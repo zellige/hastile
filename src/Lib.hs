@@ -1,39 +1,31 @@
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeOperators   #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeOperators     #-}
+
 module Lib
-    ( startApp
+    ( api,
+      hastileService
     ) where
 
-import Data.Aeson
-import Data.Aeson.TH
-import Network.Wai
-import Network.Wai.Handler.Warp
+import Control.Monad.Reader.Class
+import Data.Text
+import Hasql.Pool               as P
+--import Mapnik                   as M
 import Servant
 
-data User = User
-  { userId        :: Int
-  , userFirstName :: String
-  , userLastName  :: String
-  } deriving (Eq, Show)
+type HastileApi =    Capture "x" Double
+                  :> Capture "y" Double
+                  :> Capture "z" Double
+                  :> Get '[PlainText] Text
 
-$(deriveJSON defaultOptions ''User)
-
-type API = "users" :> Get '[JSON] [User]
-
-startApp :: IO ()
-startApp = run 8080 app
-
-app :: Application
-app = serve api server
-
-api :: Proxy API
+api :: Proxy HastileApi
 api = Proxy
 
-server :: Server API
-server = return users
+hastileService :: Pool -> Server HastileApi
+hastileService pool x y z =
+  enter (runReaderTNat pool) $ getTile x y z
 
-users :: [User]
-users = [ User 1 "Isaac" "Newton"
-        , User 2 "Albert" "Einstein"
-        ]
+getTile :: MonadReader P.Pool m => Double -> Double -> Double -> m Text
+getTile x y z = return . pack $ "x: " ++ show x ++ "y: " ++ show y ++ "z: " ++ show z

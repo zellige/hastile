@@ -37,9 +37,14 @@ resolver: lts-6.15
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - '.'
+- location:
+    git: https://github.com/albertov/hs-mapnik.git
+    commit: 416cf5c51c07cc25967da7aa632aba66753777d9
+  extra-dep: true
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps: []
+extra-deps:
+  - hasql-pool-0.4.1
 
 # Override default flag values for local packages and extra-deps
 flags: {}
