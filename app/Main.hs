@@ -10,7 +10,7 @@ import           Hasql.Pool               as P
 import           Lib
 import qualified Network.Wai.Handler.Warp as Warp
 import           Options.Generic
-import Servant
+import           Servant
 
 data CmdLine = CmdLine { pgConfig :: FilePath
                        , port :: Maybe Int
