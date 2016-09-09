@@ -5,8 +5,8 @@
 {-# LANGUAGE TypeOperators     #-}
 
 module Lib
-    ( api,
-      hastileService
+    ( api
+    , hastileService
     ) where
 
 import Control.Monad.Reader.Class
