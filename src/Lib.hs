@@ -1,8 +1,8 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Lib
     ( api
@@ -12,14 +12,15 @@ module Lib
 import           Control.Monad.Reader.Class
 import           Data.Text
 import           Hasql.Pool                 as P
---import Mapnik                   as M
-import Servant
+import           Servant
 
-import SphericalMercator
+import           SphericalMercator
 
--- TODO: extract common captures - can't seem to make it work :(
-type HastileApi =      Capture "z" Integer :> Capture "x" Integer :> Capture "y" Integer :> "query" :> Get '[PlainText] Text
-                  :<|> Capture "z" Integer :> Capture "x" Integer :> Capture "y" Integer :> "mvt" :> Get '[PlainText] Text
+type Z = Capture "z" Integer
+type X = Capture "x" Integer
+type Y = Capture "y" Integer
+type HastileApi =    Z :> X :> Y :> "query" :> Get '[PlainText] Text
+                :<|> Z :> X :> Y :> "mvt" :> Get '[PlainText] Text
 
 api :: Proxy HastileApi
 api = Proxy
