@@ -9,28 +9,28 @@ module Lib
     , hastileService
     ) where
 
-import Control.Monad.Reader.Class
-import Data.Text
-import Hasql.Pool               as P
+import           Control.Monad.Reader.Class
+import           Data.Text
+import           Hasql.Pool                 as P
 --import Mapnik                   as M
 import Servant
 
 import SphericalMercator
 
-type HastileApi =    Capture "z" Integer
-                  :> Capture "y" Integer
-                  :> Capture "x" Integer
-                  :> Get '[PlainText] Text
+-- TODO: extract common captures - can't seem to make it work :(
+type HastileApi =      Capture "z" Integer :> Capture "x" Integer :> Capture "y" Integer :> "query" :> Get '[PlainText] Text
+                  :<|> Capture "z" Integer :> Capture "x" Integer :> Capture "y" Integer :> "mvt" :> Get '[PlainText] Text
 
 api :: Proxy HastileApi
 api = Proxy
 
 hastileService :: Pool -> Server HastileApi
-hastileService pool z x y =
-  enter (runReaderTNat pool) $ getTile z x y
+hastileService pool =
+  enter (runReaderTNat pool) (getQuery :<|> getTile)
 
-getTile :: MonadReader P.Pool m => Integer -> Integer -> Integer -> m Text
-getTile z x y = return $ Data.Text.concat [queryPre, bboxSql, queryPost]
+
+getQuery :: MonadReader P.Pool m => Integer -> Integer -> Integer -> m Text
+getQuery z x y = pure $ Data.Text.concat [queryPre, bboxSql, queryPost]
   where queryPre  = "SELECT linkid, name, load_total_24_2way, load_commveh_24_2way, \
                        \ST_AsGeoJSON(wkb_geometry) as the_geom_geojson FROM \"traffic_per_v5b\" \
                      \WHERE ST_Intersects(wkb_geometry, "
@@ -40,3 +40,6 @@ getTile z x y = return $ Data.Text.concat [queryPre, bboxSql, queryPost]
         bboxSql   = pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
                            \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ ", \
                            \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")) 3857) 4326)"
+
+getTile :: Applicative m => Integer -> Integer -> Integer -> m Text
+getTile _z _x _y = pure "I'm not implemented yet"
