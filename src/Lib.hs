@@ -12,16 +12,15 @@ module Lib
 import           Control.Monad.Reader.Class
 import           Data.Text
 import           Hasql.Pool                 as P
-import           Mapnik                     as M
 import           Servant
 
 import           SphericalMercator
 
--- TODO: extract common captures - can't seem to make it work :(
 type Z = Capture "z" Integer
 type X = Capture "x" Integer
 type Y = Capture "y" Integer
-type HastileApi = Z :> X :> Y :> "query" :> Get '[PlainText] Text :<|> Z :> X :> Y :> "mvt" :> Get '[PlainText] Text
+type HastileApi =    Z :> X :> Y :> "query" :> Get '[PlainText] Text
+                :<|> Z :> X :> Y :> "mvt" :> Get '[PlainText] Text
 
 api :: Proxy HastileApi
 api = Proxy
