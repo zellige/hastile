@@ -4,30 +4,44 @@
 module Main where
 
 import           Control.Exception.Base
-import qualified Data.ByteString.Char8    as BS
+import           Data.Aeson
+import qualified Data.ByteString.Char8       as BS
+import qualified Data.ByteString.Lazy.Char8  as BSL
 import           Data.Maybe (fromMaybe)
-import           Hasql.Pool               as P
+import           Data.Time (NominalDiffTime)
+import           Hasql.Pool                  as P
 import           Lib
-import qualified Network.Wai.Handler.Warp as Warp
+import qualified Network.Wai.Handler.Warp    as Warp
 import           Options.Generic
 import           Servant
 
-data CmdLine = CmdLine { pgConfig :: FilePath
-                       , port :: Maybe Int
+data CmdLine = CmdLine { configFile :: FilePath
                        }
                deriving Generic
 instance ParseRecord CmdLine
+
+data Config = Config { pgConnection :: String
+                     , port :: Maybe Int
+                     , pgPoolSize :: Maybe Int
+                     , pgTimeout :: Maybe NominalDiffTime
+                     } deriving (Show, Generic)
+instance FromJSON Config where
 
 main :: IO ()
 main = getRecord "hastile" >>= doIt
 
 doIt :: CmdLine -> IO ()
 doIt cmdLine = do
-  let poolSize = 10
-      timeout  = 1
-      port'     = fromMaybe 8080 $ port cmdLine
-  -- TODO: read file better
-  connString <- fmap (head . BS.split '\n') . BS.readFile $ pgConfig cmdLine
-  bracket (P.acquire (poolSize, timeout, connString))
+  configBs <- BSL.readFile $ configFile cmdLine
+  case (decode configBs) of
+    Just config -> doItWithConfig config
+    Nothing -> putStrLn $ "Failed to parse config file " ++ configFile cmdLine
+
+doItWithConfig :: Config -> IO ()
+doItWithConfig config = do
+  let pgPoolSize' = fromMaybe 10 $ pgPoolSize config
+      pgTimeout'  = fromMaybe 1 $ pgTimeout config
+      port'    = fromMaybe 8080 $ port config
+  bracket (P.acquire (pgPoolSize', pgTimeout', BS.pack . pgConnection $ config))
           (P.release)
           (\pool -> Warp.run port'. serve api $ hastileService pool)
