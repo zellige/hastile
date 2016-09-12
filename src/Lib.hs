@@ -15,17 +15,28 @@ import Hasql.Pool               as P
 --import Mapnik                   as M
 import Servant
 
-type HastileApi =    Capture "x" Double
-                  :> Capture "y" Double
-                  :> Capture "z" Double
+import SphericalMercator
+
+type HastileApi =    Capture "z" Integer
+                  :> Capture "y" Integer
+                  :> Capture "x" Integer
                   :> Get '[PlainText] Text
 
 api :: Proxy HastileApi
 api = Proxy
 
 hastileService :: Pool -> Server HastileApi
-hastileService pool x y z =
-  enter (runReaderTNat pool) $ getTile x y z
+hastileService pool z x y =
+  enter (runReaderTNat pool) $ getTile z x y
 
-getTile :: MonadReader P.Pool m => Double -> Double -> Double -> m Text
-getTile x y z = return . pack $ "x: " ++ show x ++ "y: " ++ show y ++ "z: " ++ show z
+getTile :: MonadReader P.Pool m => Integer -> Integer -> Integer -> m Text
+getTile z x y = return $ Data.Text.concat [queryPre, bboxSql, queryPost]
+  where queryPre  = "SELECT linkid, name, load_total_24_2way, load_commveh_24_2way, \
+                       \ST_AsGeoJSON(wkb_geometry) as the_geom_geojson FROM \"traffic_per_v5b\" \
+                     \WHERE ST_Intersects(wkb_geometry, "
+        queryPost = pack ")"
+        (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
+          googleToBBoxM 256 (ZoomLevel z) (GoogleTileCoords x y)
+        bboxSql   = pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
+                           \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ ", \
+                           \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")) 3857) 4326)"
