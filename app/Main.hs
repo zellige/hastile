@@ -26,7 +26,7 @@ data Config = Config { pgConnection :: String
                      , port :: Maybe Int
                      , pgPoolSize :: Maybe Int
                      , pgTimeout :: Maybe NominalDiffTime
-                     , layers' :: Map String String
+                     , layers :: Map Text Text
                      } deriving (Show, Generic)
 instance FromJSON Config where
 
@@ -45,7 +45,7 @@ doItWithConfig config = do
   let pgPoolSize' = fromMaybe 10 $ pgPoolSize config
       pgTimeout'  = fromMaybe 1 $ pgTimeout config
       port'       = fromMaybe 8080 $ port config
-      layers''    = layers' config
+      layers'    = layers config
   bracket (P.acquire (pgPoolSize', pgTimeout', BS.pack . pgConnection $ config))
           (P.release)
-          (\p -> Warp.run port'. serve api $ hastileService (ServerState p layers''))
+          (\p -> Warp.run port'. serve api $ hastileService (ServerState p layers'))
