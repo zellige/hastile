@@ -57,5 +57,5 @@ getTile _l _z _x _y = pure "I'm not implemented yet"
 
 escape :: Text -> Text -> Text
 escape bbox query = T.concat . fmap replace' . T.split (== '!') $ query
-  where replace' "bbox4326" = bbox
+  where replace' "bbox_4326" = bbox
         replace' t = t
