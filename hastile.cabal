@@ -20,6 +20,7 @@ library
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , bytestring
+                     , containers
                      , hasql
                      , hasql-pool
                      , hs-mapnik
@@ -37,6 +38,7 @@ executable hastile
   build-depends:       aeson
                      , base
                      , bytestring
+                     , containers
                      , hastile
                      , hasql-pool
                      , optparse-generic
