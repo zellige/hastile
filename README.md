@@ -59,3 +59,9 @@ TODO
  - Develop better/more detailed instructions for installing dependencies (i.e. Mapnik)
  - Allow connections to multiple Postgres servers for different layers
  - Get building and testing on Linux
+
+Helpful links
+-------------
+
+[Tiles a la Google Maps](http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/)
+[The Google Maps/Bing Maps Spherical Mercator Projection](https://alastaira.wordpress.com/2011/01/23/the-google-maps-bing-maps-spherical-mercator-projection/)
