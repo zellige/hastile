@@ -5,6 +5,12 @@
 
 #include "mvt_from_geojson.h"
 
+struct _mvtc_return {
+  mvtc_return_code return_code;
+  std::string message;
+  std::string mvt;
+};
+
 mvtc_return * mvtc_from_geo_json(const uint32_t tile_size,
                                  const char * geo_json,
                                  const char * layer_name,
