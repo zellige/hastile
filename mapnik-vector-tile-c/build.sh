@@ -2,7 +2,7 @@
 
 #-I$(obj)/gen \
 
-g++ mvt_from_geojson.c -o mvt_from_geojson \
+g++ -c mvt_from_geojson.c \
 	-arch x86_64 \
 	-std=c++11 \
 	-stdlib=libc++ \
@@ -31,6 +31,7 @@ g++ mvt_from_geojson.c -o mvt_from_geojson \
 	'-DCLIPPER_PATHS_IMPL=mapnik::geometry::multi_line_string<cInt>' \
 	'-DCLIPPER_IMPL_INCLUDE=<mapnik/geometry.hpp>' \
 	'-DMAPNIK_PLUGINDIR="/usr/local/lib/mapnik/input"' \
+	'-DDEFAULT_INPUT_PLUGIN_DIR="/usr/local/lib/mapnik/input"' \
 	'-DNDEBUG' \
 	-DMAPNIK_MEMORY_MAPPED_FILE \
 	-DMAPNIK_HAS_DLCFN \
@@ -82,3 +83,4 @@ g++ mvt_from_geojson.c -o mvt_from_geojson \
 	-lz \
 	-lprotobuf-lite
 
+ar crsv libmvt_from_geojson.a mvt_from_geojson.o
