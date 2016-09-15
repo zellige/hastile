@@ -13,13 +13,13 @@ typedef enum {
 
 typedef struct _mvtc_return mvtc_return;
 
-mvtc_return * mvtc_from_geo_json(const uint32_t tile_size,
+mvtc_return * mvtc_from_geo_json(const int tile_size,
                                  const char * geo_json,
                                  const char * layer_name,
                                  const char * mapnik_input_plugins_path,
-                                 const uint32_t z,
-                                 const uint32_t x,
-                                 const uint32_t y);
+                                 const int z,
+                                 const int x,
+                                 const int y);
 
 const char * mvtc_get_mvt(mvtc_return * rv);
 
