@@ -58,6 +58,9 @@ g++ mvt_from_geojson.c -o mvt_from_geojson \
 	-Wno-unknown-pragmas \
 	-L/usr/local/lib \
 	-lmapnik \
+	-L/Users/andrew/git/mapnik-vector-tile/build/Release \
+    -lmapnik_vector_tile_impl \
+	-lvector_tile \
 	-L/usr/local/Cellar/freetype/2.6.5/lib \
 	-L/usr/local/opt/icu4c/lib \
 	-L/usr/lib \

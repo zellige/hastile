@@ -1,6 +1,7 @@
 #ifndef MVT_FROM_GEOJSON_H
 #define MVT_FROM_GEOJSON_H
 
+#include <cstdio>
 #include <string>
 
 #include <mapnik/map.hpp>
@@ -31,7 +32,7 @@ typedef struct {
 /*   } */
 /* } */
 
-mvtc_return * mvtc_from_geo_json(const int tile_size,
+mvtc_return * mvtc_from_geo_json(const uint32_t tile_size,
                                  const char * geo_json,
                                  const char * layer_name)
 {
@@ -47,6 +48,8 @@ mvtc_return * mvtc_from_geo_json(const int tile_size,
     mapnik::vector_tile_impl::polygon_fill_type fill_type = mapnik::vector_tile_impl::positive_fill;
     bool process_all_rings = false;
 
+    mapnik::datasource_cache::instance().register_datasources("/usr/local/lib/mapnik/input");
+
     mapnik::Map map(tile_size, tile_size, "+init=epsg:3857");
     mapnik::parameters p;
     p["type"]="geojson";
@@ -54,10 +57,12 @@ mvtc_return * mvtc_from_geo_json(const int tile_size,
 
     mapnik::layer lyr(layer_name,"+init=epsg:4326");
     lyr.set_datasource(mapnik::datasource_cache::instance().create(p));
+    mapnik::box2d<double> lyr_box = lyr.envelope();
+    printf("(%f, %f), (%f, %f)\n", lyr_box.minx(), lyr_box.miny(), lyr_box.maxx(), lyr_box.maxy());
     map.add_layer(lyr);
 
-    mapnik::box2d<double> bbox = mapnik::vector_tile_impl::merc_extent(tile_size, 0, 0, 0);
-    mapnik::vector_tile_impl::tile out_tile(bbox, tile_size, 0 /*buffer size*/);
+    mapnik::box2d<double> bbox = mapnik::vector_tile_impl::merc_extent(tile_size, 13464, 9727, 14);
+    mapnik::vector_tile_impl::tile out_tile(bbox, tile_size/*, 0 /*buffer size*/);
     mapnik::vector_tile_impl::processor ren(map);
     ren.set_area_threshold(area_threshold);
     ren.set_strictly_simple(strictly_simple);
@@ -70,7 +75,7 @@ mvtc_return * mvtc_from_geo_json(const int tile_size,
     out_tile.serialize_to_string(rv->mvt);
     rv->return_code = MVTC_SUCCESS;
   }
-  catch (std::exception ex)
+  catch (std::exception & ex)
   {
     /* mvtc_reset_return(rv); */
     rv->mvt = "";
