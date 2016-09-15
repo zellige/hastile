@@ -2,7 +2,7 @@
 
 #-I$(obj)/gen \
 
-g++ -c mvt_from_geojson.c \
+g++ -c mvt_from_geojson.cpp \
 	-arch x86_64 \
 	-std=c++11 \
 	-stdlib=libc++ \

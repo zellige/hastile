@@ -25,7 +25,7 @@ mvtc_return * mvtc_from_geo_json(const uint32_t tile_size,
     mapnik::vector_tile_impl::polygon_fill_type fill_type = mapnik::vector_tile_impl::positive_fill;
     bool process_all_rings = false;
 
-    /* mapnik::datasource_cache::instance().register_datasources(mapnik_input_plugins_path); */
+    mapnik::datasource_cache::instance().register_datasources(mapnik_input_plugins_path);
 
     mapnik::Map map(tile_size, tile_size, "+init=epsg:3857");
     mapnik::parameters p;
@@ -34,11 +34,10 @@ mvtc_return * mvtc_from_geo_json(const uint32_t tile_size,
 
     mapnik::layer lyr(layer_name,"+init=epsg:4326");
     lyr.set_datasource(mapnik::datasource_cache::instance().create(p));
-    mapnik::box2d<double> lyr_box = lyr.envelope();
     map.add_layer(lyr);
 
-  mapnik::box2d<double> bbox = mapnik::vector_tile_impl::merc_extent(tile_size, x, y, z);
-    mapnik::vector_tile_impl::tile out_tile(bbox, tile_size/*, 0 /*buffer size*/);
+    mapnik::box2d<double> bbox = mapnik::vector_tile_impl::merc_extent(tile_size, x, y, z);
+    mapnik::vector_tile_impl::tile out_tile(bbox, tile_size);
     mapnik::vector_tile_impl::processor ren(map);
     ren.set_area_threshold(area_threshold);
     ren.set_strictly_simple(strictly_simple);

@@ -1,8 +1,10 @@
 #ifndef MVT_FROM_GEOJSON_H
 #define MVT_FROM_GEOJSON_H
 
+#ifdef __cplusplus
 extern "C"
 {
+#endif
 
 typedef enum {
   MVTC_SUCCESS,
@@ -31,5 +33,8 @@ const char * mvtc_get_message(mvtc_return * rv);
 
 void mvtc_free_mvtc_return(mvtc_return * rv);
 
+#ifdef __cplusplus
 } // extern "C"
+#endif
+
 #endif // MVT_FROM_GEOJSON_H
