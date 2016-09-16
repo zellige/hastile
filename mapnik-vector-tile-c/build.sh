@@ -2,7 +2,7 @@
 
 #-I$(obj)/gen \
 
-g++ -c mvt_from_geojson.cpp \
+g++ mvt_from_geojson.cpp -dynamiclib -o libmvt_from_geojson.dylib\
 	-arch x86_64 \
 	-std=c++11 \
 	-stdlib=libc++ \
@@ -83,4 +83,4 @@ g++ -c mvt_from_geojson.cpp \
 	-lz \
 	-lprotobuf-lite
 
-ar crsv libmvt_from_geojson.a mvt_from_geojson.o
+#ar crsv libmvt_from_geojson.a mvt_from_geojson.o
