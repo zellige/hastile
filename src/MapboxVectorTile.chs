@@ -9,9 +9,8 @@ module MapboxVectorTile (fromGeoJSON) where
 import           Data.ByteString.Char8 as BS8
 import           Data.Text as T
 import           Foreign
-import           Foreign.Ptr
-import           Foreign.C.String (CString, withCString, peekCString)
-import           Foreign.C.Types (CInt, CDouble)
+-- import           Foreign.C.Types (CInt, CChar)
+import           Foreign.C.String (withCString, peekCString)
 
 import           SphericalMercator
 
@@ -34,22 +33,23 @@ fromGeoJSON (Pixels tileSize)
   withCString (BS8.unpack geoJSON) $ \cGeoJSON ->
   withCString (T.unpack layerName) $ \cLayerName ->
   withCString inputPluginsPath $ \cInputPluginsPath -> do
-    mvtcReturn <-
+    mvtcReturn <- MvtcReturn <$> (newForeignPtr mvtc_free_mvtc_return =<<
       {# call mvtc_from_geo_json #} (fromInteger tileSize)
                                     cGeoJSON
                                     cLayerName
                                     cInputPluginsPath
                                     (fromInteger z)
                                     (fromInteger x)
-                                    (fromInteger y)
-    case mvtcReturn of
-      nullPtr -> return $ Left miserable
-      _       -> handleMvtcReturn mvtcReturn
+                                    (fromInteger y))
+    withMvtcReturn mvtcReturn $ \ptr ->
+      if ptr == nullPtr
+        then return $ Left miserable
+        else handleMvtcReturn ptr
   where miserable = "Mapnik vector tile wrapper failed miserably - didn't even allocate a return value!"
 
 handleMvtcReturn :: Ptr MvtcReturn -> IO (Either Text ByteString)
 handleMvtcReturn rPtr = do
-    rc <- toEnum . fromIntegral $ {# call mvtc_get_return_code #} rPtr
+    rc <- toEnum . fromIntegral <$> {# call mvtc_get_return_code #} rPtr
     if rc == MvtcSuccess
-      then Right . BS8.pack <$> {# call mvtc_get_mvt #} rPtr >>= peek
-      else Left $ T.pack <$> {# call mvtc_get_message #} rPtr >>= peek
+      then Right <$> ({# call mvtc_get_mvt #} rPtr >>= packCString)
+      else Left . T.pack <$> ({# call mvtc_get_message #} rPtr >>= peekCString)

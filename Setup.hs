@@ -4,7 +4,7 @@ import Data.Maybe
 import System.Process
 import System.IO
 import System.Environment (lookupEnv)
-import System.Directory (makeAbsolute)
+import System.Directory (getCurrentDirectory, makeAbsolute)
 import System.Exit
 import Data.List
 import Distribution.Simple
@@ -36,7 +36,8 @@ configureWithMapnikConfig lbi = do
   mapnikFontDir <- liftM (escapeWinPathSep . head . words) $
     (mapnikConfig ["--fonts"])
   --error (show [ mapnikInclude, mapnikLibDirs])
-  let updBinfo bi = bi { extraLibDirs = extraLibDirs bi ++ mapnikLibDirs
+  dir <- getCurrentDirectory
+  let updBinfo bi = bi { extraLibDirs = extraLibDirs bi ++ mapnikLibDirs ++ [dir ++ "mapnik-vector-tile-c"]
                        , extraLibs    = extraLibs    bi ++ mapnikLibs
                        , includeDirs  = includeDirs  bi ++ mapnikInclude
                        , ccOptions    = ccOptions    bi ++ mapnikCcOptions
