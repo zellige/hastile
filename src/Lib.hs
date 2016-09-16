@@ -10,18 +10,25 @@ module Lib
     , ServerState (..)
     ) where
 
+import           Control.Monad
 import           Control.Monad.Error.Class
+import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
+import           Data.Aeson
 import           Data.ByteString            as BS
+import           Data.ByteString.Internal   as BSI
 import           Data.Map
 import           Data.Text                  as T
 import           Data.Text.Encoding (encodeUtf8)
-import           Hasql.Pool                 as P
---import qualified Hasql.Session              as HS
+import qualified Hasql.Decoders             as HD
+import qualified Hasql.Encoders             as HE
+import qualified Hasql.Pool                 as P
+import qualified Hasql.Query                as HQ
+import qualified Hasql.Session              as HS
 import           Servant
 
 import           SphericalMercator
---import           MapboxVectorTile
+import           MapboxVectorTile
 
 type Layer = Capture "layer" Text
 type Z     = Capture "z" Integer
@@ -34,6 +41,10 @@ type HastileApi =    Layer :> Z :> X :> Y :> "query" :> Get '[PlainText] Text
 data ServerState = ServerState { pool :: P.Pool
                                , stateLayers :: Map Text Text
                                }
+
+data TileFeatures = TileFeatures { geoJson :: ByteString
+                                 , properties :: Map Text Text
+                                 } deriving (Show)
 
 api :: Proxy HastileApi
 api = Proxy
@@ -57,8 +68,33 @@ getQuery l z x y = do
                             \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ ", \
                             \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")) 3857) 4326)")
 
-getTile :: (MonadError ServantErr m, MonadReader ServerState m) => Text -> Integer -> Integer -> Integer -> m ByteString
-getTile l z x y = encodeUtf8 <$> getQuery l z x y
+getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+        => Text -> Integer -> Integer -> Integer -> m ByteString
+getTile l z x y = do
+  sql <- encodeUtf8 <$> getQuery l z x y
+  s <- ask
+  let p    = pool s
+      sess = HS.query HE.unit (mkStatement sql)
+  tfsM <- liftIO $ P.use p sess
+  case tfsM of
+    Left e -> fail $ show e
+    Right tfs -> liftIO $ fromGeoJSON 256
+                                      (mkGeoJSON tfs)
+                                      l
+                                      "/usr/local/lib/mapnik/input"
+                                      (ZoomLevel z)
+                                      (GoogleTileCoords x y)
+  return sql
+
+mkGeoJSON :: [TileFeatures] -> ByteString
+mkGeoJSON = undefined
+
+mkStatement :: ByteString -> HQ.Query a [TileFeatures]
+mkStatement sql = HQ.statement sql
+                               HE.unit
+                               (HD.rowsList (TileFeatures <$> HD.value (HD.jsonBytes (sToT . eitherDecode)) <*> HD.value (HD.hstore replicateM))) False
+                  where sToT (Left s)  = Left $ T.pack s
+                        sToT (Right b) = Right b :: Either Text BSI.ByteString
 
 -- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
 escape :: Text -> Text -> Text
