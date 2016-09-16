@@ -50,7 +50,7 @@ Building
 Projections
 -----------
 
-We assume tiles are requested in the spherical mercator (EPSG 3857 AKA EPSG 900913 AKA Spherey McSpherecator). Furthermore, map data is assumed to be stored in EPSG 4326 (WGS84).
+We assume tiles are requested in the spherical mercator (EPSG 3857 AKA EPSG 900913 AKA Webby McWebcator). Furthermore, map data is assumed to be stored in EPSG 4326.
 
 TODO
 ----
@@ -63,5 +63,5 @@ TODO
 Helpful links
 -------------
 
-[Tiles a la Google Maps](http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/)
-[The Google Maps/Bing Maps Spherical Mercator Projection](https://alastaira.wordpress.com/2011/01/23/the-google-maps-bing-maps-spherical-mercator-projection/)
+- [Tiles a la Google Maps](http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/)
+- [The Google Maps/Bing Maps Spherical Mercator Projection](https://alastaira.wordpress.com/2011/01/23/the-google-maps-bing-maps-spherical-mercator-projection/)
