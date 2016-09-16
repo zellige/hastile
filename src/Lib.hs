@@ -18,6 +18,7 @@ import           Hasql.Pool                 as P
 import           Servant
 
 import           SphericalMercator
+import           MapboxVectorTile
 
 type Layer = Capture "layer" Text
 type Z     = Capture "z" Integer
