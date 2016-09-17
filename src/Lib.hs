@@ -43,9 +43,9 @@ data ServerState = ServerState { pool :: P.Pool
                                , stateLayers :: Map Text Text
                                }
 
-data TileFeatures = TileFeatures { geoJson :: BS.ByteString
-                                 , properties :: Map Text Text
-                                 } deriving (Show)
+data TileFeature = TileFeature { geometry :: Value
+                               , properties :: Map Text Text
+                               }
 
 api :: Proxy HastileApi
 api = Proxy
@@ -74,29 +74,42 @@ getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
 getTile l z x y = do
   sql <- encodeUtf8 <$> getQuery l z x y
   s <- ask
-  let p       = pool s
+  let p = pool s
       sessTfs = HS.query () (mkStatement sql)
   tfsM <- liftIO $ P.use p sessTfs
   case tfsM of
     Left e -> fail $ show e
-    Right tfs -> liftIO $ fromGeoJSON 256
-                                      (mkGeoJSON tfs)
-                                      l
-                                      "/usr/local/lib/mapnik/input"
-                                      (ZoomLevel z)
-                                      (GoogleTileCoords x y)
-  return sql
+    Right tfs -> do
+      eet <- liftIO $ geoJSONReturn tfs
+      case eet of
+        Left e -> pure $ encodeUtf8 e
+        Right tile -> pure tile
+  where geoJSONReturn tfs' = fromGeoJSON 256
+                                         (mkGeoJSON tfs')
+                                         l
+                                         "/usr/local/lib/mapnik/input"
+                                         (ZoomLevel z)
+                                         (GoogleTileCoords x y)
 
-mkGeoJSON :: [TileFeatures] -> ByteString
-mkGeoJSON = undefined
+mkGeoJSON :: [TileFeature] -> ByteString
+mkGeoJSON tfs = toStrict . encode $ geoJSON
+  where geoJSON = M.fromList [ ("type", String "FeatureCollection")
+                             , ("features", toJSON . fmap mkFeature $ tfs)
+                             ] :: M.Map Text Value
 
-mkStatement :: ByteString -> HQ.Query () [TileFeatures]
+mkFeature :: TileFeature -> Value
+mkFeature tf = toJSON featureMap
+  where featureMap = M.fromList [ ("type", String "Feature")
+                                , ("geometry", geometry tf)
+                                , ("properties", toJSON . properties $ tf)
+                                ] :: M.Map Text Value
+
+mkStatement :: ByteString -> HQ.Query () [TileFeature]
 mkStatement sql =
   HQ.statement sql HE.unit
-               (HD.rowsList (TileFeatures <$> jsonValue <*> propsValue))
+               (HD.rowsList (TileFeature <$> HD.value HD.json <*> propsValue))
                False
-  where jsonValue = toStrict . encode <$> HD.value HD.json
-        -- jsonValue = HD.value (HD.jsonBytes (bimap T.pack id . eitherDecode . fromStrict))
+  where -- jsonValue = toStrict . encode <$> HD.value HD.json
         propsValue = fmap (fromMaybe "") . M.fromList <$> (HD.value $ HD.hstore replicateM)
 
 -- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
