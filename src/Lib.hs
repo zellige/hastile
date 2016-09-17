@@ -66,8 +66,8 @@ getQuery l z x y = do
   where (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
           googleToBBoxM 256 (ZoomLevel z) (GoogleTileCoords x y)
         bbox4326 = T.pack $ ("ST_Transform(ST_SetSRID(ST_MakeBox2D(\
-                            \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ ", \
-                            \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")) 3857) 4326)")
+                            \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
+                            \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)")
 
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Integer -> m ByteString
@@ -80,11 +80,11 @@ getTile l z x y = do
   case tfsM of
     Left e -> fail $ show e
     Right tfs -> do
-      eet <- liftIO $ geoJSONReturn tfs
+      eet <- liftIO $ tileReturn tfs
       case eet of
         Left e -> pure $ encodeUtf8 e
         Right tile -> pure tile
-  where geoJSONReturn tfs' = fromGeoJSON 256
+  where tileReturn tfs' = fromGeoJSON 256
                                          (mkGeoJSON tfs')
                                          l
                                          "/usr/local/lib/mapnik/input"
