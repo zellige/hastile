@@ -16,8 +16,9 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import           Data.Aeson
 import           Data.ByteString            as BS
-import           Data.ByteString.Internal   as BSI
-import           Data.Map
+import           Data.ByteString.Lazy (toStrict)
+import           Data.Map                   as M
+import           Data.Maybe (fromMaybe)
 import           Data.Text                  as T
 import           Data.Text.Encoding (encodeUtf8)
 import qualified Hasql.Decoders             as HD
@@ -42,7 +43,7 @@ data ServerState = ServerState { pool :: P.Pool
                                , stateLayers :: Map Text Text
                                }
 
-data TileFeatures = TileFeatures { geoJson :: ByteString
+data TileFeatures = TileFeatures { geoJson :: BS.ByteString
                                  , properties :: Map Text Text
                                  } deriving (Show)
 
@@ -59,7 +60,7 @@ getQuery :: (MonadError ServantErr m, MonadReader ServerState m)
 getQuery l z x y = do
   s <- ask
   let ls = stateLayers s
-  case Data.Map.lookup l ls of
+  case M.lookup l ls of
     Just rawQuery -> pure . escape bbox4326 $ rawQuery
     Nothing -> throwError $ err404 { errBody = "Layer not found :(" }
   where (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
@@ -73,9 +74,9 @@ getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
 getTile l z x y = do
   sql <- encodeUtf8 <$> getQuery l z x y
   s <- ask
-  let p    = pool s
-      sess = HS.query HE.unit (mkStatement sql)
-  tfsM <- liftIO $ P.use p sess
+  let p       = pool s
+      sessTfs = HS.query () (mkStatement sql)
+  tfsM <- liftIO $ P.use p sessTfs
   case tfsM of
     Left e -> fail $ show e
     Right tfs -> liftIO $ fromGeoJSON 256
@@ -89,12 +90,14 @@ getTile l z x y = do
 mkGeoJSON :: [TileFeatures] -> ByteString
 mkGeoJSON = undefined
 
-mkStatement :: ByteString -> HQ.Query a [TileFeatures]
-mkStatement sql = HQ.statement sql
-                               HE.unit
-                               (HD.rowsList (TileFeatures <$> HD.value (HD.jsonBytes (sToT . eitherDecode)) <*> HD.value (HD.hstore replicateM))) False
-                  where sToT (Left s)  = Left $ T.pack s
-                        sToT (Right b) = Right b :: Either Text BSI.ByteString
+mkStatement :: ByteString -> HQ.Query () [TileFeatures]
+mkStatement sql =
+  HQ.statement sql HE.unit
+               (HD.rowsList (TileFeatures <$> jsonValue <*> propsValue))
+               False
+  where jsonValue = toStrict . encode <$> HD.value HD.json
+        -- jsonValue = HD.value (HD.jsonBytes (bimap T.pack id . eitherDecode . fromStrict))
+        propsValue = fmap (fromMaybe "") . M.fromList <$> (HD.value $ HD.hstore replicateM)
 
 -- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
 escape :: Text -> Text -> Text
