@@ -22,7 +22,7 @@ module SphericalMercator ( -- earthRadius
 
 newtype TileCoord  = TileCoord Integer deriving (Show, Eq, Num)
 newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional)
-newtype Pixels = Pixels Double deriving (Show, Eq, Num, Floating, Fractional)
+newtype Pixels = Pixels Integer deriving (Show, Eq, Num)
 newtype ZoomLevel = ZoomLevel Integer deriving (Show, Eq, Num)
 newtype Ratio n d = Ratio Double deriving (Show, Eq, Num, Floating, Fractional)
 
@@ -69,7 +69,7 @@ googleToBBoxPx tileSize (GoogleTileCoords gx gy) =
   transformBBox ((* tileSize) . fromInteger) $ BBox gx (gy + 1) (gx + 1) gy
 
 pixelMaxExtent :: Pixels -> ZoomLevel -> Pixels
-pixelMaxExtent tile (ZoomLevel z) = 2 ** fromInteger z * tile
+pixelMaxExtent tile (ZoomLevel z) = (2 ^ z) * tile
 
 -- tileCentreToBBox :: Pixels -> ZoomLevel -> Metres -> Metres -> BBox Metres
 -- tileCentreToBBox p z x y = BBox (x - halfTileMetres)
@@ -83,11 +83,11 @@ pixelMaxExtent tile (ZoomLevel z) = 2 ** fromInteger z * tile
 -- At each zoom level we double the number of tiles in both the x and y direction.
 -- z = 0: 1 tile, z = 1: 2 * 2 = 4 tiles, z = 3: 8 * 8 = 64 tiles
 mPerPxAtZoom :: Metres -> Pixels -> ZoomLevel -> Ratio Metres Pixels
-mPerPxAtZoom (Metres m) tile z = Ratio $ m / p
+mPerPxAtZoom (Metres m) tile z = Ratio $ m / fromIntegral p
   where (Pixels p) = pixelMaxExtent tile z
 
 mPerPxToM :: Ratio Metres Pixels -> Pixels -> Metres
-mPerPxToM (Ratio r) (Pixels p) = Metres $ r * p
+mPerPxToM (Ratio r) (Pixels p) = Metres $ r * fromIntegral p
 
 -- pxToLatLon :: Pixels -> ZoomLevel -> (Pixels, Pixels) -> (LatLon Degrees, LatLon Degrees)
 -- pxToLatLon tileSize z (x, y) = (xPxToLon tileSize z x, yPxToLat tileSize z y)
