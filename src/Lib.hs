@@ -20,7 +20,7 @@ import           Data.ByteString.Lazy (toStrict)
 import           Data.Map                   as M
 import           Data.Maybe (fromMaybe)
 import           Data.Text                  as T
-import           Data.Text.Encoding (encodeUtf8)
+import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import qualified Hasql.Decoders             as HD
 import qualified Hasql.Encoders             as HE
 import qualified Hasql.Pool                 as P
@@ -36,6 +36,7 @@ type Z     = Capture "z" Integer
 type X     = Capture "x" Integer
 type Y     = Capture "y" Integer
 type HastileApi =    Layer :> Z :> X :> Y :> "query" :> Get '[PlainText] Text
+                :<|> Layer :> Z :> X :> Y :> "geojson" :> Get '[PlainText] Text
                 :<|> Layer :> Z :> X :> Y :> "mvt" :> Get '[OctetStream] ByteString
 
 -- TODO: make lenses!
@@ -52,26 +53,30 @@ api = Proxy
 
 hastileService :: ServerState -> Server HastileApi
 hastileService state =
-  enter (runReaderTNat state) (getQuery :<|> getTile)
-
-
-getQuery :: (MonadError ServantErr m, MonadReader ServerState m)
-         => Text -> Integer -> Integer -> Integer -> m Text
-getQuery l z x y = do
-  s <- ask
-  let ls = stateLayers s
-  case M.lookup l ls of
-    Just rawQuery -> pure . escape bbox4326 $ rawQuery
-    Nothing -> throwError $ err404 { errBody = "Layer not found :(" }
-  where (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
-          googleToBBoxM 256 (ZoomLevel z) (GoogleTileCoords x y)
-        bbox4326 = T.pack $ ("ST_Transform(ST_SetSRID(ST_MakeBox2D(\
-                            \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
-                            \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)")
+  enter (runReaderTNat state) (getQuery :<|> getJson :<|> getTile)
 
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Integer -> m ByteString
 getTile l z x y = do
+  geoJson <- getJson' l z x y
+  eet <- liftIO $ tileReturn geoJson
+  case eet of
+    Left e -> pure $ encodeUtf8 e
+    Right tile -> pure tile
+  where tileReturn geoJson' = fromGeoJSON 256
+                                          geoJson'
+                                          l
+                                          "/usr/local/lib/mapnik/input"
+                                          (ZoomLevel z)
+                                          (GoogleTileCoords x y)
+
+getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+        => Text -> Integer -> Integer -> Integer -> m Text
+getJson l z x y = decodeUtf8 <$> getJson' l z x y
+
+getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+        => Text -> Integer -> Integer -> Integer -> m ByteString
+getJson' l z x y = do
   sql <- encodeUtf8 <$> getQuery l z x y
   s <- ask
   let p = pool s
@@ -79,17 +84,7 @@ getTile l z x y = do
   tfsM <- liftIO $ P.use p sessTfs
   case tfsM of
     Left e -> fail $ show e
-    Right tfs -> do
-      eet <- liftIO $ tileReturn tfs
-      case eet of
-        Left e -> pure $ encodeUtf8 e
-        Right tile -> pure tile
-  where tileReturn tfs' = fromGeoJSON 256
-                                         (mkGeoJSON tfs')
-                                         l
-                                         "/usr/local/lib/mapnik/input"
-                                         (ZoomLevel z)
-                                         (GoogleTileCoords x y)
+    Right tfs -> pure . mkGeoJSON $ tfs
 
 mkGeoJSON :: [TileFeature] -> ByteString
 mkGeoJSON tfs = toStrict . encode $ geoJSON
@@ -111,6 +106,21 @@ mkStatement sql =
                False
   where -- jsonValue = toStrict . encode <$> HD.value HD.json
         propsValue = fmap (fromMaybe "") . M.fromList <$> (HD.value $ HD.hstore replicateM)
+
+
+getQuery :: (MonadError ServantErr m, MonadReader ServerState m)
+         => Text -> Integer -> Integer -> Integer -> m Text
+getQuery l z x y = do
+  s <- ask
+  let ls = stateLayers s
+  case M.lookup l ls of
+    Just rawQuery -> pure . escape bbox4326 $ rawQuery
+    Nothing -> throwError $ err404 { errBody = "Layer not found :(" }
+  where (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
+          googleToBBoxM 256 (ZoomLevel z) (GoogleTileCoords x y)
+        bbox4326 = T.pack $ ("ST_Transform(ST_SetSRID(ST_MakeBox2D(\
+                            \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
+                            \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)")
 
 -- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
 escape :: Text -> Text -> Text
