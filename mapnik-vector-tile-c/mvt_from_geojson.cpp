@@ -42,8 +42,7 @@ mvtc_return * mvtc_from_geo_json(const int tile_size,
     lyr.set_datasource(mapnik::datasource_cache::instance().create(p));
     map.add_layer(lyr);
 
-    mapnik::box2d<double> bbox = mapnik::vector_tile_impl::merc_extent(tile_size, x, y, z);
-    mapnik::vector_tile_impl::tile out_tile(bbox, tile_size);
+    mapnik::vector_tile_impl::merc_tile out_tile(x, y, z, tile_size);
     mapnik::vector_tile_impl::processor ren(map);
     ren.set_area_threshold(area_threshold);
     ren.set_strictly_simple(strictly_simple);
