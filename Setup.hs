@@ -35,11 +35,16 @@ configureWithMapnikConfig lbi = do
     (mapnikConfig ["--input-plugins"])
   mapnikFontDir <- liftM (escapeWinPathSep . head . words) $
     (mapnikConfig ["--fonts"])
+  -- We require the user to specify where mapnik-vector-tile source is. Lib should
+  -- be built in the standard location.
+  mvtSrc <- getMvtSource
+  mvtIncludes <- sequence . fmap makeAbsolute $ getMvtIncludes mvtSrc
+  mvtLibDirs <- makeAbsolute $ mvtSrc ++ "/build/Release"
   --error (show [ mapnikInclude, mapnikLibDirs])
   dir <- getCurrentDirectory
-  let updBinfo bi = bi { extraLibDirs = extraLibDirs bi ++ mapnikLibDirs ++ [dir ++ "mapnik-vector-tile-c"]
-                       , extraLibs    = extraLibs    bi ++ mapnikLibs
-                       , includeDirs  = includeDirs  bi ++ mapnikInclude
+  let updBinfo bi = bi { extraLibDirs = extraLibDirs bi ++ mapnikLibDirs ++ [mvtLibDirs]
+                       , extraLibs    = extraLibs    bi ++ mapnikLibs ++ ["mapnik_vector_tile_impl"]
+                       , includeDirs  = includeDirs  bi ++ mapnikInclude ++ mvtIncludes
                        , ccOptions    = ccOptions    bi ++ mapnikCcOptions
                        , ldOptions    = ldOptions    bi ++ mapnikLdOptions
                        , cppOptions   = cppOptions   bi ++ mapnikCppOptions
@@ -59,6 +64,13 @@ configureWithMapnikConfig lbi = do
                        }
   let lbi' = lbi { localPkgDescr = updLpd (localPkgDescr lbi) }
   return lbi'
+
+getMvtIncludes :: String -> [String]
+getMvtIncludes mvtSrc =  fmap (mvtSrc ++) ["/src", "/deps/protozero/include", "/deps/clipper/cpp"]
+
+getMvtSource :: IO String
+getMvtSource = lookupEnv "MAPNIK_VECTOR_TILE_SRC" >>= maybe bad pure
+  where bad = error "Must set MAPNIK_VECTOR_TILE_SRC to source checkout with static library already built"
 
 getOutput s a = readProcess s a ""
 
