@@ -40,7 +40,7 @@ configureWithMapnikConfig lbi = do
   mvtSrc <- getMvtSource
   mvtIncludes <- sequence . fmap makeAbsolute $ getMvtIncludes mvtSrc
   mvtLibDirs <- makeAbsolute $ mvtSrc ++ "/build/Release"
-  let mapnikDefines = [ "-DMAPNIK_VECTOR_TILE_LIBRARY=1"
+  let mvtDefines = [ "-DMAPNIK_VECTOR_TILE_LIBRARY=1"
                       , "-DCLIPPER_INTPOINT_IMPL=mapnik::geometry::point<cInt>"
                       , "-DCLIPPER_PATH_IMPL=mapnik::geometry::line_string<cInt>"
                       , "-DCLIPPER_PATHS_IMPL=mapnik::geometry::multi_line_string<cInt>"
@@ -51,7 +51,7 @@ configureWithMapnikConfig lbi = do
   let updBinfo bi = bi { extraLibDirs = extraLibDirs bi ++ mapnikLibDirs ++ [mvtLibDirs]
                        , extraLibs    = extraLibs    bi ++ mapnikLibs ++ ["mapnik_vector_tile_impl"]
                        , includeDirs  = includeDirs  bi ++ mapnikInclude ++ mvtIncludes
-                       , ccOptions    = ccOptions    bi ++ mapnikCcOptions ++ mapnikDefines
+                       , ccOptions    = ccOptions    bi ++ mapnikCcOptions ++ mvtDefines
                        , ldOptions    = ldOptions    bi ++ mapnikLdOptions
                        , cppOptions   = cppOptions   bi ++ mapnikCppOptions
                        }
