@@ -5,6 +5,8 @@ A haskell tile server. Send request to `/layer/z/x/y/mvt`, get back a Mapbox vec
 
 Start server with `hastile --configFile FILEPATH`
 
+**NOTE**: hastile doesn't _quite_ work at the moment. Only the first feature in each tile is put into the returned vector tile. See [my question](http://gis.stackexchange.com/questions/212691/mapnik-vector-tile-produces-tiles-with-only-one-feature) on gis.stackexchange for details.
+
 Configuration
 -------------
 
@@ -59,7 +61,14 @@ Download the [source](https://github.com/mapbox/mapnik-vector-tile) and follow i
 
 ### FFI
 
-hastile includes a C wrapper for mapnik-vector-tile that exposes a function to turn GeoJSON into a vector tile. The code for this is in the `mapnik-vector-tile-c` directory. Build this using `build.sh`. Unfortunately this is currently a manual step, and will likely require you to edit build.sh to point to the correct include and library directories.
+hastile includes a C wrapper for mapnik-vector-tile that exposes a function to turn GeoJSON into a vector tile. The code for this is in the `mapnik-vector-tile-c` directory. The FFI wrapper _should_ be built when you `stack build` as long as you
+
+ - have mapnik installed
+ - have downloaded and built mapnik-vector-tile
+ - have set the MAPNIK\_VECTOR\_TILE\_SRC environment variable to the path where you checked out
+   and built mapnik-vector-tile
+
+If this does not work, build this using `build.sh`. You will likely have to edit `build.sh` to point to the correct include and library directories.
 
 Building
 --------
