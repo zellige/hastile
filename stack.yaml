@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-6.15
+resolver: lts-7.14
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -37,6 +37,10 @@ resolver: lts-6.15
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - '.'
+- location:
+    git: git@github.com:ajmccluskey/vectortiles
+    commit: 3a58b05fdb8f451d16d34002843388fcc531c706
+    extra-dep: true
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
