@@ -17,7 +17,7 @@ library
   build-tools:         c2hs >= 0.25
   hs-source-dirs:      src
   exposed-modules:     Lib
-                     , SphericalMercator
+                     , Tile
   other-modules:       MapboxVectorTile
   build-depends:       base >= 4.7 && < 5
                      , aeson

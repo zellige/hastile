@@ -28,7 +28,7 @@ import qualified Hasql.Query                as HQ
 import qualified Hasql.Session              as HS
 import           Servant
 
-import           SphericalMercator
+import           Tile
 import           MapboxVectorTile
 
 type Layer = Capture "layer" Text

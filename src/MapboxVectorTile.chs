@@ -12,7 +12,7 @@ import           Foreign
 -- import           Foreign.C.Types (CInt, CChar)
 import           Foreign.C.String (withCString, peekCString)
 
-import           SphericalMercator
+import           Tile
 
 {# pointer *mvtc_return as MvtcReturn foreign finalizer mvtc_free_mvtc_return newtype #}
 {# enum mvtc_return_code as MvtcReturnCode {underscoreToCase} deriving (Eq) #}
