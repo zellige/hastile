@@ -1,18 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Tile ( -- earthRadius
-            -- , earthCircumference
-            extent
+module Tile ( extent
             , googleToBBoxM
-            -- , googleToBBoxPx
-            -- , tileCentreToBBox
-            -- , xPxToLon
-            -- , yPxToLat
-            -- , zxyToBBox
             , BBox (..)
-            -- , Degrees
             , GoogleTileCoords (..)
-            -- , LatLon (..)
             , Metres (..)
             , Pixels (..)
             , ZoomLevel (..)
@@ -27,8 +18,6 @@ newtype Ratio n d = Ratio Double deriving (Show, Eq, Num, Floating, Fractional)
 data LatLon a = Lat Double
               | Lon Double
               deriving (Show, Eq)
-
--- data Degrees
 
 data GoogleTileCoords = GoogleTileCoords Integer Integer deriving (Eq, Show)
 
@@ -71,33 +60,3 @@ mPerPxAtZoom (Metres m) tile z = Ratio $ m / fromIntegral p
 
 mPerPxToM :: Ratio Metres Pixels -> Pixels -> Metres
 mPerPxToM (Ratio r) (Pixels p) = Metres $ r * fromIntegral p
-
--- zxyToBBox :: Pixels -> ZoomLevel -> GoogleTileCoords -> BBox (LatLon Degrees)
--- zxyToBBox tileSize z t = BBox (xToLon w) (yToLat s) (xToLon e) (yToLat n)
---   where (BBox w s e n) = googleToBBoxPx tileSize t
---         xToLon = xPxToLon tileSize z
---         yToLat = yPxToLat tileSize z
-
-
--- tileCentreToBBox :: Pixels -> ZoomLevel -> Metres -> Metres -> BBox Metres
--- tileCentreToBBox px@(Pixels p) z x y =
---   BBox (x - halfTileMetres)
---        (y - halfTileMetres)
---        (x + halfTileMetres)
---        (y + halfTileMetres)
---   where mPerPx = mPerPxAtZoom earthCircumference px z
---         halfTilePixels = Pixels $ p `div` 2
---         halfTileMetres = mPerPxToM mPerPx halfTilePixels
-
--- xPxToLon :: Pixels -> ZoomLevel -> Pixels -> LatLon Degrees
--- xPxToLon (Pixels tileSize) (ZoomLevel z) (Pixels x) =
---   Lon $ (fromIntegral x * 180) / ((fromIntegral tileSize / 2) * 2 ** fromIntegral z) - 180
-
--- yPxToLat :: Pixels -> ZoomLevel -> Pixels -> LatLon Degrees
--- yPxToLat (Pixels tileSize) (ZoomLevel z) (Pixels y) =
---   let denom = (fromIntegral tileSize) ** (fromIntegral z)
---       g = ((-180) * fromIntegral y / denom) + pi
---    in Lat $ ((2 *) . atanDeg . exp $ g) - (180 / 2)
-
--- atanDeg :: Floating a => a -> a
--- atanDeg = (/ pi) . (* 180) . atan
