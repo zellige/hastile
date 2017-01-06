@@ -47,9 +47,35 @@ Building it on Mac involves something like the following:
 
  - `brew install boost --with-icu4c`
  - `brew install` mapnik's dependencies (**not** mapnik itself)
+   - brew install cairo --without-x --without-glib
+   - brew install icu4c
+   - brew link icu4c
+   - brew install boost
+   - brew install boost-python
+   - brew install proj
+   - brew install jpeg
+   - brew link jpeg
+   - brew install libtiff
+   - brew install gdal --with-libtiff=/usr/local/lib
+   - brew install ossp-uuid
+   - brew install postgis
+   - brew install harfbuzz
  - `git clone <mapnik>`
- - `git checkout v3.0.9`
+ - `git submodule sync`
+ - `git submodule update --init deps/mapbox/variant`
  - `./configure && make && make install`
+
+ ### Ubuntu 16.04
+ - Add ubuntugis ppa
+  - add to /etc/apt/sources.list
+    - deb http://ppa.launchpad.net/ubuntugis/ubuntugis-experimental/ubuntu xenial main 
+    - deb-src http://ppa.launchpad.net/ubuntugis/ubuntugis-experimental/ubuntu xenial main 
+  - `sudo add-apt-repository ppa:ubuntugis/ubuntugis-experimental`
+  - `sudo apt-get update`
+ - Mapnik
+  - `apt-get install libmapnik3.0 libmapnik-dev`
+ - Mapnik Vector Tiles
+  - `sudo apt-get install mapnik-vector-tile`
  
 You may also need to sym link the library and includes directories to somewhere ghc can find them when it builds its wrapper.
 
