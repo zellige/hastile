@@ -65,6 +65,7 @@ Building it on Mac involves something like the following:
  - `git submodule sync`
  - `git submodule update --init deps/mapbox/variant`
  - `./configure && make && make install`
+ - stack build --extra-include-dirs="/Users/andrew/work/mapnik-vector-tile/src;/Users/andrew/work/mapnik-vector-tile/deps/protozero/include/protozero"
 
  ### Ubuntu 16.04
  - Add ubuntugis ppa
