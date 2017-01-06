@@ -41,7 +41,7 @@ Dependencies
 
 ### Mapnik
 
-Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik version that supports Mapbox vector tiles - 3.0.11 is currently used, as that's the most recent version I can get building on Mac.
+Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik version that supports Mapbox vector tiles - 3.0.11ish is currently used, as that's the most recent version I can get building on Mac.
 
 Building it on Mac involves something like the following:
 
@@ -61,6 +61,7 @@ Building it on Mac involves something like the following:
    - brew install postgis
    - brew install harfbuzz
  - `git clone <mapnik>`
+ - `git checkout 8a8427daedb685b8f37fac487526255d575a715d`
  - `git submodule sync`
  - `git submodule update --init deps/mapbox/variant`
  - `./configure && make && make install`
