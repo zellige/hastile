@@ -65,7 +65,6 @@ Building it on Mac involves something like the following:
  - `git submodule sync`
  - `git submodule update --init deps/mapbox/variant`
  - `./configure && make && make install`
- - stack build --extra-include-dirs="/Users/andrew/work/mapnik-vector-tile/src;/Users/andrew/work/mapnik-vector-tile/deps/protozero/include/protozero"
 
  ### Ubuntu 16.04
  - Add ubuntugis ppa
@@ -78,8 +77,11 @@ Building it on Mac involves something like the following:
   - `apt-get install libmapnik3.0 libmapnik-dev`
  - Mapnik Vector Tiles
   - `sudo apt-get install mapnik-vector-tile`
- 
-You may also need to sym link the library and includes directories to somewhere ghc can find them when it builds its wrapper.
+
+### Building 
+Assuming mapnik-vector-tile and hastile are peers:
+ - export MAPNIK_VECTOR_TILE_SRC=`pwd`/../mapnik-vector-tile/
+ - stack build --extra-include-dirs=`pwd`../mapnik-vector-tile/src:`pwd`../mapnik-vector-tile/deps/protozero/include
 
 ### Mapnik vector tile
 
