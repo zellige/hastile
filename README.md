@@ -97,12 +97,7 @@ hastile includes a C wrapper for mapnik-vector-tile that exposes a function to t
  - have set the MAPNIK\_VECTOR\_TILE\_SRC environment variable to the path where you checked out
    and built mapnik-vector-tile
 
-If this does not work, build this using `build.sh`. You will likely have to edit `build.sh` to point to the correct include and library directories.
-
-Building
---------
-
-Assuming mapnik-vector-tile and hastile are peers:
+For example, assuming mapnik-vector-tile and hastile are peers:
  - export MAPNIK_VECTOR_TILE_SRC=`pwd`/../mapnik-vector-tile/
  - stack build --extra-include-dirs=`pwd`../mapnik-vector-tile/src:`pwd`../mapnik-vector-tile/deps/protozero/include
 
