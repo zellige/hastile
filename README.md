@@ -73,7 +73,7 @@ For Ubuntu 16.04:
   - `sudo add-apt-repository ppa:ubuntugis/ubuntugis-experimental`
   - `sudo apt-get update`
  - Mapnik
-  - `apt-get install libmapnik3.0 libmapnik-dev`
+  - `sudo apt-get install libmapnik3.0 libmapnik-dev`
 
 ### Mapnik Vector Tile
 
@@ -99,7 +99,7 @@ hastile includes a C wrapper for mapnik-vector-tile that exposes a function to t
 
 For example, assuming mapnik-vector-tile and hastile are peers:
  - `export MAPNIK_VECTOR_TILE_SRC=`pwd`/../mapnik-vector-tile/`
- - `stack build --extra-include-dirs=`pwd`../mapnik-vector-tile/src:`pwd`../mapnik-vector-tile/deps/protozero/include`
+ - `stack build`
 
 Projections
 -----------
