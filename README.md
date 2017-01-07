@@ -41,25 +41,24 @@ Dependencies
 
 ### Mapnik
 
-Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik version that supports Mapbox vector tiles - 3.0.11ish is currently used, as that's the most recent version I can get building on Mac.
+Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik version that supports Mapbox vector tiles - 
+3.0.11ish is currently used (supports MVT version 2).
 
 For OSX:
+ - `brew install cairo --without-x --without-glib`
  - `brew install boost --with-icu4c`
- - `brew install` mapnik's dependencies (**not** mapnik itself)
-   - brew install cairo --without-x --without-glib
-   - brew install icu4c
-   - brew link icu4c
-   - brew install boost
-   - brew install boost-python
-   - brew install proj
-   - brew install jpeg
-   - brew link jpeg
-   - brew install libtiff
-   - brew install gdal --with-libtiff=/usr/local/lib
-   - brew install ossp-uuid
-   - brew install postgis
-   - brew install harfbuzz
- - `git clone <mapnik>`
+ - `brew install icu4c`
+ - `brew link icu4c`
+ - `brew install boost-python`
+ - `brew install proj`
+ - `brew install jpeg`
+ - `brew link jpeg`
+ - `brew install libtiff`
+ - `brew install gdal --with-libtiff=/usr/local/lib`
+ - `brew install ossp-uuid`
+ - `brew install postgis`
+ - `brew install harfbuzz`
+ - `git clone https://github.com/mapnik/mapnik.git`
  - `git checkout 8a8427daedb685b8f37fac487526255d575a715d`
  - `git submodule sync`
  - `git submodule update --init deps/mapbox/variant`
