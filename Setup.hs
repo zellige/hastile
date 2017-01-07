@@ -49,7 +49,7 @@ configureWithMapnikConfig lbi = do
   --error (show [ mapnikInclude, mapnikLibDirs])
   dir <- getCurrentDirectory
   let updBinfo bi = bi { extraLibDirs = extraLibDirs bi ++ mapnikLibDirs ++ [mvtLibDirs]
-                       , extraLibs    = extraLibs    bi ++ mapnikLibs -- ++ ["mapnik_vector_tile_impl"]
+                       , extraLibs    = extraLibs    bi ++ mapnikLibs ++ ["mapnik_vector_tile_impl"]
                        , includeDirs  = includeDirs  bi ++ mapnikInclude ++ mvtIncludes
                        , ccOptions    = ccOptions    bi ++ mapnikCcOptions ++ mvtDefines
                        , ldOptions    = ldOptions    bi ++ mapnikLdOptions

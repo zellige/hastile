@@ -98,8 +98,8 @@ hastile includes a C wrapper for mapnik-vector-tile that exposes a function to t
    and built mapnik-vector-tile
 
 For example, assuming mapnik-vector-tile and hastile are peers:
- - export MAPNIK_VECTOR_TILE_SRC=`pwd`/../mapnik-vector-tile/
- - stack build --extra-include-dirs=`pwd`../mapnik-vector-tile/src:`pwd`../mapnik-vector-tile/deps/protozero/include
+ - `export MAPNIK_VECTOR_TILE_SRC=`pwd`/../mapnik-vector-tile/`
+ - `stack build --extra-include-dirs=`pwd`../mapnik-vector-tile/src:`pwd`../mapnik-vector-tile/deps/protozero/include`
 
 Projections
 -----------
