@@ -43,8 +43,7 @@ Dependencies
 
 Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik version that supports Mapbox vector tiles - 3.0.11ish is currently used, as that's the most recent version I can get building on Mac.
 
-Building it on Mac involves something like the following:
-
+For OSX:
  - `brew install boost --with-icu4c`
  - `brew install` mapnik's dependencies (**not** mapnik itself)
    - brew install cairo --without-x --without-glib
@@ -66,7 +65,7 @@ Building it on Mac involves something like the following:
  - `git submodule update --init deps/mapbox/variant`
  - `./configure && make && make install`
 
- ### Ubuntu 16.04
+For Ubuntu 16.04:
  - Add ubuntugis ppa
   - add to /etc/apt/sources.list
     - deb http://ppa.launchpad.net/ubuntugis/ubuntugis-experimental/ubuntu xenial main 
@@ -75,19 +74,19 @@ Building it on Mac involves something like the following:
   - `sudo apt-get update`
  - Mapnik
   - `apt-get install libmapnik3.0 libmapnik-dev`
- - Mapnik Vector Tiles
-  - `sudo apt-get install mapnik-vector-tile`
 
-### Building 
-Assuming mapnik-vector-tile and hastile are peers:
- - export MAPNIK_VECTOR_TILE_SRC=`pwd`/../mapnik-vector-tile/
- - stack build --extra-include-dirs=`pwd`../mapnik-vector-tile/src:`pwd`../mapnik-vector-tile/deps/protozero/include
+### Mapnik Vector Tile
 
-### Mapnik vector tile
+For OSX:
+ - `brew install protobuf`
 
-This sits on top of mapnik and allows us to produce mapbox vector tiles from GeoJSON.
+For Ubuntu 16.04:
+ - `sudo apt-get install -y protobuf-compiler libprotoc-dev libprotoc9v5`
 
-Download the [source](https://github.com/mapbox/mapnik-vector-tile) and follow its documentation to build it.
+Then clone and compile:
+ - `git clone https://github.com/mapbox/mapnik-vector-tile.git`
+ - `cd mapnik-vector-tile`
+ - `make`
 
 ### FFI
 
@@ -103,7 +102,9 @@ If this does not work, build this using `build.sh`. You will likely have to edit
 Building
 --------
 
-Once all of the dependencies above are built, you should be able to build the project with `stack build`.
+Assuming mapnik-vector-tile and hastile are peers:
+ - export MAPNIK_VECTOR_TILE_SRC=`pwd`/../mapnik-vector-tile/
+ - stack build --extra-include-dirs=`pwd`../mapnik-vector-tile/src:`pwd`../mapnik-vector-tile/deps/protozero/include
 
 Projections
 -----------
