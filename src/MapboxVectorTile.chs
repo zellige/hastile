@@ -51,5 +51,11 @@ handleMvtcReturn :: Ptr MvtcReturn -> IO (Either Text ByteString)
 handleMvtcReturn rPtr = do
     rc <- toEnum . fromIntegral <$> {# call mvtc_get_return_code #} rPtr
     if rc == MvtcSuccess
-      then Right <$> ({# call mvtc_get_mvt #} rPtr >>= packCString)
+      then Right <$> getMvtTile rPtr
       else Left . T.pack <$> ({# call mvtc_get_message #} rPtr >>= peekCString)
+
+getMvtTile :: Ptr MvtcReturn -> IO ByteString
+getMvtTile rPtr = do
+  cStringSize <- fromIntegral <$> ({# call mvtc_get_mvt_size #} rPtr)
+  cString <- {# call mvtc_get_mvt #} rPtr
+  packCStringLen (cString, cStringSize)

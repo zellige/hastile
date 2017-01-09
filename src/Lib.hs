@@ -16,11 +16,11 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import           Data.Aeson
 import           Data.ByteString            as BS
-import           Data.ByteString.Lazy (toStrict)
+import           Data.ByteString.Lazy       (toStrict)
 import           Data.Map                   as M
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe                 (fromMaybe)
 import           Data.Text                  as T
-import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import           Data.Text.Encoding         (decodeUtf8, encodeUtf8)
 import qualified Hasql.Decoders             as HD
 import qualified Hasql.Encoders             as HE
 import qualified Hasql.Pool                 as P
@@ -28,8 +28,8 @@ import qualified Hasql.Query                as HQ
 import qualified Hasql.Session              as HS
 import           Servant
 
-import           Tile
 import           MapboxVectorTile
+import           Tile
 
 type Layer = Capture "layer" Text
 type Z     = Capture "z" Integer
@@ -40,11 +40,11 @@ type HastileApi =    Layer :> Z :> X :> Y :> "query" :> Get '[PlainText] Text
                 :<|> Layer :> Z :> X :> Y :> "mvt" :> Get '[OctetStream] ByteString
 
 -- TODO: make lenses!
-data ServerState = ServerState { pool :: P.Pool
+data ServerState = ServerState { pool        :: P.Pool
                                , stateLayers :: Map Text Text
                                }
 
-data TileFeature = TileFeature { geometry :: Value
+data TileFeature = TileFeature { geometry   :: Value
                                , properties :: Map Text Text
                                }
 

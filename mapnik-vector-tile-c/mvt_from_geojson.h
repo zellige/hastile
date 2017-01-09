@@ -23,6 +23,8 @@ mvtc_return * mvtc_from_geo_json(const int tile_size,
 
 const char * mvtc_get_mvt(mvtc_return * rv);
 
+const int mvtc_get_mvt_size(mvtc_return * rv);
+
 mvtc_return_code mvtc_get_return_code(mvtc_return * rv);
 
 const char * mvtc_get_message(mvtc_return * rv);

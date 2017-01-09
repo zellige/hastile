@@ -1,16 +1,17 @@
 -- Lovingly stolen from hs-mapnik
-import Control.Monad
-import Data.Maybe
-import System.Process
-import System.IO
-import System.Environment (lookupEnv)
-import System.Directory (getCurrentDirectory, makeAbsolute)
-import System.Exit
-import Data.List
-import Distribution.Simple
-import Distribution.Simple.Setup (configConfigurationsFlags)
-import Distribution.PackageDescription
-import Distribution.Simple.LocalBuildInfo
+import           Control.Monad
+import           Data.List
+import           Data.Maybe
+import           Distribution.PackageDescription
+import           Distribution.Simple
+import           Distribution.Simple.LocalBuildInfo
+import           Distribution.Simple.Setup          (configConfigurationsFlags)
+import           System.Directory                   (getCurrentDirectory,
+                                                     makeAbsolute)
+import           System.Environment                 (lookupEnv)
+import           System.Exit
+import           System.IO
+import           System.Process
 
 main = defaultMainWithHooks simpleUserHooks {confHook = mapnikConf}
 

@@ -5,9 +5,13 @@
 
 #include "mvt_from_geojson.h"
 
+#include <iostream>
+#include <fstream>
+
 struct _mvtc_return {
   mvtc_return_code return_code;
   std::string message;
+  int mvt_size;
   std::string mvt;
 };
 
@@ -52,7 +56,10 @@ mvtc_return * mvtc_from_geo_json(const int tile_size,
     ren.set_process_all_rings(process_all_rings);
     ren.update_tile(out_tile);
 
-    out_tile.serialize_to_string(rv->mvt);
+    std::string output_buffer;
+    out_tile.serialize_to_string(output_buffer);
+    rv->mvt = output_buffer;
+    rv->mvt_size = output_buffer.length();
     rv->return_code = MVTC_SUCCESS;
   }
   catch (std::exception & ex)
@@ -69,10 +76,16 @@ const char * mvtc_get_mvt(mvtc_return * rv)
   return rv->mvt.c_str();
 }
 
+const int mvtc_get_mvt_size(mvtc_return * rv)
+{
+  return rv->mvt_size;
+}
+
 mvtc_return_code mvtc_get_return_code(mvtc_return * rv)
 {
   return rv->return_code;
 }
+
 
 const char * mvtc_get_message(mvtc_return * rv)
 {
