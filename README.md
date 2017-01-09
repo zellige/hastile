@@ -107,7 +107,7 @@ Building
 --------
 
 For example, assuming mapnik-vector-tile and hastile are peers:
- - `export MAPNIK_VECTOR_TILE_SRC=`pwd`/../mapnik-vector-tile/`
+ - <code>export MAPNIK_VECTOR_TILE_SRC=\`pwd\`/../mapnik-vector-tile/</code>
  - `stack build`
 
 Projections
