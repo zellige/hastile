@@ -41,31 +41,30 @@ Dependencies
 
 ### Mapnik
 
-Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik version that supports Mapbox vector tiles - 3.0.9 is currently used, as that's the most recent version I can get building on Mac.
+Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik version that supports Mapbox vector tiles - 
+3.0.11ish is currently used (supports MVT version 2).
 
-Building it on Mac involves something like the following:
-
+For OSX:
+ - `brew install cairo --without-x --without-glib`
  - `brew install boost --with-icu4c`
- - `brew install` mapnik's dependencies (**not** mapnik itself)
-   - brew install cairo --without-x --without-glib
-   - brew install icu4c
-   - brew link icu4c
-   - brew install boost
-   - brew install boost-python
-   - brew install proj
-   - brew install jpeg
-   - brew link jpeg
-   - brew install libtiff
-   - brew install gdal --with-libtiff=/usr/local/lib
-   - brew install ossp-uuid
-   - brew install postgis
-   - brew install harfbuzz
- - `git clone <mapnik>`
+ - `brew install icu4c`
+ - `brew link icu4c`
+ - `brew install boost-python`
+ - `brew install proj`
+ - `brew install jpeg`
+ - `brew link jpeg`
+ - `brew install libtiff`
+ - `brew install gdal --with-libtiff=/usr/local/lib`
+ - `brew install ossp-uuid`
+ - `brew install postgis`
+ - `brew install harfbuzz`
+ - `git clone https://github.com/mapnik/mapnik.git`
+ - `git checkout 8a8427daedb685b8f37fac487526255d575a715d`
  - `git submodule sync`
  - `git submodule update --init deps/mapbox/variant`
  - `./configure && make && make install`
 
- ### Ubuntu 16.04
+For Ubuntu 16.04:
  - Add ubuntugis ppa
   - add to /etc/apt/sources.list
     - deb http://ppa.launchpad.net/ubuntugis/ubuntugis-experimental/ubuntu xenial main 
@@ -73,17 +72,25 @@ Building it on Mac involves something like the following:
   - `sudo add-apt-repository ppa:ubuntugis/ubuntugis-experimental`
   - `sudo apt-get update`
  - Mapnik
-  - `apt-get install libmapnik3.0 libmapnik-dev`
- - Mapnik Vector Tiles
-  - `sudo apt-get install mapnik-vector-tile`
- 
-You may also need to sym link the library and includes directories to somewhere ghc can find them when it builds its wrapper.
+  - `sudo apt-get install libmapnik3.0 libmapnik-dev`
 
-### Mapnik vector tile
+### Mapnik Vector Tile
 
-This sits on top of mapnik and allows us to produce mapbox vector tiles from GeoJSON.
+Then clone and compile:
+ - `git clone https://github.com/mapbox/mapnik-vector-tile.git`
+ - `cd mapnik-vector-tile`
 
-Download the [source](https://github.com/mapbox/mapnik-vector-tile) and follow its documentation to build it.
+For OSX:
+ - `brew install protobuf`
+ - `make`
+ - Will produce files in ./build/Release/
+
+For Ubuntu 16.04:
+ - `sudo apt-get install -y protobuf-compiler libprotoc-dev libprotoc9v5`
+ - `make`
+ - Create static libraries:
+   - ar -t obj.target/gyp/libmapnik_vector_tile_impl.a | xargs ar rvs ./libmapnik_vector_tile_impl.a
+   - ar -t obj.target/gyp/libvector_tile.a | xargs ar rvs ./libvector_tile.a
 
 ### FFI
 
@@ -94,12 +101,14 @@ hastile includes a C wrapper for mapnik-vector-tile that exposes a function to t
  - have set the MAPNIK\_VECTOR\_TILE\_SRC environment variable to the path where you checked out
    and built mapnik-vector-tile
 
-If this does not work, build this using `build.sh`. You will likely have to edit `build.sh` to point to the correct include and library directories.
+If this does not work, build this using `build.sh`. You will likely have to edit `build.sh` to point to the correct include and library directories.   
 
 Building
 --------
 
-Once all of the dependencies above are built, you should be able to build the project with `stack build`.
+For example, assuming mapnik-vector-tile and hastile are peers:
+ - `export MAPNIK_VECTOR_TILE_SRC=`pwd`/../mapnik-vector-tile/`
+ - `stack build`
 
 Projections
 -----------
