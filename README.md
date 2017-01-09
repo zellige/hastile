@@ -76,16 +76,21 @@ For Ubuntu 16.04:
 
 ### Mapnik Vector Tile
 
-For OSX:
- - `brew install protobuf`
-
-For Ubuntu 16.04:
- - `sudo apt-get install -y protobuf-compiler libprotoc-dev libprotoc9v5`
-
 Then clone and compile:
  - `git clone https://github.com/mapbox/mapnik-vector-tile.git`
  - `cd mapnik-vector-tile`
+
+For OSX:
+ - `brew install protobuf`
  - `make`
+ - Will produce files in ./build/Release/
+
+For Ubuntu 16.04:
+ - `sudo apt-get install -y protobuf-compiler libprotoc-dev libprotoc9v5`
+ - `make`
+ - Create static libraries:
+   - ar -t obj.target/gyp/libmapnik_vector_tile_impl.a | xargs ar rvs ./libmapnik_vector_tile_impl.a
+   - ar -t obj.target/gyp/libvector_tile.a | xargs ar rvs ./libvector_tile.a
 
 ### FFI
 
