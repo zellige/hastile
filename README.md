@@ -10,8 +10,7 @@ Start server with `hastile --configFile FILEPATH`
 Configuration
 -------------
 
-Config file should contain a JSON map like
-
+Config file should contain a JSON map like:
 ```javascript
 {
   "pgConnection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
@@ -21,6 +20,19 @@ Config file should contain a JSON map like
   }
 }
 ```
+
+Where, pgConnection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
+
+You can configure the database connection pool settings too:
+```javascript
+{
+  "pgPoolSize": 10,
+  "pgTimeout": 5,
+  "port": 1234
+}
+```
+
+Hastile will replace `!bbox_4326!` with the SQL for a bounding box for the requested tile in EPSG4326. This allows your query to dynamically select the features to be included in the requested tile.
 
 If you want to combine multiple tables into a single layer you can use UNION and MATERIALIZED VIEWS and then query it directly:
 ```SQL
@@ -35,20 +47,6 @@ Changing the configuration to:
   "layers": {
     "layer": "SELECT geojson, hstore(layers)-ARRAY['wkb_geometry','geojson'] FROM layers WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
   }
-```
-
-where pgConnection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
-
-Like tilesplash, hastile will replace `!bbox_4326!` with the SQL for a bounding box for the requested tile in EPSG4326. This allows your query to dynamically select the features to be included in the requested tile.
-
-The configuration may optionally contain these too:
-
-```javascript
-{
-  "pgPoolSize": 10,
-  "pgTimeout": 5,
-  "port": 1234
-}
 ```
 
 Dependencies
