@@ -21,6 +21,7 @@ import           Data.Map                   as M
 import           Data.Maybe                 (fromMaybe)
 import           Data.Text                  as T
 import           Data.Text.Encoding         (decodeUtf8, encodeUtf8)
+import           Data.Text.Read             as DTR
 import qualified Hasql.Decoders             as HD
 import qualified Hasql.Encoders             as HE
 import qualified Hasql.Pool                 as P
@@ -34,10 +35,11 @@ import           Tile
 type Layer = Capture "layer" Text
 type Z     = Capture "z" Integer
 type X     = Capture "x" Integer
-type Y     = Capture "y" Integer
-type HastileApi =    Layer :> Z :> X :> Y :> "query" :> Get '[PlainText] Text
-                :<|> Layer :> Z :> X :> Y :> "geojson" :> Get '[PlainText] Text
-                :<|> Layer :> Z :> X :> Y :> "mvt" :> Get '[OctetStream] ByteString
+type YI    = Capture "y" Integer
+type Y     = Capture "y" Text
+type HastileApi =    Layer :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
+                :<|> Layer :> Z :> X :> YI :> "geojson" :> Get '[PlainText] Text
+                :<|> Layer :> Z :> X :> Y :> Get '[OctetStream] ByteString
 
 -- TODO: make lenses!
 data ServerState = ServerState { pool        :: P.Pool
@@ -53,7 +55,16 @@ api = Proxy
 
 hastileService :: ServerState -> Server HastileApi
 hastileService state =
-  enter (runReaderTNat state) (getQuery :<|> getJson :<|> getTile)
+  enter (runReaderTNat state) (getQuery :<|> getJson :<|> getSTile)
+
+getSTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+        => Text -> Integer -> Integer -> Text -> m ByteString
+getSTile l z x stringY =
+    case parseY of
+      Left e -> fail $ show e
+      Right (y, _) -> getTile l z x y
+    where
+      parseY = decimal $ T.take (T.length stringY - 4) stringY
 
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Integer -> m ByteString
@@ -63,12 +74,12 @@ getTile l z x y = do
   case eet of
     Left e -> pure $ encodeUtf8 e
     Right tile -> pure tile
-  where tileReturn geoJson' = fromGeoJSON 256
-                                          geoJson'
-                                          l
-                                          "/usr/local/lib/mapnik/input"
-                                          (ZoomLevel z)
-                                          (GoogleTileCoords x y)
+    where tileReturn geoJson' = fromGeoJSON 256
+                                  geoJson'
+                                  l
+                                  "/usr/local/lib/mapnik/input"
+                                  (ZoomLevel z)
+                                  (GoogleTileCoords x y)
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Integer -> m Text
@@ -105,7 +116,7 @@ mkStatement sql =
                (HD.rowsList (TileFeature <$> HD.value HD.json <*> propsValue))
                False
   where -- jsonValue = toStrict . encode <$> HD.value HD.json
-        propsValue = fmap (fromMaybe "") . M.fromList <$> (HD.value $ HD.hstore replicateM)
+        propsValue = fmap (fromMaybe "") . M.fromList <$> HD.value (HD.hstore replicateM)
 
 
 getQuery :: (MonadError ServantErr m, MonadReader ServerState m)
@@ -118,9 +129,9 @@ getQuery l z x y = do
     Nothing -> throwError $ err404 { errBody = "Layer not found :(" }
   where (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
           googleToBBoxM 256 (ZoomLevel z) (GoogleTileCoords x y)
-        bbox4326 = T.pack $ ("ST_Transform(ST_SetSRID(ST_MakeBox2D(\
+        bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
                             \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
-                            \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)")
+                            \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
 
 -- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
 escape :: Text -> Text -> Text

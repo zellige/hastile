@@ -9,7 +9,6 @@ module MapboxVectorTile (fromGeoJSON) where
 import           Data.ByteString.Char8 as BS8
 import           Data.Text as T
 import           Foreign
--- import           Foreign.C.Types (CInt, CChar)
 import           Foreign.C.String (withCString, peekCString)
 
 import           Tile

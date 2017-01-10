@@ -1,17 +1,17 @@
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
 
 module Main where
 
 import           Control.Exception.Base
 import           Data.Aeson
-import qualified Data.ByteString.Char8       as BS
-import qualified Data.ByteString.Lazy.Char8  as BSL
+import qualified Data.ByteString.Char8      as BS
+import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Map
-import           Data.Maybe (fromMaybe)
-import           Data.Time (NominalDiffTime)
-import           Hasql.Pool                  as P
-import qualified Network.Wai.Handler.Warp    as Warp
+import           Data.Maybe                 (fromMaybe)
+import           Data.Time                  (NominalDiffTime)
+import           Hasql.Pool                 as P
+import qualified Network.Wai.Handler.Warp   as Warp
 import           Options.Generic
 import           Servant
 
@@ -23,10 +23,10 @@ data CmdLine = CmdLine { configFile :: FilePath
 instance ParseRecord CmdLine
 
 data Config = Config { pgConnection :: String
-                     , port :: Maybe Int
-                     , pgPoolSize :: Maybe Int
-                     , pgTimeout :: Maybe NominalDiffTime
-                     , layers :: Map Text Text
+                     , port         :: Maybe Int
+                     , pgPoolSize   :: Maybe Int
+                     , pgTimeout    :: Maybe NominalDiffTime
+                     , layers       :: Map Text Text
                      } deriving (Show, Generic)
 instance FromJSON Config where
 
@@ -36,7 +36,7 @@ main = getRecord "hastile" >>= doIt
 doIt :: CmdLine -> IO ()
 doIt cmdLine = do
   configBs <- BSL.readFile $ configFile cmdLine
-  case (decode configBs) of
+  case decode configBs of
     Just config -> doItWithConfig config
     Nothing -> putStrLn $ "Failed to parse config file " ++ configFile cmdLine
 

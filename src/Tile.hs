@@ -25,7 +25,7 @@ data GoogleTileCoords = GoogleTileCoords Integer Integer deriving (Eq, Show)
 data BBox a = BBox a a a a deriving (Show, Eq)
 
 earthRadius :: Metres
-earthRadius = (Metres 6378137)
+earthRadius = Metres 6378137
 
 maxExtent :: Metres
 maxExtent = pi * earthRadius
@@ -38,7 +38,7 @@ extent = BBox (-maxExtent) (-maxExtent) maxExtent maxExtent
 
 googleToBBoxM :: Pixels -> ZoomLevel -> GoogleTileCoords -> BBox Metres
 googleToBBoxM tileSize z g =
-  flipYs . transformBBox (flip (-) maxExtent . (mPerPxToM mPerPx)) $ googleToBBoxPx tileSize g
+  flipYs . transformBBox (flip (-) maxExtent . mPerPxToM mPerPx) $ googleToBBoxPx tileSize g
   where mPerPx = mPerPxAtZoom earthCircumference tileSize z
         flipYs (BBox llX llY urX urY) = BBox llX (-llY) urX (-urY)
 
