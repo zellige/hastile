@@ -16,8 +16,8 @@ Config file should contain a JSON map like
 {
   "pgConnection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
   "layers": {
-    "layer1"": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer1_table) FROM layer1_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
-    "layer2"": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer2_table) FROM layer2_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+    "layer1"": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer1_table)-'wkb_geometry'::text FROM layer1_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+    "layer2"": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer2_table)-'wkb_geometry'::text FROM layer2_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
   }
 }
 ```
