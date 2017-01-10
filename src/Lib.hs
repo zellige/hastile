@@ -53,7 +53,8 @@ data TileFeature = TileFeature { geometry   :: Value
 api :: Proxy HastileApi
 api = Proxy
 
-defaultTileSize = 2048
+defaultTileSize :: Pixels
+defaultTileSize = Pixels 2048
 
 hastileService :: ServerState -> Server HastileApi
 hastileService state =
