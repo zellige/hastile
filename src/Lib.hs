@@ -74,7 +74,7 @@ getTile l z x y = do
   case eet of
     Left e -> pure $ encodeUtf8 e
     Right tile -> pure tile
-    where tileReturn geoJson' = fromGeoJSON 256
+    where tileReturn geoJson' = fromGeoJSON 2048
                                   geoJson'
                                   l
                                   "/usr/local/lib/mapnik/input"
