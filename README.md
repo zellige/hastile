@@ -30,7 +30,7 @@ create materialized view layers as
   SELECT ST_AsGeoJSON(wkb_geometry) as geojson, * FROM layer2_table
 ```
 
-Changing to configuration to:
+Changing the configuration to:
 ```javascript
   "layers": {
     "layer": "SELECT geojson, hstore(layers)-ARRAY['wkb_geometry','geojson'] FROM layers WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
