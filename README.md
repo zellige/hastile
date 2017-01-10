@@ -25,9 +25,9 @@ Config file should contain a JSON map like
 If you want to combine multiple tables into a single layer you can use UNION and MATERIALIZED VIEWS and then query it directly:
 ```SQL
 create materialized view layers as
-  SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer1_table)-'wkb_geometry'::text FROM layer1_table
+  SELECT ST_AsGeoJSON(wkb_geometry), wkb_geometry, hstore(layer1_table)-'wkb_geometry'::text FROM layer1_table
   UNION
-  SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer2_table)-'wkb_geometry'::text FROM layer2_table
+  SELECT ST_AsGeoJSON(wkb_geometry), wkb_geometry, hstore(layer2_table)-'wkb_geometry'::text FROM layer2_table
 ```
 
 Changing to configuration to:
