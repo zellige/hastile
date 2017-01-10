@@ -52,6 +52,7 @@ executable hastile
                      , servant-server
                      , time
                      , transformers
+                     , wai-cors
                      , warp
   default-language:    Haskell2010
 
