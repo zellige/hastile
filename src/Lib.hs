@@ -53,6 +53,8 @@ data TileFeature = TileFeature { geometry   :: Value
 api :: Proxy HastileApi
 api = Proxy
 
+defaultTileSize = 2048
+
 hastileService :: ServerState -> Server HastileApi
 hastileService state =
   enter (runReaderTNat state) (getQuery :<|> getJson :<|> getSTile)
@@ -74,7 +76,7 @@ getTile l z x y = do
   case eet of
     Left e -> pure $ encodeUtf8 e
     Right tile -> pure tile
-    where tileReturn geoJson' = fromGeoJSON 2048
+    where tileReturn geoJson' = fromGeoJSON defaultTileSize
                                   geoJson'
                                   l
                                   "/usr/local/lib/mapnik/input"
@@ -128,7 +130,7 @@ getQuery l z x y = do
     Just rawQuery -> pure . escape bbox4326 $ rawQuery
     Nothing -> throwError $ err404 { errBody = "Layer not found :(" }
   where (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
-          googleToBBoxM 256 (ZoomLevel z) (GoogleTileCoords x y)
+          googleToBBoxM defaultTileSize (ZoomLevel z) (GoogleTileCoords x y)
         bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
                             \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
                             \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
