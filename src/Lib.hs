@@ -80,7 +80,7 @@ getTile l z x y = do
     where tileReturn geoJson' = fromGeoJSON defaultTileSize
                                   geoJson'
                                   l
-                                  "/usr/local/lib/mapnik/input"
+                                  "/usr/lib/mapnik/3.0/input"
                                   (ZoomLevel z)
                                   (GoogleTileCoords x y)
 
