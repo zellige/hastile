@@ -100,6 +100,8 @@ For OSX:
 
 For Ubuntu 16.04:
  - `sudo apt-get install -y protobuf-compiler libprotoc-dev libprotoc9v5`
+ - Turn on PIC
+   - Under mapnik_vector_tile_impl, cflags_cc (line 91 and 112) add '-fPIC'.
  - `make`
  - Create static libraries in:
    - cd build/Release
