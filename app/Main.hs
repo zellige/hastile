@@ -23,11 +23,12 @@ data CmdLine = CmdLine { configFile :: FilePath
                deriving Generic
 instance ParseRecord CmdLine
 
-data Config = Config { pgConnection :: String
-                     , port         :: Maybe Int
-                     , pgPoolSize   :: Maybe Int
-                     , pgTimeout    :: Maybe NominalDiffTime
-                     , layers       :: Map Text Text
+data Config = Config { pgConnection       :: String
+                     , mapnikInputPlugins :: Maybe FilePath
+                     , port               :: Maybe Int
+                     , pgPoolSize         :: Maybe Int
+                     , pgTimeout          :: Maybe NominalDiffTime
+                     , layers             :: Map Text Text
                      } deriving (Show, Generic)
 instance FromJSON Config where
 
@@ -45,11 +46,12 @@ doItWithConfig :: Config -> IO ()
 doItWithConfig config =
   let pgPoolSize' = fromMaybe 10 $ pgPoolSize config
       pgTimeout'  = fromMaybe 1 $ pgTimeout config
+      pluginDir'   = fromMaybe "/usr/local/lib/mapnik/input" $ mapnikInputPlugins config
       port'       = fromMaybe 8080 $ port config
       layers'    = layers config
   in bracket (P.acquire (pgPoolSize', pgTimeout', BS.pack . pgConnection $ config))
           P.release $
      \p ->
-       Warp.run port' . cors (const $ Just policy) . serve api $ hastileService (ServerState p layers')
+       Warp.run port' . cors (const $ Just policy) . serve api $ hastileService (ServerState p pluginDir' layers')
          where
            policy = simpleCorsResourcePolicy { corsRequestHeaders = ["Content-Type"] }

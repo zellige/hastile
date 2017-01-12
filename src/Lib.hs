@@ -43,6 +43,7 @@ type HastileApi =    Layer :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
 
 -- TODO: make lenses!
 data ServerState = ServerState { pool        :: P.Pool
+                               , pluginDir   :: FilePath
                                , stateLayers :: Map Text Text
                                }
 
@@ -73,14 +74,16 @@ getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Integer -> m ByteString
 getTile l z x y = do
   geoJson <- getJson' l z x y
-  eet <- liftIO $ tileReturn geoJson
+  s <- ask
+  let pp = pluginDir s
+  eet <- liftIO $ tileReturn geoJson pp
   case eet of
     Left e -> pure $ encodeUtf8 e
     Right tile -> pure tile
-    where tileReturn geoJson' = fromGeoJSON defaultTileSize
+    where tileReturn geoJson' pp' = fromGeoJSON defaultTileSize
                                   geoJson'
                                   l
-                                  "/usr/lib/mapnik/3.0/input"
+                                  pp'
                                   (ZoomLevel z)
                                   (GoogleTileCoords x y)
 

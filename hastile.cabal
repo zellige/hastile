@@ -46,6 +46,7 @@ executable hastile
                      , base
                      , bytestring
                      , containers
+                     , filepath
                      , hastile
                      , hasql-pool
                      , optparse-generic
