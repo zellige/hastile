@@ -7,4 +7,4 @@ rm -rf pkg
 mkdir -p pkg
 cp $BIN_LOCATION/bin/* pkg
 cd pkg
-zip run-sheet_linux.zip *
+zip hastile_linux.zip *
