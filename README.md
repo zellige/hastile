@@ -100,8 +100,12 @@ For OSX:
 
 For Ubuntu 16.04:
  - `sudo apt-get install -y protobuf-compiler libprotoc-dev libprotoc9v5`
+ - Turn on PIC
+   - Edit ./gyp/build.gyp
+   - Under "mapnik_vector_tile_impl", "cflags_cc" (line 91 and 112) add '-fPIC'.
  - `make`
- - Create static libraries:
+ - Create static libraries in:
+   - cd build/Release
    - ar -t obj.target/gyp/libmapnik_vector_tile_impl.a | xargs ar rvs ./libmapnik_vector_tile_impl.a
    - ar -t obj.target/gyp/libvector_tile.a | xargs ar rvs ./libvector_tile.a
 
