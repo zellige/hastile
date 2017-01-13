@@ -9,6 +9,7 @@ import qualified Data.ByteString.Char8       as BS
 import qualified Data.ByteString.Lazy.Char8  as BSL
 import           Data.Map
 import           Data.Maybe                  (fromMaybe)
+import           Data.Text
 import           Data.Time
 import           Hasql.Pool                  as P
 import qualified Network.Wai.Handler.Warp    as Warp
@@ -46,6 +47,7 @@ doIt cmdLine = do
 doItWithConfig :: Config -> UTCTime -> IO ()
 doItWithConfig config startTime =
   let startTime' = formatTime defaultTimeLocale rfc822DateFormat startTime
+      startTime'' = Data.Text.concat [dropEnd 3 (pack startTime'), "GMT"]
       pgPoolSize' = fromMaybe 10 $ pgPoolSize config
       pgTimeout'  = fromMaybe 1 $ pgTimeout config
       pluginDir'   = fromMaybe "/usr/local/lib/mapnik/input" $ mapnikInputPlugins config
@@ -54,6 +56,6 @@ doItWithConfig config startTime =
   in bracket (P.acquire (pgPoolSize', pgTimeout', BS.pack . pgConnection $ config))
           P.release $
      \p ->
-       Warp.run port' . cors (const $ Just policy) . serve api $ hastileService (ServerState p pluginDir' startTime' layers')
+       Warp.run port' . cors (const $ Just policy) . serve api $ hastileService (ServerState p pluginDir' (unpack startTime'') layers')
          where
            policy = simpleCorsResourcePolicy { corsRequestHeaders = ["Content-Type"] }

@@ -48,6 +48,7 @@ executable hastile
                      , containers
                      , filepath
                      , hastile
+                     , text
                      , hasql-pool
                      , optparse-generic
                      , servant-server
