@@ -39,16 +39,17 @@ type YI    = Capture "y" Integer
 type Y     = Capture "y" Text
 type HastileApi =    Layer :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
                 :<|> Layer :> Z :> X :> YI :> "geojson" :> Get '[PlainText] Text
-                :<|> Layer :> Z :> X :> Y :> Get '[OctetStream] ByteString
+                :<|> Layer :> Z :> X :> Y :> Get '[OctetStream] (Headers '[Header "Last-Modified" String] ByteString)
 
 -- TODO: make lenses!
-data ServerState = ServerState { pool        :: P.Pool
-                               , pluginDir   :: FilePath
-                               , stateLayers :: Map Text Text
+data ServerState = ServerState { _pool        :: P.Pool
+                               , _pluginDir   :: FilePath
+                               , _startTime   :: String
+                               , _stateLayers :: Map Text Text
                                }
 
-data TileFeature = TileFeature { geometry   :: Value
-                               , properties :: Map Text Text
+data TileFeature = TileFeature { _geometry   :: Value
+                               , _properties :: Map Text Text
                                }
 
 api :: Proxy HastileApi
@@ -62,7 +63,7 @@ hastileService state =
   enter (runReaderTNat state) (getQuery :<|> getJson :<|> getSTile)
 
 getSTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Text -> m ByteString
+        => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] ByteString)
 getSTile l z x stringY =
     case parseY of
       Left e -> fail $ show e
@@ -71,15 +72,16 @@ getSTile l z x stringY =
       parseY = decimal $ T.take (T.length stringY - 4) stringY
 
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Integer -> m ByteString
+        => Text -> Integer -> Integer -> Integer -> m (Headers '[Header "Last-Modified" String] ByteString)
 getTile l z x y = do
   geoJson <- getJson' l z x y
   s <- ask
-  let pp = pluginDir s
+  let pp = _pluginDir s
+  let startTime = _startTime s
   eet <- liftIO $ tileReturn geoJson pp
   case eet of
-    Left e -> pure $ encodeUtf8 e
-    Right tile -> pure tile
+    Left e -> pure $ addHeader startTime $ encodeUtf8 e
+    Right tile -> pure $ addHeader startTime tile
     where tileReturn geoJson' pp' = fromGeoJSON defaultTileSize
                                   geoJson'
                                   l
@@ -96,7 +98,7 @@ getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
 getJson' l z x y = do
   sql <- encodeUtf8 <$> getQuery l z x y
   s <- ask
-  let p = pool s
+  let p = _pool s
       sessTfs = HS.query () (mkStatement sql)
   tfsM <- liftIO $ P.use p sessTfs
   case tfsM of
@@ -112,8 +114,8 @@ mkGeoJSON tfs = toStrict . encode $ geoJSON
 mkFeature :: TileFeature -> Value
 mkFeature tf = toJSON featureMap
   where featureMap = M.fromList [ ("type", String "Feature")
-                                , ("geometry", geometry tf)
-                                , ("properties", toJSON . properties $ tf)
+                                , ("geometry", _geometry tf)
+                                , ("properties", toJSON . _properties $ tf)
                                 ] :: M.Map Text Value
 
 mkStatement :: ByteString -> HQ.Query () [TileFeature]
@@ -129,7 +131,7 @@ getQuery :: (MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Integer -> Integer -> Integer -> m Text
 getQuery l z x y = do
   s <- ask
-  let ls = stateLayers s
+  let ls = _stateLayers s
   case M.lookup l ls of
     Just rawQuery -> pure . escape bbox4326 $ rawQuery
     Nothing -> throwError $ err404 { errBody = "Layer not found :(" }

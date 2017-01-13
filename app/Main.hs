@@ -9,7 +9,7 @@ import qualified Data.ByteString.Char8       as BS
 import qualified Data.ByteString.Lazy.Char8  as BSL
 import           Data.Map
 import           Data.Maybe                  (fromMaybe)
-import           Data.Time                   (NominalDiffTime)
+import           Data.Time
 import           Hasql.Pool                  as P
 import qualified Network.Wai.Handler.Warp    as Warp
 import           Network.Wai.Middleware.Cors
@@ -37,14 +37,16 @@ main = getRecord "hastile" >>= doIt
 
 doIt :: CmdLine -> IO ()
 doIt cmdLine = do
+  startTime <- getCurrentTime
   configBs <- BSL.readFile $ configFile cmdLine
   case decode configBs of
-    Just config -> doItWithConfig config
+    Just config -> doItWithConfig config startTime
     Nothing -> putStrLn $ "Failed to parse config file " ++ configFile cmdLine
 
-doItWithConfig :: Config -> IO ()
-doItWithConfig config =
-  let pgPoolSize' = fromMaybe 10 $ pgPoolSize config
+doItWithConfig :: Config -> UTCTime -> IO ()
+doItWithConfig config startTime =
+  let startTime' = formatTime defaultTimeLocale rfc822DateFormat startTime
+      pgPoolSize' = fromMaybe 10 $ pgPoolSize config
       pgTimeout'  = fromMaybe 1 $ pgTimeout config
       pluginDir'   = fromMaybe "/usr/local/lib/mapnik/input" $ mapnikInputPlugins config
       port'       = fromMaybe 8080 $ port config
@@ -52,6 +54,6 @@ doItWithConfig config =
   in bracket (P.acquire (pgPoolSize', pgTimeout', BS.pack . pgConnection $ config))
           P.release $
      \p ->
-       Warp.run port' . cors (const $ Just policy) . serve api $ hastileService (ServerState p pluginDir' layers')
+       Warp.run port' . cors (const $ Just policy) . serve api $ hastileService (ServerState p pluginDir' startTime' layers')
          where
            policy = simpleCorsResourcePolicy { corsRequestHeaders = ["Content-Type"] }
