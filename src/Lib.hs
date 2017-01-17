@@ -29,7 +29,7 @@ import qualified Hasql.Query                as HQ
 import qualified Hasql.Session              as HS
 import           Servant
 
-import           MapboxVectorTile
+-- import           MapboxVectorTile
 import           Tile
 
 type Layer = Capture "layer" Text
@@ -82,12 +82,13 @@ getTile l z x y = do
   case eet of
     Left e -> pure $ addHeader startTime $ encodeUtf8 e
     Right tile -> pure $ addHeader startTime tile
-    where tileReturn geoJson' pp' = fromGeoJSON defaultTileSize
-                                  geoJson'
-                                  l
-                                  pp'
-                                  (ZoomLevel z)
-                                  (GoogleTileCoords x y)
+    where tileReturn _geoJson' _pp' = undefined
+    -- where tileReturn geoJson' pp' = fromGeoJSON defaultTileSize
+    --                               geoJson'
+    --                               l
+    --                               pp'
+    --                               (ZoomLevel z)
+    --                               (GoogleTileCoords x y)
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Integer -> m Text
