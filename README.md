@@ -96,7 +96,7 @@ For Ubuntu 16.04:
 
 ### Mapnik Vector Tile
 
-Then clone and compile:
+You need to build this one from source:
  - `git clone https://github.com/mapbox/mapnik-vector-tile.git`
  - `cd mapnik-vector-tile`
 
