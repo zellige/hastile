@@ -5,8 +5,6 @@ A haskell tile server. Send request to `/layer/z/x/y/mvt`, get back a Mapbox vec
 
 Start server with `hastile --configFile FILEPATH`
 
-**NOTE**: hastile doesn't _quite_ work at the moment. Only the first feature in each tile is put into the returned vector tile. See [my question](http://gis.stackexchange.com/questions/212691/mapnik-vector-tile-produces-tiles-with-only-one-feature) on gis.stackexchange for details.
-
 Configuration
 -------------
 
