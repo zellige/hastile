@@ -27,7 +27,7 @@ Config file should contain a JSON map like:
 
 Where, pgConnection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
 
-You can configure other db, mapnik and HTTP port settings too:
+You can configure other database, mapnik and HTTP port settings too:
 ```javascript
 {
   "db-pool-size": 10,
