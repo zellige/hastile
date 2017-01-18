@@ -52,8 +52,8 @@ Changing the configuration to:
   "layers": {
     "layer": {
       "query": "SELECT geojson, hstore(layers)-ARRAY['wkb_geometry','geojson'] FROM layers WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      ...
     }  
-    ...
   }
 ```
 
