@@ -92,7 +92,6 @@ For Ubuntu 16.04:
     - deb-src http://ppa.launchpad.net/ubuntugis/ubuntugis-experimental/ubuntu xenial main 
   - `sudo add-apt-repository ppa:ubuntugis/ubuntugis-experimental`
   - `sudo apt-get update`
- - Mapnik
   - `sudo apt-get install libmapnik3.0 libmapnik-dev`
 
 ### Mapnik Vector Tile
