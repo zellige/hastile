@@ -130,7 +130,7 @@ If this does not work, build this using `build.sh`. You will likely have to edit
 Building
 --------
 
-For example, assuming mapnik-vector-tile and hastile are peers:
+Assuming mapnik-vector-tile and hastile projects are peers (underneath the same parent directory):
  - <code>export MAPNIK_VECTOR_TILE_SRC=\`pwd\`/../mapnik-vector-tile/</code>
  - `stack build`
 
