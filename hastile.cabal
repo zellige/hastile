@@ -10,7 +10,7 @@ maintainer:          andrew.mccluskey@veitchlister.com.au
 copyright:           Andrew McCluskey
 category:            Web
 build-type:          Custom
--- extra-source-files:  mapnik-vector-tile-c/mvt_from_geojson.h
+extra-source-files:  mapnik-vector-tile-c/mvt_from_geojson.h
 cabal-version:       >=1.10
 
 library
@@ -18,7 +18,8 @@ library
   hs-source-dirs:      src
   exposed-modules:     Lib
                      , Tile
-  -- other-modules:       MapboxVectorTile
+                     , Types
+  other-modules:       MapboxVectorTile
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , bytestring
@@ -27,8 +28,10 @@ library
                      , hasql-pool
                      , here
                      , mtl
+                     , optparse-generic
                      , servant-server
                      , text
+                     , time
                      , transformers
                      , wai
                      , word8
@@ -48,12 +51,13 @@ executable hastile
                      , containers
                      , filepath
                      , hastile
-                     , text
-                     , hasql-pool
                      , optparse-generic
-                     , servant-server
+                     , text
                      , time
+                     , hasql-pool
+                     , servant-server
                      , transformers
+                     , wai
                      , wai-cors
                      , warp
   default-language:    Haskell2010
