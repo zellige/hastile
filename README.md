@@ -13,10 +13,16 @@ Configuration
 Config file should contain a JSON map like:
 ```javascript
 {
-  "pgConnection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
+  "db-connection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
   "layers": {
-    "layer1": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer1_table)-'wkb_geometry'::text FROM layer1_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
-    "layer2": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer2_table)-'wkb_geometry'::text FROM layer2_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+    "layer1": { 
+      "query": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer1_table)-'wkb_geometry'::text FROM layer1_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      "last-modified": "2017-01-15T23:49:36Z"
+    },
+    "layer2": {
+      "query": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer2_table)-'wkb_geometry'::text FROM layer2_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      "last-modified": "2017-01-15T23:49:36Z"
+    }
   }
 }
 ```
@@ -26,8 +32,9 @@ Where, pgConnection is a [Postgres connection string](https://www.postgresql.org
 You can configure the database connection pool settings too:
 ```javascript
 {
-  "pgPoolSize": 10,
-  "pgTimeout": 5,
+  "db-pool-size": 10,
+  "db-timeout": 5,
+  "mapnik-input-plugins": "/usr/local/lib/mapnik/input"
   "port": 1234
 }
 ```
@@ -45,7 +52,10 @@ create materialized view layers as
 Changing the configuration to:
 ```javascript
   "layers": {
-    "layer": "SELECT geojson, hstore(layers)-ARRAY['wkb_geometry','geojson'] FROM layers WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+    "layer": {
+      "query": "SELECT geojson, hstore(layers)-ARRAY['wkb_geometry','geojson'] FROM layers WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+    }  
+    ...
   }
 ```
 

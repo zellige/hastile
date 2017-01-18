@@ -16,6 +16,7 @@ import qualified Network.Wai.Handler.Warp    as Warp
 import           Network.Wai.Middleware.Cors
 import           Options.Generic
 import           Servant
+import           System.Exit
 
 import           Lib
 import           Types
@@ -26,10 +27,12 @@ main = getRecord "hastile" >>= doIt
 doIt :: CmdLine -> IO ()
 doIt cmdLine = do
   startTime <- getCurrentTime
-  configBs <- BSL.readFile $ _cmdLineConfigFile cmdLine
-  case decode configBs of
-    Just config -> doItWithConfig config startTime
-    Nothing -> putStrLn $ "Failed to parse config file " <> _cmdLineConfigFile cmdLine
+  configBs <- BSL.readFile $ configFile cmdLine
+  case eitherDecode configBs of
+    Right config -> doItWithConfig config startTime
+    Left e -> do
+      putStrLn $ "In file: " <> configFile cmdLine <> "\nError: " <> e
+      exitWith (ExitFailure 2)
 
 doItWithConfig :: Config -> UTCTime -> IO ()
 doItWithConfig config startTime =
