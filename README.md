@@ -1,7 +1,7 @@
 hastile
 =======
 
-A haskell tile server. Send request to `/layer/z/x/y/mvt`, get back a Mapbox vector tile (`.mvt`). In addition, to see the SQL generated, replace `mvt` in the URL with `query`. Likewise, replace `mvt` with `geojson` to see the GeoJSON generated as input to mapnik-vector-tile.
+A haskell tile server. Send request to `/layer/z/x/y.mvt`, get back a Mapbox vector tile (`.mvt`). In addition, to see the SQL generated, replace `mvt` in the URL with `query`. Likewise, replace `mvt` with `geojson` to see the GeoJSON generated as input to mapnik-vector-tile.
 
 Start server with `hastile --configFile FILEPATH`
 
