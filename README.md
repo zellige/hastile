@@ -27,13 +27,13 @@ Config file should contain a JSON map like:
 
 Where, pgConnection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
 
-You can configure the database connection pool settings too:
+You can configure other db, mapnik and HTTP port settings too:
 ```javascript
 {
   "db-pool-size": 10,
   "db-timeout": 5,
   "mapnik-input-plugins": "/usr/local/lib/mapnik/input"
-  "port": 1234
+  "port": 8080
 }
 ```
 
