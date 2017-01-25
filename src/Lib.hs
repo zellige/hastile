@@ -16,12 +16,11 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import           Data.Aeson
 import           Data.ByteString            as BS
-import           Data.ByteString.Lazy       (toStrict)
 import           Data.Map                   as M
 import           Data.Maybe                 (fromMaybe)
 import           Data.Monoid
 import           Data.Text                  as T
-import           Data.Text.Encoding         (decodeUtf8, encodeUtf8)
+import           Data.Text.Encoding         (encodeUtf8)
 import           Data.Text.Read             as DTR
 import           Data.Time
 import qualified Hasql.Decoders             as HD
@@ -36,12 +35,13 @@ import           Tile
 import           Types
 
 type LayerName = Capture "layer" Text
+type GeoJson = Map Text Value
 type Z = Capture "z" Integer
 type X = Capture "x" Integer
 type Y = Capture "y" Text
 type YI = Capture "y" Integer
 type HastileApi =    LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
-                :<|> LayerName :> Z :> X :> Y :> Get '[PlainText] (Headers '[Header "Last-Modified" String] Text)
+                :<|> LayerName :> Z :> X :> Y :> Get '[JSON] (Headers '[Header "Last-Modified" String] GeoJson)
                 :<|> LayerName :> Z :> X :> Y :> Get '[OctetStream] (Headers '[Header "Last-Modified" String] ByteString)
 
 api :: Proxy HastileApi
@@ -78,7 +78,7 @@ getTile l z x y = do
       tileReturn _ _ = undefined
 
 getJsonWithExtension :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] Text)
+        => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] GeoJson)
 getJsonWithExtension l z x stringY =
     case parseY of
       Left e -> fail $ show e
@@ -87,14 +87,14 @@ getJsonWithExtension l z x stringY =
       parseY = decimal $ T.take (T.length stringY - 5) stringY
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Integer -> m (Headers '[Header "Last-Modified" String] Text)
+        => Text -> Integer -> Integer -> Integer -> m (Headers '[Header "Last-Modified" String] GeoJson)
 getJson l z x y = do
     geoJson <- getJson' l z x y
     lastModified <- getLastModified l
-    pure $ addHeader lastModified $ decodeUtf8 geoJson
+    pure $ addHeader lastModified geoJson
 
 getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Integer -> m ByteString
+        => Text -> Integer -> Integer -> Integer -> m GeoJson
 getJson' l z x y = do
   sql <- encodeUtf8 <$> getQuery l z x y
   p <- asks _pool
@@ -102,11 +102,10 @@ getJson' l z x y = do
   tfsM <- liftIO $ P.use p sessTfs
   case tfsM of
     Left e -> fail $ show e
-    Right tfs -> pure . mkGeoJSON $ tfs
+    Right tfs -> pure $ mkGeoJSON tfs
 
-mkGeoJSON :: [TileFeature] -> ByteString
-mkGeoJSON tfs = toStrict . encode $ geoJSON
-  where geoJSON = M.fromList [ ("type", String "FeatureCollection")
+mkGeoJSON :: [TileFeature] -> GeoJson
+mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
                              , ("features", toJSON . fmap mkFeature $ tfs)
                              ] :: M.Map Text Value
 
