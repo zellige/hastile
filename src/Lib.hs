@@ -25,14 +25,16 @@ import           Data.Text                  as T
 import           Data.Text.Encoding         as TE
 import           Data.Text.Read             as DTR
 import           Data.Time
+import           GHC.Conc
 import qualified Hasql.Decoders             as HD
 import qualified Hasql.Encoders             as HE
 import qualified Hasql.Pool                 as P
 import qualified Hasql.Query                as HQ
 import qualified Hasql.Session              as HS
 import           Servant
+import           STMContainers.Map          as STM
 
-import           MapboxVectorTile
+-- import           MapboxVectorTile
 import           Tile
 import           Types
 
@@ -41,7 +43,9 @@ type Z = Capture "z" Integer
 type X = Capture "x" Integer
 type Y = Capture "y" Text
 type YI = Capture "y" Integer
-type HastileApi =    LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
+                     -- Remember header is: "Content-Type: text/plain; charset=UTF-8"
+type HastileApi =    LayerName :> ReqBody '[PlainText] Text :> Post '[PlainText] NoContent
+                :<|> LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
                 :<|> LayerName :> Z :> X :> Y :> Get '[OctetStream] (Headers '[Header "Last-Modified" String] BS.ByteString)
 
 api :: Proxy HastileApi
@@ -52,9 +56,17 @@ defaultTileSize = Pixels 2048
 
 hastileService :: ServerState -> Server HastileApi
 hastileService state =
-  enter (runReaderTNat state) (getQuery :<|> getContent)
+  enter (runReaderTNat state) (provisionLayer :<|> getQuery :<|> getContent)
 
-getQuery :: (MonadError ServantErr m, MonadReader ServerState m)
+provisionLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+         => Text -> Text -> m NoContent
+provisionLayer l query = do
+  ls <- asks _stateLayers
+  lastModifiedTime <- liftIO getCurrentTime
+  _ <- liftIO $ atomically $ STM.insert (Layer query lastModifiedTime) l ls
+  pure NoContent
+
+getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Integer -> Integer -> Integer -> m Text
 getQuery l z x y = getQuery' l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
 
@@ -85,7 +97,8 @@ getTile l zxy = do
     Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
     Right tile -> pure $ addHeader lastModified tile
   where
-    tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
+--    tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
+    tileReturn _ _ = undefined
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
@@ -105,7 +118,7 @@ getJson' l zxy = do
     Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
     Right tfs -> pure $ mkGeoJSON tfs
 
-getQuery' :: (MonadError ServantErr m, MonadReader ServerState m)
+getQuery' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
           => Text -> Coordinates -> m Text
 getQuery' l zxy = do
   layer <- getLayer l
@@ -134,7 +147,7 @@ mkStatement sql = HQ.statement sql
   where
     propsValue = fmap (fromMaybe "") . M.fromList <$> HD.value (HD.hstore replicateM)
 
-getLastModified :: (MonadError ServantErr m, MonadReader ServerState m) => Text -> m String
+getLastModified :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m) => Text -> m String
 getLastModified l = do
   layer <- getLayer l
   let lastModified = _layerLastModified layer
@@ -142,10 +155,11 @@ getLastModified l = do
       toGMT = T.unpack $ dropEnd 3 (T.pack rfc822Str) <> "GMT"
   pure toGMT
 
-getLayer :: (MonadError ServantErr m, MonadReader ServerState m) => Text -> m Layer
+getLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m) => Text -> m Layer
 getLayer l = do
   ls <- asks _stateLayers
-  case M.lookup l ls of
+  result <- liftIO $ atomically $ STM.lookup l ls
+  case result of
     Just layer -> pure layer
     Nothing -> throwError $ err404 { errBody = "Layer not found :( " }
 
