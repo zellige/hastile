@@ -31,17 +31,17 @@ import qualified Hasql.Query                as HQ
 import qualified Hasql.Session              as HS
 import           Servant
 
-import           MapboxVectorTile
+-- import           MapboxVectorTile
 import           Tile
 import           Types
 
 type LayerName = Capture "layer" Text
 type Z = Capture "z" Integer
 type X = Capture "x" Integer
-type YI = Capture "y" Integer
 type Y = Capture "y" Text
+type YI = Capture "y" Integer
 type HastileApi =    LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
-                :<|> LayerName :> Z :> X :> YI :> "geojson" :> Get '[PlainText] Text
+                :<|> LayerName :> Z :> X :> Y :> Get '[PlainText] (Headers '[Header "Last-Modified" String] Text)
                 :<|> LayerName :> Z :> X :> Y :> Get '[OctetStream] (Headers '[Header "Last-Modified" String] ByteString)
 
 api :: Proxy HastileApi
@@ -52,11 +52,11 @@ defaultTileSize = Pixels 2048
 
 hastileService :: ServerState -> Server HastileApi
 hastileService state =
-  enter (runReaderTNat state) (getQuery :<|> getJson :<|> getSTile)
+  enter (runReaderTNat state) (getQuery :<|> getJsonWithExtension :<|> getTileWithExtension)
 
-getSTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+getTileWithExtension :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] ByteString)
-getSTile l z x stringY =
+getTileWithExtension l z x stringY =
     case parseY of
       Left e -> fail $ show e
       Right (y, _) -> getTile l z x y
@@ -74,11 +74,24 @@ getTile l z x y = do
     Left e -> pure $ addHeader lastModified $ encodeUtf8 e
     Right tile -> pure $ addHeader lastModified tile
     where
-      tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' (ZoomLevel z) (GoogleTileCoords x y)
+      -- tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' (ZoomLevel z) (GoogleTileCoords x y)
+      tileReturn _ _ = undefined
+
+getJsonWithExtension :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+        => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] Text)
+getJsonWithExtension l z x stringY =
+    case parseY of
+      Left e -> fail $ show e
+      Right (y, _) -> getJson l z x y
+    where
+      parseY = decimal $ T.take (T.length stringY - 5) stringY
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Integer -> m Text
-getJson l z x y = decodeUtf8 <$> getJson' l z x y
+        => Text -> Integer -> Integer -> Integer -> m (Headers '[Header "Last-Modified" String] Text)
+getJson l z x y = do
+    geoJson <- getJson' l z x y
+    lastModified <- getLastModified l
+    pure $ addHeader lastModified $ decodeUtf8 geoJson
 
 getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Integer -> m ByteString
