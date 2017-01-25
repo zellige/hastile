@@ -66,8 +66,8 @@ getQuery l z x y = getQuery' l (Coordinates (ZoomLevel z) (GoogleTileCoords x y)
 getContent :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
 getContent l z x stringY
-  | ".mvt" `T.isInfixOf` stringY = getTile l z x stringY
-  | ".json" `T.isInfixOf` stringY = getJson l z x stringY
+  | ".mvt" `T.isSuffixOf` stringY = getTile l z x stringY
+  | ".json" `T.isSuffixOf` stringY = getJson l z x stringY
   | otherwise = throwError $ err400 { errBody = "Unknow request" }
 
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
