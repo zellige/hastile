@@ -55,7 +55,6 @@ executable hastile
                      , hastile
                      , optparse-generic
                      , text
-                     , time
                      , hasql-pool
                      , servant-server
                      , stm-containers

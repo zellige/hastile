@@ -63,7 +63,6 @@ instance FromJSON Config where
 -- TODO: make lenses!
 data ServerState = ServerState { _pool        :: P.Pool
                                , _pluginDir   :: FilePath
-                               , _startTime   :: String
                                , _stateLayers :: STM.Map Text Layer
                                }
 
