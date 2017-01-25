@@ -9,7 +9,7 @@ Start server with `hastile --configFile FILEPATH`
 Configuration
 -------------
 
-Config file should contain a JSON map like:
+The file contains a JSON for setting up the database connection and layer configuration, for example:
 ```javascript
 {
   "db-connection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
@@ -26,7 +26,7 @@ Config file should contain a JSON map like:
 }
 ```
 
-Where, pgConnection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
+Where, db-connection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
 
 You can configure other database, mapnik and HTTP port settings too:
 ```javascript
