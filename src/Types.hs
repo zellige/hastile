@@ -1,14 +1,14 @@
-{-# LANGUAGE DataKinds                 #-}
-{-# LANGUAGE DeriveAnyClass            #-}
-{-# LANGUAGE DeriveGeneric             #-}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE OverloadedStrings         #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE TypeFamilies              #-}
-{-# LANGUAGE TypeOperators             #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NoMonomorphismRestriction  #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
 
 module Types where
 
@@ -19,6 +19,18 @@ import           Data.Text           as T
 import           Data.Time
 import           Hasql.Pool          as P
 import           Options.Generic
+
+type GeoJson = Map Text Value
+
+newtype ZoomLevel = ZoomLevel { _z :: Integer
+                              } deriving (Show, Eq, Num)
+data GoogleTileCoords = GoogleTileCoords { _x :: Integer
+                                         , _y :: Integer
+                                         } deriving (Eq, Show)
+
+data Coordinates = Coordinates { _zl :: ZoomLevel
+                               , _xy :: GoogleTileCoords
+                               } deriving (Show, Eq)
 
 data CmdLine = CmdLine { configFile :: FilePath
                        } deriving Generic

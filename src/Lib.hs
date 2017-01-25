@@ -16,12 +16,13 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import           Data.Aeson
 import           Data.ByteString            as BS
-import           Data.ByteString.Lazy       (toStrict)
+import           Data.ByteString.Lazy.Char8 as LBS
+import           Data.Char
 import           Data.Map                   as M
 import           Data.Maybe                 (fromMaybe)
 import           Data.Monoid
 import           Data.Text                  as T
-import           Data.Text.Encoding         (decodeUtf8, encodeUtf8)
+import           Data.Text.Encoding         as TE
 import           Data.Text.Read             as DTR
 import           Data.Time
 import qualified Hasql.Decoders             as HD
@@ -38,11 +39,10 @@ import           Types
 type LayerName = Capture "layer" Text
 type Z = Capture "z" Integer
 type X = Capture "x" Integer
-type YI = Capture "y" Integer
 type Y = Capture "y" Text
+type YI = Capture "y" Integer
 type HastileApi =    LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
-                :<|> LayerName :> Z :> X :> YI :> "geojson" :> Get '[PlainText] Text
-                :<|> LayerName :> Z :> X :> Y :> Get '[OctetStream] (Headers '[Header "Last-Modified" String] ByteString)
+                :<|> LayerName :> Z :> X :> Y :> Get '[OctetStream] (Headers '[Header "Last-Modified" String] BS.ByteString)
 
 api :: Proxy HastileApi
 api = Proxy
@@ -52,50 +52,74 @@ defaultTileSize = Pixels 2048
 
 hastileService :: ServerState -> Server HastileApi
 hastileService state =
-  enter (runReaderTNat state) (getQuery :<|> getJson :<|> getSTile)
+  enter (runReaderTNat state) (getQuery :<|> getContent)
 
-getSTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] ByteString)
-getSTile l z x stringY =
-    case parseY of
+getQuery :: (MonadError ServantErr m, MonadReader ServerState m)
+         => Text -> Integer -> Integer -> Integer -> m Text
+getQuery l z x y = getQuery' l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
+
+getContent :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+        => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
+getContent l z x stringY
+  | ".mvt" `T.isSuffixOf` stringY = getAnything getTile l z x stringY
+  | ".json" `T.isSuffixOf` stringY = getAnything getJson l z x stringY
+  | otherwise = throwError $ err400 { errBody = "Unknown request: " <> fromStrict (TE.encodeUtf8 stringY) }
+
+getAnything :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+            => (t -> Coordinates -> m a) -> t -> Integer -> Integer -> Text -> m a
+getAnything f l z x stringY =
+    case getIntY stringY of
       Left e -> fail $ show e
-      Right (y, _) -> getTile l z x y
+      Right (y, _) -> f l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
     where
-      parseY = decimal $ T.take (T.length stringY - 4) stringY
+      getIntY s = decimal $ T.takeWhile isNumber s
 
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Integer -> m (Headers '[Header "Last-Modified" String] ByteString)
-getTile l z x y = do
-  geoJson <- getJson' l z x y
+         => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
+getTile l zxy = do
   pp <- asks _pluginDir
+  geoJson <- getJson' l zxy
   lastModified <- getLastModified l
   eet <- liftIO $ tileReturn geoJson pp
   case eet of
-    Left e -> pure $ addHeader lastModified $ encodeUtf8 e
+    Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
     Right tile -> pure $ addHeader lastModified tile
-    where
-      tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' (ZoomLevel z) (GoogleTileCoords x y)
+  where
+    tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Integer -> m Text
-getJson l z x y = decodeUtf8 <$> getJson' l z x y
+         => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
+getJson l zxy = do
+  lastModified <- getLastModified l
+  geoJson <- getJson' l zxy
+  pure $ addHeader lastModified . toStrict . encode $ geoJson
 
 getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Integer -> m ByteString
-getJson' l z x y = do
-  sql <- encodeUtf8 <$> getQuery l z x y
-  p <- asks _pool
+          => Text -> Coordinates -> m GeoJson
+getJson' l zxy = do
+  sql <- TE.encodeUtf8 <$> getQuery' l zxy
   let sessTfs = HS.query () (mkStatement sql)
-  tfsM <- liftIO $ P.use p sessTfs
-  case tfsM of
-    Left e -> fail $ show e
-    Right tfs -> pure . mkGeoJSON $ tfs
+  p <- asks _pool
+  errorOrTfs <- liftIO $ P.use p sessTfs
+  case errorOrTfs of
+    Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
+    Right tfs -> pure $ mkGeoJSON tfs
 
-mkGeoJSON :: [TileFeature] -> ByteString
-mkGeoJSON tfs = toStrict . encode $ geoJSON
-  where geoJSON = M.fromList [ ("type", String "FeatureCollection")
+getQuery' :: (MonadError ServantErr m, MonadReader ServerState m)
+          => Text -> Coordinates -> m Text
+getQuery' l zxy = do
+  layer <- getLayer l
+  pure . escape bbox4326 . _layerQuery $ layer
+  where
+    (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) = googleToBBoxM defaultTileSize (_zl zxy) (_xy zxy)
+    bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
+                        \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
+                        \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
+
+mkGeoJSON :: [TileFeature] -> GeoJson
+mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
                              , ("features", toJSON . fmap mkFeature $ tfs)
-                             ] :: M.Map Text Value
+                             ]
 
 mkFeature :: TileFeature -> Value
 mkFeature tf = toJSON featureMap
@@ -104,22 +128,11 @@ mkFeature tf = toJSON featureMap
                                 , ("properties", toJSON . _properties $ tf)
                                 ] :: M.Map Text Value
 
-mkStatement :: ByteString -> HQ.Query () [TileFeature]
-mkStatement sql =
-  HQ.statement sql HE.unit
-               (HD.rowsList (TileFeature <$> HD.value HD.json <*> propsValue))
-               False
-  where propsValue = fmap (fromMaybe "") . M.fromList <$> HD.value (HD.hstore replicateM)
-
-getQuery :: (MonadError ServantErr m, MonadReader ServerState m)
-         => Text -> Integer -> Integer -> Integer -> m Text
-getQuery l z x y = do
-  layer <- getLayer l
-  pure . escape bbox4326 . _layerQuery $ layer
-  where (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) = googleToBBoxM defaultTileSize (ZoomLevel z) (GoogleTileCoords x y)
-        bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
-                            \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
-                            \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
+mkStatement :: BS.ByteString -> HQ.Query () [TileFeature]
+mkStatement sql = HQ.statement sql
+    HE.unit (HD.rowsList (TileFeature <$> HD.value HD.json <*> propsValue)) False
+  where
+    propsValue = fmap (fromMaybe "") . M.fromList <$> HD.value (HD.hstore replicateM)
 
 getLastModified :: (MonadError ServantErr m, MonadReader ServerState m) => Text -> m String
 getLastModified l = do
