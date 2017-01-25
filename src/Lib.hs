@@ -68,7 +68,7 @@ getContent :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
 getContent l z x stringY
   | ".mvt" `T.isSuffixOf` stringY = getTile l z x stringY
   | ".json" `T.isSuffixOf` stringY = getJson l z x stringY
-  | otherwise = throwError $ err400 { errBody = "Unknow request" }
+  | otherwise = throwError $ err400 { errBody = "Unknown request: " <> fromStrict (TE.encodeUtf8 stringY) }
 
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
