@@ -54,9 +54,6 @@ hastileService :: ServerState -> Server HastileApi
 hastileService state =
   enter (runReaderTNat state) (getQuery :<|> getContent)
 
-getIntY :: Integral a => Text -> Either String (a, Text)
-getIntY s = decimal $ T.takeWhile isNumber s
-
 getQuery :: (MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Integer -> Integer -> Integer -> m Text
 getQuery l z x y = getQuery' l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
@@ -68,12 +65,14 @@ getContent l z x stringY
   | ".json" `T.isSuffixOf` stringY = getAnything getJson l z x stringY
   | otherwise = throwError $ err400 { errBody = "Unknown request: " <> fromStrict (TE.encodeUtf8 stringY) }
 
-getAnything :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m) =>
-                     (t -> Coordinates -> m a) -> t -> Integer -> Integer -> Text -> m a
+getAnything :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+            => (t -> Coordinates -> m a) -> t -> Integer -> Integer -> Text -> m a
 getAnything f l z x stringY =
     case getIntY stringY of
       Left e -> fail $ show e
       Right (y, _) -> f l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
+    where
+      getIntY s = decimal $ T.takeWhile isNumber s
 
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
