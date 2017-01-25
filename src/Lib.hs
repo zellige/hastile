@@ -78,9 +78,8 @@ getJson l z x stringY =
       Right (y, _) -> getJson' l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
 
 getTile' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] ByteString)
+         => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] ByteString)
 getTile' l zxy = do
-  let tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
   pp <- asks _pluginDir
   errorOrJson <- getJson'' l zxy
   lastModified <- getLastModified l
@@ -88,10 +87,11 @@ getTile' l zxy = do
   case eet of
     Left e -> pure $ addHeader lastModified $ encodeUtf8 e
     Right tile -> pure $ addHeader lastModified tile
-
+  where
+    tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
 
 getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] GeoJson)
+         => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] GeoJson)
 getJson' l zxy = do
   lastModified <- getLastModified l
   errorOrJson <- getJson'' l zxy
@@ -101,22 +101,24 @@ getJson'' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
           => Text -> Coordinates -> m GeoJson
 getJson'' l zxy = do
   sql <- encodeUtf8 <$> getQuery' l zxy
-  let sessTfs = HS.query () (mkStatement sql)
   p <- asks _pool
-  tfsOrError <- liftIO $ P.use p sessTfs
+  tfsOrError <- liftIO $ P.use p $ sessTfs sql
   case tfsOrError of
     Left e -> fail $ show e
     Right tfs -> pure $ mkGeoJSON tfs
+  where
+    sessTfs sql = HS.query () (mkStatement sql)
 
 getQuery' :: (MonadError ServantErr m, MonadReader ServerState m)
-         => Text -> Coordinates -> m Text
+          => Text -> Coordinates -> m Text
 getQuery' l zxy = do
   layer <- getLayer l
   pure . escape bbox4326 . _layerQuery $ layer
-  where (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) = googleToBBoxM defaultTileSize (_zl zxy) (_xy zxy)
-        bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
-                            \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
-                            \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
+  where
+    (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) = googleToBBoxM defaultTileSize (_zl zxy) (_xy zxy)
+    bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
+                        \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
+                        \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
 
 mkGeoJSON :: [TileFeature] -> GeoJson
 mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
@@ -131,11 +133,10 @@ mkFeature tf = toJSON featureMap
                                 ] :: M.Map Text Value
 
 mkStatement :: ByteString -> HQ.Query () [TileFeature]
-mkStatement sql =
-  HQ.statement sql HE.unit
-               (HD.rowsList (TileFeature <$> HD.value HD.json <*> propsValue))
-               False
-  where propsValue = fmap (fromMaybe "") . M.fromList <$> HD.value (HD.hstore replicateM)
+mkStatement sql = HQ.statement sql
+    HE.unit (HD.rowsList (TileFeature <$> HD.value HD.json <*> propsValue)) False
+  where
+    propsValue = fmap (fromMaybe "") . M.fromList <$> HD.value (HD.hstore replicateM)
 
 getLastModified :: (MonadError ServantErr m, MonadReader ServerState m) => Text -> m String
 getLastModified l = do
