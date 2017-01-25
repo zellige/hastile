@@ -17,6 +17,7 @@ import           Control.Monad.Reader.Class
 import           Data.Aeson
 import           Data.ByteString            as BS
 import           Data.ByteString.Lazy.Char8 as LBS
+import           Data.Char
 import           Data.Map                   as M
 import           Data.Maybe                 (fromMaybe)
 import           Data.Monoid
@@ -53,11 +54,8 @@ hastileService :: ServerState -> Server HastileApi
 hastileService state =
   enter (runReaderTNat state) (getQuery :<|> getContent)
 
-parseMvtExt :: Integral a => Text -> Either String (a, Text)
-parseMvtExt s = decimal $ T.take (T.length s - T.length ".mvt") s
-
-parseJsonExt :: Integral a => Text -> Either String (a, Text)
-parseJsonExt s = decimal $ T.take (T.length s - T.length ".json") s
+getIntY :: Integral a => Text -> Either String (a, Text)
+getIntY s = decimal $ T.takeWhile isNumber s
 
 getQuery :: (MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Integer -> Integer -> Integer -> m Text
@@ -66,29 +64,22 @@ getQuery l z x y = getQuery' l (Coordinates (ZoomLevel z) (GoogleTileCoords x y)
 getContent :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
 getContent l z x stringY
-  | ".mvt" `T.isSuffixOf` stringY = getTile l z x stringY
-  | ".json" `T.isSuffixOf` stringY = getJson l z x stringY
+  | ".mvt" `T.isSuffixOf` stringY = getAnything getTile l z x stringY
+  | ".json" `T.isSuffixOf` stringY = getAnything getJson l z x stringY
   | otherwise = throwError $ err400 { errBody = "Unknown request: " <> fromStrict (TE.encodeUtf8 stringY) }
 
+getAnything :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m) =>
+                     (t -> Coordinates -> m a) -> t -> Integer -> Integer -> Text -> m a
+getAnything f l z x stringY =
+    case getIntY stringY of
+      Left e -> fail $ show e
+      Right (y, _) -> f l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
+
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
-getTile l z x stringY =
-    case parseMvtExt stringY of
-      Left e -> fail $ show e
-      Right (y, _) -> getTile' l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
-
-getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
-getJson l z x stringY =
-    case parseJsonExt stringY of
-      Left e -> fail $ show e
-      Right (y, _) -> getJson' l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
-
-getTile' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
-getTile' l zxy = do
+getTile l zxy = do
   pp <- asks _pluginDir
-  geoJson <- getJson'' l zxy
+  geoJson <- getJson' l zxy
   lastModified <- getLastModified l
   eet <- liftIO $ tileReturn geoJson pp
   case eet of
@@ -97,16 +88,16 @@ getTile' l zxy = do
   where
     tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
 
-getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
-getJson' l zxy = do
+getJson l zxy = do
   lastModified <- getLastModified l
-  geoJson <- getJson'' l zxy
+  geoJson <- getJson' l zxy
   pure $ addHeader lastModified . toStrict . encode $ geoJson
 
-getJson'' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
           => Text -> Coordinates -> m GeoJson
-getJson'' l zxy = do
+getJson' l zxy = do
   sql <- TE.encodeUtf8 <$> getQuery' l zxy
   let sessTfs = HS.query () (mkStatement sql)
   p <- asks _pool
