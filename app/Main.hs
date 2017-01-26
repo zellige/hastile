@@ -41,7 +41,7 @@ doItWithConfig :: Config -> IO ()
 doItWithConfig config = do
       let layers = _configLayers config
       layers' <- liftIO $ atomically STM.new :: IO (STM.Map Text Layer)
-      forM_ (Data.Map.toList layers) $ \k -> atomically $ STM.insert (snd k) (fst k) layers'
+      forM_ (Data.Map.toList layers) $ \(k, v) -> atomically $ STM.insert v k layers'
       let pgPoolSize' = fromMaybe 10 $ _configPgPoolSize config
           pgTimeout' = fromMaybe 1 $ _configPgTimeout config
           pluginDir' = fromMaybe "/usr/local/lib/mapnik/input" $ _configMapnikInputPlugins config
