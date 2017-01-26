@@ -24,8 +24,6 @@ import           Data.Text.Encoding         as TE
 import           Data.Text.Read             as DTR
 import           Data.Time
 import           GHC.Conc
-import qualified Hasql.Pool                 as P
-import qualified Hasql.Session              as HS
 import           Servant
 import           STMContainers.Map          as STM
 
@@ -91,10 +89,7 @@ getJson l zxy = do
 getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
           => Text -> Coordinates -> m GeoJson
 getJson' l zxy = do
-  sql <- TE.encodeUtf8 <$> getQuery' l zxy
-  let sessTfs = HS.query () (mkStatement sql)
-  p <- asks _pool
-  errorOrTfs <- liftIO $ P.use p sessTfs
+  errorOrTfs <- findFeatures l zxy
   case errorOrTfs of
     Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
     Right tfs -> pure $ mkGeoJSON tfs
