@@ -18,6 +18,8 @@ library
   hs-source-dirs:      src
   exposed-modules:     Lib
                      , Tile
+                     , DB
+                     , Routes
                      , Types
   -- other-modules:       MapboxVectorTile
   build-depends:       base >= 4.7 && < 5

@@ -10,7 +10,6 @@ module Lib
     , ServerState (..)
     ) where
 
-import           Control.Monad
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
@@ -19,40 +18,22 @@ import           Data.ByteString            as BS
 import           Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
 import           Data.Map                   as M
-import           Data.Maybe                 (fromMaybe)
 import           Data.Monoid
 import           Data.Text                  as T
 import           Data.Text.Encoding         as TE
 import           Data.Text.Read             as DTR
 import           Data.Time
 import           GHC.Conc
-import qualified Hasql.Decoders             as HD
-import qualified Hasql.Encoders             as HE
 import qualified Hasql.Pool                 as P
-import qualified Hasql.Query                as HQ
 import qualified Hasql.Session              as HS
 import           Servant
 import           STMContainers.Map          as STM
 
 -- import           MapboxVectorTile
+import           DB
+import           Routes
 import           Tile
 import           Types
-
-type LayerName = Capture "layer" Text
-type Z = Capture "z" Integer
-type X = Capture "x" Integer
-type Y = Capture "y" Text
-type YI = Capture "y" Integer
-                     -- Remember header is: "Content-Type: text/plain; charset=UTF-8"
-type HastileApi =    LayerName :> ReqBody '[PlainText] Text :> Post '[PlainText] NoContent
-                :<|> LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
-                :<|> LayerName :> Z :> X :> Y :> Get '[OctetStream] (Headers '[Header "Last-Modified" String] BS.ByteString)
-
-api :: Proxy HastileApi
-api = Proxy
-
-defaultTileSize :: Pixels
-defaultTileSize = Pixels 2048
 
 hastileService :: ServerState -> Server HastileApi
 hastileService state =
@@ -118,17 +99,6 @@ getJson' l zxy = do
     Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
     Right tfs -> pure $ mkGeoJSON tfs
 
-getQuery' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-          => Text -> Coordinates -> m Text
-getQuery' l zxy = do
-  layer <- getLayer l
-  pure . escape bbox4326 . _layerQuery $ layer
-  where
-    (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) = googleToBBoxM defaultTileSize (_zl zxy) (_xy zxy)
-    bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
-                        \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
-                        \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
-
 mkGeoJSON :: [TileFeature] -> GeoJson
 mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
                              , ("features", toJSON . fmap mkFeature $ tfs)
@@ -140,32 +110,3 @@ mkFeature tf = toJSON featureMap
                                 , ("geometry", _geometry tf)
                                 , ("properties", toJSON . _properties $ tf)
                                 ] :: M.Map Text Value
-
-mkStatement :: BS.ByteString -> HQ.Query () [TileFeature]
-mkStatement sql = HQ.statement sql
-    HE.unit (HD.rowsList (TileFeature <$> HD.value HD.json <*> propsValue)) False
-  where
-    propsValue = fmap (fromMaybe "") . M.fromList <$> HD.value (HD.hstore replicateM)
-
-getLastModified :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m) => Text -> m String
-getLastModified l = do
-  layer <- getLayer l
-  let lastModified = _layerLastModified layer
-      rfc822Str = formatTime defaultTimeLocale rfc822DateFormat lastModified
-      toGMT = T.unpack $ dropEnd 3 (T.pack rfc822Str) <> "GMT"
-  pure toGMT
-
-getLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m) => Text -> m Layer
-getLayer l = do
-  ls <- asks _stateLayers
-  result <- liftIO $ atomically $ STM.lookup l ls
-  case result of
-    Just layer -> pure layer
-    Nothing -> throwError $ err404 { errBody = "Layer not found :( " }
-
--- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
-escape :: Text -> Text -> Text
-escape bbox query = T.concat . fmap replace' . T.split (== '!') $ query
-  where
-    replace' "bbox_4326" = bbox
-    replace' t = t
