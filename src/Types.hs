@@ -15,6 +15,7 @@ module Types where
 import           Control.Applicative
 import           Data.Aeson
 import           Data.Map            as M
+import           Data.Maybe
 import           Data.Text           as T
 import           Data.Time
 import           Hasql.Pool          as P
@@ -59,6 +60,23 @@ instance FromJSON Config where
        Config <$> o .: "db-connection" <*> o .:? "db-pool-size" <*> o .:? "db-timeout" <*>
           o .:? "mapnik-input-plugins" <*> o .:? "port" <*> o .: "layers"
   parseJSON _ = Control.Applicative.empty
+
+instance ToJSON Config where
+  toJSON c = object $ catMaybes
+    [
+      Just ((.=) "db-connection" (_configPgConnection c)),
+      (.=) "db-pool-size" <$> _configPgPoolSize c,
+      (.=) "db-timeout" <$> _configPgTimeout c,
+      (.=) "mapnik-input-plugins" <$> _configMapnikInputPlugins c,
+      (.=) "port" <$> _configPort c,
+      Just ((.=) "layers" (_configLayers c))
+    ]
+
+instance ToJSON Layer where
+  toJSON l = object
+    [  "query" .= _layerQuery l,
+       "last-modified" .= _layerLastModified l
+    ]
 
 -- TODO: make lenses!
 data ServerState = ServerState { _pool        :: P.Pool
