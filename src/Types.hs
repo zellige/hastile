@@ -64,12 +64,12 @@ instance FromJSON Config where
 instance ToJSON Config where
   toJSON c = object $ catMaybes
     [
-      Just ((.=) "db-connection" (_configPgConnection c)),
-      (.=) "db-pool-size" <$> _configPgPoolSize c,
-      (.=) "db-timeout" <$> _configPgTimeout c,
-      (.=) "mapnik-input-plugins" <$> _configMapnikInputPlugins c,
-      (.=) "port" <$> _configPort c,
-      Just ((.=) "layers" (_configLayers c))
+      ("db-connection" .=) <$> Just (_configPgConnection c),
+      ("db-pool-size" .=) <$> _configPgPoolSize c,
+      ("db-timeout" .=) <$> _configPgTimeout c,
+      ("mapnik-input-plugins" .=) <$> _configMapnikInputPlugins c,
+      ("port" .=) <$> _configPort c,
+      ("layers" .=) <$> Just (_configLayers c)
     ]
 
 instance ToJSON Layer where
