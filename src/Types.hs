@@ -79,10 +79,11 @@ instance ToJSON Layer where
     ]
 
 -- TODO: make lenses!
-data ServerState = ServerState { _ssPool        :: P.Pool
-                               , _ssPluginDir   :: FilePath
-                               , _ssConfigFile  :: FilePath
-                               , _ssStateLayers :: STM.Map Text Layer
+data ServerState = ServerState { _ssPool           :: P.Pool
+                               , _ssPluginDir      :: FilePath
+                               , _ssConfigFile     :: FilePath
+                               , _ssOriginalConfig :: Config
+                               , _ssStateLayers    :: STM.Map Text Layer
                                }
 
 data TileFeature = TileFeature { _tfGeometry   :: Value

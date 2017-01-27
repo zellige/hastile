@@ -49,7 +49,7 @@ doItWithConfig cfgFile config = do
           port' = fromMaybe 8080 $ _configPort config
         in bracket (P.acquire (pgPoolSize', pgTimeout', encodeUtf8 $ _configPgConnection config))
                 P.release $
-                  \p -> getWarp port' . serve api $ hastileService (ServerState p pluginDir' cfgFile layers')
+                  \p -> getWarp port' . serve api $ hastileService (ServerState p pluginDir' cfgFile config layers')
       pure ()
 
 getWarp :: Warp.Port -> Network.Wai.Application -> IO ()

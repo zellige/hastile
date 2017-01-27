@@ -14,6 +14,7 @@ import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import           Data.Aeson
+import           Data.Aeson.Encode.Pretty
 import           Data.ByteString            as BS
 import           Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
@@ -46,11 +47,11 @@ provisionLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m
 provisionLayer l query = do
   ls <- asks _ssStateLayers
   cfgFile <- asks _ssConfigFile
+  originalCfg <- asks _ssOriginalConfig
   lastModifiedTime <- liftIO getCurrentTime
   _ <- liftIO $ atomically $ STM.insert (Layer query lastModifiedTime) l ls
   newLayers <- liftIO $ atomically $ stmMapToList ls
-  let newConfig = Config "asdf" Nothing Nothing Nothing Nothing (fromList newLayers)
-  _ <- liftIO $ LBS.writeFile cfgFile (encode newConfig)
+  _ <- liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {_configLayers = fromList newLayers}))
   pure NoContent
 
 getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
