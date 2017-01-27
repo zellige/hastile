@@ -49,9 +49,10 @@ provisionLayer l query = do
   cfgFile <- asks _ssConfigFile
   originalCfg <- asks _ssOriginalConfig
   lastModifiedTime <- liftIO getCurrentTime
-  _ <- liftIO $ atomically $ STM.insert (Layer query lastModifiedTime) l ls
-  newLayers <- liftIO $ atomically $ stmMapToList ls
-  _ <- liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {_configLayers = fromList newLayers}))
+  newLayers <- liftIO $ atomically $ do
+    STM.insert (Layer query lastModifiedTime) l ls
+    stmMapToList ls
+  liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {_configLayers = fromList newLayers}))
   pure NoContent
 
 getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
