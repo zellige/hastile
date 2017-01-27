@@ -45,9 +45,8 @@ stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
 provisionLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Text -> m NoContent
 provisionLayer l query = do
-  ls <- asks _ssStateLayers
-  cfgFile <- asks _ssConfigFile
-  originalCfg <- asks _ssOriginalConfig
+  r <- ask
+  let (ls, cfgFile, originalCfg) = (,,) <$> _ssStateLayers <*> _ssConfigFile <*> _ssOriginalConfig $ r
   lastModifiedTime <- liftIO getCurrentTime
   newLayers <- liftIO . atomically $ do
     STM.insert (Layer query lastModifiedTime) l ls
