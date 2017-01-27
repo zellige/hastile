@@ -37,7 +37,7 @@ findFeatures :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
 findFeatures l zxy = do
   sql <- TE.encodeUtf8 <$> getQuery' l zxy
   let sessTfs = HS.query () (mkStatement sql)
-  p <- asks _pool
+  p <- asks _ssPool
   liftIO $ P.use p sessTfs
 
 getQuery' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
@@ -61,7 +61,7 @@ getLastModified l = do
 
 getLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m) => Text -> m Layer
 getLayer l = do
-  ls <- asks _stateLayers
+  ls <- asks _ssStateLayers
   result <- liftIO $ atomically $ STM.lookup l ls
   case result of
     Just layer -> pure layer

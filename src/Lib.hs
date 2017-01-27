@@ -44,12 +44,13 @@ stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
 provisionLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Text -> m NoContent
 provisionLayer l query = do
-  ls <- asks _stateLayers
+  ls <- asks _ssStateLayers
+  cfgFile <- asks _ssConfigFile
   lastModifiedTime <- liftIO getCurrentTime
   _ <- liftIO $ atomically $ STM.insert (Layer query lastModifiedTime) l ls
   newLayers <- liftIO $ atomically $ stmMapToList ls
   let newConfig = Config "asdf" Nothing Nothing Nothing Nothing (fromList newLayers)
-  _ <- liftIO $ LBS.writeFile "/tmp/foo" (encode newConfig)
+  _ <- liftIO $ LBS.writeFile cfgFile (encode newConfig)
   pure NoContent
 
 getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
@@ -75,7 +76,7 @@ getAnything f l z x stringY =
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
 getTile l zxy = do
-  pp <- asks _pluginDir
+  pp <- asks _ssPluginDir
   geoJson <- getJson' l zxy
   lastModified <- getLastModified l
   eet <- liftIO $ tileReturn geoJson pp
@@ -109,6 +110,6 @@ mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
 mkFeature :: TileFeature -> Value
 mkFeature tf = toJSON featureMap
   where featureMap = M.fromList [ ("type", String "Feature")
-                                , ("geometry", _geometry tf)
-                                , ("properties", toJSON . _properties $ tf)
+                                , ("geometry", _tfGeometry tf)
+                                , ("properties", toJSON . _tfProperties $ tf)
                                 ] :: M.Map Text Value

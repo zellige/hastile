@@ -30,15 +30,16 @@ main = getRecord "hastile" >>= doIt
 
 doIt :: CmdLine -> IO ()
 doIt cmdLine = do
-  configBs <- LBS.readFile $ configFile cmdLine
+  let cfgFile = configFile cmdLine
+  configBs <- LBS.readFile cfgFile
   case eitherDecode configBs of
-    Right config -> doItWithConfig config
+    Right config -> doItWithConfig cfgFile config
     Left e -> do
-      putStrLn $ "In file: " <> configFile cmdLine <> "\nError: " <> e
+      putStrLn $ "In file: " <> cfgFile <> "\nError: " <> e
       exitWith (ExitFailure 2)
 
-doItWithConfig :: Config -> IO ()
-doItWithConfig config = do
+doItWithConfig :: FilePath -> Config -> IO ()
+doItWithConfig cfgFile config = do
       let layers = _configLayers config
       layers' <- liftIO $ atomically STM.new :: IO (STM.Map Text Layer)
       forM_ (Data.Map.toList layers) $ \(k, v) -> atomically $ STM.insert v k layers'
@@ -48,7 +49,7 @@ doItWithConfig config = do
           port' = fromMaybe 8080 $ _configPort config
         in bracket (P.acquire (pgPoolSize', pgTimeout', encodeUtf8 $ _configPgConnection config))
                 P.release $
-                  \p -> getWarp port' . serve api $ hastileService (ServerState p pluginDir' layers')
+                  \p -> getWarp port' . serve api $ hastileService (ServerState p pluginDir' cfgFile layers')
       pure ()
 
 getWarp :: Warp.Port -> Network.Wai.Application -> IO ()
