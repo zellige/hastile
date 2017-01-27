@@ -49,7 +49,7 @@ provisionLayer l query = do
   cfgFile <- asks _ssConfigFile
   originalCfg <- asks _ssOriginalConfig
   lastModifiedTime <- liftIO getCurrentTime
-  newLayers <- liftIO $ atomically $ do
+  newLayers <- liftIO . atomically $ do
     STM.insert (Layer query lastModifiedTime) l ls
     stmMapToList ls
   liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {_configLayers = fromList newLayers}))
