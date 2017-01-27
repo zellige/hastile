@@ -5,7 +5,7 @@ module Main where
 import           Control.Exception.Base
 import           Control.Monad.IO.Class
 import           Data.Aeson
-import qualified Data.ByteString.Lazy.Char8  as BSL
+import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.Foldable
 import           Data.Map
 import           Data.Maybe                  (fromMaybe)
@@ -30,7 +30,7 @@ main = getRecord "hastile" >>= doIt
 
 doIt :: CmdLine -> IO ()
 doIt cmdLine = do
-  configBs <- BSL.readFile $ configFile cmdLine
+  configBs <- LBS.readFile $ configFile cmdLine
   case eitherDecode configBs of
     Right config -> doItWithConfig config
     Left e -> do

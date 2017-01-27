@@ -29,6 +29,7 @@ library
                      , hasql
                      , hasql-pool
                      , here
+                     , list-t
                      , mtl
                      , optparse-generic
                      , servant  

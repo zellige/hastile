@@ -24,6 +24,7 @@ import           Data.Text.Encoding         as TE
 import           Data.Text.Read             as DTR
 import           Data.Time
 import           GHC.Conc
+import           ListT
 import           Servant
 import           STMContainers.Map          as STM
 
@@ -37,12 +38,18 @@ hastileService :: ServerState -> Server HastileApi
 hastileService state =
   enter (runReaderTNat state) (provisionLayer :<|> getQuery :<|> getContent)
 
+stmMapToList :: STM.Map k v -> STM [(k, v)]
+stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
+
 provisionLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Text -> m NoContent
 provisionLayer l query = do
   ls <- asks _stateLayers
   lastModifiedTime <- liftIO getCurrentTime
   _ <- liftIO $ atomically $ STM.insert (Layer query lastModifiedTime) l ls
+  newLayers <- liftIO $ atomically $ stmMapToList ls
+  let newConfig = Config "asdf" Nothing Nothing Nothing Nothing (fromList newLayers)
+  _ <- liftIO $ LBS.writeFile "/tmp/foo" (encode newConfig)
   pure NoContent
 
 getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
