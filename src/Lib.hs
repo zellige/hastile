@@ -19,7 +19,6 @@ import           Data.ByteString            as BS
 import           Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
 import           Data.Map                   as M
-import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                  as T
 import           Data.Text.Encoding         as TE
@@ -60,7 +59,9 @@ returnConfiguration ::(MonadIO m, MonadError ServantErr m, MonadReader ServerSta
 returnConfiguration = do
   cfgFile <- asks _ssConfigFile
   configBs <- liftIO $ LBS.readFile cfgFile
-  pure $ fromMaybe emptyConfig (decode configBs)
+  case eitherDecode configBs of
+    Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
+    Right c -> pure c
 
 getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Integer -> Integer -> Integer -> m Text
@@ -79,11 +80,11 @@ getContent l z x stringY
 getAnything :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
             => (t -> Coordinates -> m a) -> t -> Integer -> Integer -> Text -> m a
 getAnything f l z x stringY =
-    case getIntY stringY of
-      Left e -> fail $ show e
-      Right (y, _) -> f l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
-    where
-      getIntY s = decimal $ T.takeWhile isNumber s
+  case getIntY stringY of
+    Left e -> fail $ show e
+    Right (y, _) -> f l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
+  where
+    getIntY s = decimal $ T.takeWhile isNumber s
 
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)

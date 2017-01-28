@@ -33,10 +33,10 @@ doIt cmdLine = do
   let cfgFile = configFile cmdLine
   configBs <- LBS.readFile cfgFile
   case eitherDecode configBs of
-    Right config -> doItWithConfig cfgFile config
     Left e -> do
       putStrLn $ "In file: " <> cfgFile <> "\nError: " <> e
       exitWith (ExitFailure 2)
+    Right config -> doItWithConfig cfgFile config
 
 doItWithConfig :: FilePath -> Config -> IO ()
 doItWithConfig cfgFile config = do
