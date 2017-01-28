@@ -115,18 +115,6 @@ getJson' l zxy = do
     Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
     Right tfs -> pure $ mkGeoJSON tfs
 
-mkGeoJSON :: [TileFeature] -> GeoJson
-mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
-                             , ("features", toJSON . fmap mkFeature $ tfs)
-                             ]
-
-mkFeature :: TileFeature -> Value
-mkFeature tf = toJSON featureMap
-  where featureMap = M.fromList [ ("type", String "Feature")
-                                , ("geometry", _tfGeometry tf)
-                                , ("properties", toJSON . _tfProperties $ tf)
-                                ] :: M.Map Text Value
-
 getLayerOrThrow :: (MonadIO m, MonadReader ServerState m, MonadError ServantErr m)
                 => Text -> m Layer
 getLayerOrThrow l = do
