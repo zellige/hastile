@@ -29,8 +29,8 @@ import           ListT
 import           Servant
 import           STMContainers.Map          as STM
 
--- import           MapboxVectorTile
 import           DB
+import           MapboxVectorTile
 import           Routes
 import           Tile
 import           Types
@@ -92,8 +92,7 @@ getTile l zxy = do
     Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
     Right tile -> pure $ addHeader lastModified tile
   where
---    tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
-    tileReturn _ _ = undefined
+    tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
