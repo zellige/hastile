@@ -18,6 +18,7 @@ type X = Capture "x" Integer
 type Y = Capture "y" Text
 type YI = Capture "y" Integer
 
+                     -- "Content-Type: text/plain; charset=UTF-8"
 type HastileApi =    Get '[PlainText] Text
                 :<|> LayerName :> ReqBody '[JSON] LayerQuery :> Post '[JSON] NoContent
                 :<|> LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
