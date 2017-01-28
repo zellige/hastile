@@ -35,14 +35,14 @@ defaultTileSize = Pixels 2048
 findFeatures :: (MonadIO m, MonadReader ServerState m)
           => Layer -> Coordinates -> m (Either P.UsageError [TileFeature])
 findFeatures layer zxy = do
-  sql <- getQuery' layer zxy
+  sql <- mkQuery layer zxy
   let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
   p <- asks _ssPool
   errOrResult <- liftIO $ P.use p sessTfs
   pure errOrResult
 
-getQuery' :: (MonadReader ServerState m) => Layer -> Coordinates -> m Text
-getQuery' layer zxy = pure $ escape bbox4326 . _layerQuery $ layer
+mkQuery :: (MonadReader ServerState m) => Layer -> Coordinates -> m Text
+mkQuery layer zxy = pure $ escape bbox4326 . _layerQuery $ layer
   where
     (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) = googleToBBoxM defaultTileSize (_zl zxy) (_xy zxy)
     bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\

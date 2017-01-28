@@ -67,7 +67,7 @@ getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Integer -> Integer -> Integer -> m Text
 getQuery l z x y = do
   layer <- getLayerOrThrow l
-  query <- getQuery' layer (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
+  query <- mkQuery layer (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
   pure query
 
 getContent :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
