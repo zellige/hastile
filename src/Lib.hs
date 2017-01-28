@@ -89,9 +89,9 @@ getAnything f l z x stringY =
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
 getTile l zxy = do
-  pp <- asks _ssPluginDir
-  geoJson <- getJson' l zxy
   layer <- getLayerOrThrow l
+  geoJson <- getJson' layer zxy
+  pp <- asks _ssPluginDir
   eet <- liftIO $ tileReturn geoJson pp
   case eet of
     Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
@@ -103,13 +103,12 @@ getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
 getJson l zxy = do
   layer <- getLayerOrThrow l
-  geoJson <- getJson' l zxy
+  geoJson <- getJson' layer zxy
   pure $ addHeader (lastModified layer) . toStrict . encode $ geoJson
 
 getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-         => Text -> Coordinates -> m GeoJson
-getJson' l zxy = do
-  layer <- getLayerOrThrow l
+         => Layer -> Coordinates -> m GeoJson
+getJson' layer zxy = do
   errorOrTfs <- findFeatures layer zxy
   case errorOrTfs of
     Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
