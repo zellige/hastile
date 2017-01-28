@@ -1,64 +1,9 @@
 hastile
 =======
 
-A haskell tile server. Send request to `/layer_name/z/x/y.mvt`, get back a Mapbox vector tile (`.mvt`). Likewise, `/layer_name/z/x/y.geojson` to get back GeoJSON.  In addition, to see the SQL generated 
-use `/layer/z/x/y/query`.
+A Haskell tile server that produces GeoJSON or MVT (Mapbox Vector Tiles) from a PostGIS database.
 
-Start server with `hastile --configFile FILEPATH`
-
-Configuration
--------------
-
-The file contains settings for the database connection and layer configuration, for example:
-```javascript
-{
-  "db-connection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
-  "layers": {
-    "layer1": { 
-      "query": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer1_table)-'wkb_geometry'::text FROM layer1_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
-      "last-modified": "2017-01-15T23:49:36Z"
-    },
-    "layer2": {
-      "query": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer2_table)-'wkb_geometry'::text FROM layer2_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
-      "last-modified": "2017-01-15T23:49:36Z"
-    }
-  }
-}
-```
-
-Where, db-connection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
-
-You can configure other database, mapnik and HTTP port settings too:
-```javascript
-{
-  "db-pool-size": 10,
-  "db-timeout": 5,
-  "mapnik-input-plugins": "/usr/local/lib/mapnik/input"
-  "port": 8080
-}
-```
-
-Hastile will replace `!bbox_4326!` with the SQL for a bounding box for the requested tile in EPSG4326. This allows your query to dynamically select the features to be included in the requested tile.
-
-If you want to combine multiple tables into a single layer you can use UNION and MATERIALIZED VIEWS and then query it directly:
-```SQL
-create materialized view layers as
-  SELECT ST_AsGeoJSON(wkb_geometry) as geojson, * FROM layer1_table
-  UNION
-  SELECT ST_AsGeoJSON(wkb_geometry) as geojson, * FROM layer2_table
-```
-
-Changing the configuration to:
-```javascript
-  "layers": {
-    "layer": {
-      "query": "SELECT geojson, hstore(layers)-ARRAY['wkb_geometry','geojson'] FROM layers WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
-      ...
-    }  
-  }
-```
-
-Restful API
+RESTful API
 -----------
 ```
 GET  /                            (application/json)         - Returns the current configuration.
@@ -67,8 +12,8 @@ GET  /layername/Z/X/Y/query       (text/plain)               - Query for a given
 GET  /layername/Z/X/Y[.mvt|.json] (application/octet-stream) - Return GeoJSON or Mapnick Vector Tile for given layername, Zoom, (X,Y).
 ```
 
-Dependencies
-------------
+Building
+--------
 
 ### Mapnik
 
@@ -137,12 +82,67 @@ hastile includes a C wrapper for mapnik-vector-tile that exposes a function to t
 
 If this does not work, build this using `build.sh`. You will likely have to edit `build.sh` to point to the correct include and library directories.   
 
-Building
---------
+### Stack
 
 Assuming mapnik-vector-tile and hastile projects are peers (underneath the same parent directory):
  - <code>export MAPNIK_VECTOR_TILE_SRC=\`pwd\`/../mapnik-vector-tile/</code>
  - `stack build`
+
+Configuration
+-------------
+
+The file contains settings for the database connection and layer configuration, for example:
+```javascript
+{
+  "db-connection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
+  "layers": {
+    "layer1": { 
+      "query": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer1_table)-'wkb_geometry'::text FROM layer1_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      "last-modified": "2017-01-15T23:49:36Z"
+    },
+    "layer2": {
+      "query": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer2_table)-'wkb_geometry'::text FROM layer2_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      "last-modified": "2017-01-15T23:49:36Z"
+    }
+  }
+}
+```
+
+Where, db-connection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
+
+You can configure other database, mapnik and HTTP port settings too:
+```javascript
+{
+  "db-pool-size": 10,
+  "db-timeout": 5,
+  "mapnik-input-plugins": "/usr/local/lib/mapnik/input"
+  "port": 8080
+}
+```
+
+Hastile will replace `!bbox_4326!` with the SQL for a bounding box for the requested tile in EPSG4326. This allows your query to dynamically select the features to be included in the requested tile.
+
+If you want to combine multiple tables into a single layer you can use UNION and MATERIALIZED VIEWS and then query it directly:
+```SQL
+create materialized view layers as
+  SELECT ST_AsGeoJSON(wkb_geometry) as geojson, * FROM layer1_table
+  UNION
+  SELECT ST_AsGeoJSON(wkb_geometry) as geojson, * FROM layer2_table
+```
+
+Changing the configuration to:
+```javascript
+  "layers": {
+    "layer": {
+      "query": "SELECT geojson, hstore(layers)-ARRAY['wkb_geometry','geojson'] FROM layers WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      ...
+    }  
+  }
+```
+
+Running
+-------
+Start the server with `hastile --configFile FILEPATH`
 
 Projections
 -----------
