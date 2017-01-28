@@ -40,17 +40,17 @@ doIt cmdLine = do
 
 doItWithConfig :: FilePath -> Config -> IO ()
 doItWithConfig cfgFile config = do
-      let layers = _configLayers config
-      layers' <- liftIO $ atomically STM.new :: IO (STM.Map Text Layer)
-      forM_ (Data.Map.toList layers) $ \(k, v) -> atomically $ STM.insert v k layers'
-      let pgPoolSize' = fromMaybe 10 $ _configPgPoolSize config
-          pgTimeout' = fromMaybe 1 $ _configPgTimeout config
-          pluginDir' = fromMaybe "/usr/local/lib/mapnik/input" $ _configMapnikInputPlugins config
-          port' = fromMaybe 8080 $ _configPort config
-        in bracket (P.acquire (pgPoolSize', pgTimeout', encodeUtf8 $ _configPgConnection config))
-                P.release $
-                  \p -> getWarp port' . serve api $ hastileService (ServerState p pluginDir' cfgFile config layers')
-      pure ()
+  let layers = _configLayers config
+  layers' <- liftIO $ atomically STM.new :: IO (STM.Map Text Layer)
+  forM_ (Data.Map.toList layers) $ \(k, v) -> atomically $ STM.insert v k layers'
+  let pgPoolSize' = fromMaybe 10 $ _configPgPoolSize config
+      pgTimeout' = fromMaybe 1 $ _configPgTimeout config
+      pluginDir' = fromMaybe "/usr/local/lib/mapnik/input" $ _configMapnikInputPlugins config
+      port' = fromMaybe 8080 $ _configPort config
+    in bracket (P.acquire (pgPoolSize', pgTimeout', encodeUtf8 $ _configPgConnection config))
+            P.release $
+              \p -> getWarp port' . serve api $ hastileService (ServerState p pluginDir' cfgFile config layers')
+  pure ()
 
 getWarp :: Warp.Port -> Network.Wai.Application -> IO ()
 getWarp port' = Warp.run port' . cors (const $ Just policy)

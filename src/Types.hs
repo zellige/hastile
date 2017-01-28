@@ -38,6 +38,15 @@ data CmdLine = CmdLine { configFile :: FilePath
                        } deriving Generic
 instance ParseRecord CmdLine
 
+newtype LayerQuery = LayerQuery { unLayerQuery :: Text } deriving (Show, Eq)
+
+instance ToJSON LayerQuery where
+  toJSON (LayerQuery lq) = object [ "query" .= lq ]
+
+instance FromJSON LayerQuery where
+  parseJSON (Object o) = LayerQuery <$> o .: "query"
+  parseJSON _ = Control.Applicative.empty
+
 data Layer = Layer { _layerQuery        :: Text
                    , _layerLastModified :: UTCTime
                    } deriving (Show, Eq, Generic)

@@ -37,22 +37,29 @@ import           Types
 
 hastileService :: ServerState -> Server HastileApi
 hastileService state =
-  enter (runReaderTNat state) (provisionLayer :<|> getQuery :<|> getContent)
+  enter (runReaderTNat state) (returnConfiguration :<|> provisionLayer :<|> getQuery :<|> getContent)
 
 stmMapToList :: STM.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
 
 provisionLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-         => Text -> Text -> m NoContent
+               => Text -> LayerQuery -> m NoContent
 provisionLayer l query = do
   r <- ask
   let (ls, cfgFile, originalCfg) = (,,) <$> _ssStateLayers <*> _ssConfigFile <*> _ssOriginalConfig $ r
   lastModifiedTime <- liftIO getCurrentTime
   newLayers <- liftIO . atomically $ do
-    STM.insert (Layer query lastModifiedTime) l ls
+    STM.insert (Layer (unLayerQuery query) lastModifiedTime) l ls
     stmMapToList ls
   liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {_configLayers = fromList newLayers}))
   pure NoContent
+
+returnConfiguration ::(MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+               => m Text
+returnConfiguration = do
+  cfgFile <- asks _ssConfigFile
+  configBs <- liftIO $ BS.readFile cfgFile
+  pure $ decodeUtf8 configBs
 
 getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Integer -> Integer -> Integer -> m Text

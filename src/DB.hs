@@ -62,7 +62,7 @@ getLastModified l = do
 getLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m) => Text -> m Layer
 getLayer l = do
   ls <- asks _ssStateLayers
-  result <- liftIO $ atomically $ STM.lookup l ls
+  result <- liftIO . atomically $ STM.lookup l ls
   case result of
     Just layer -> pure layer
     Nothing -> throwError $ err404 { errBody = "Layer not found :( " }
