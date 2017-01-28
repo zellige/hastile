@@ -64,6 +64,9 @@ data Config = Config { _configPgConnection       :: Text
                      , _configLayers             :: M.Map Text Layer
                      } deriving (Show, Generic)
 
+emptyConfig :: Config
+emptyConfig = Config "" Nothing Nothing Nothing Nothing (fromList [])
+
 instance FromJSON Config where
   parseJSON (Object o) =
        Config <$> o .: "db-connection" <*> o .:? "db-pool-size" <*> o .:? "db-timeout" <*>

@@ -9,7 +9,7 @@ Start server with `hastile --configFile FILEPATH`
 Configuration
 -------------
 
-The file contains a JSON for setting up the database connection and layer configuration, for example:
+The file contains settings for the database connection and layer configuration, for example:
 ```javascript
 {
   "db-connection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
@@ -61,7 +61,7 @@ Changing the configuration to:
 Restful API
 -----------
 ```
-GET  /                            (text/plain)               - Returns current configuration
+GET  /                            (application/json)         - Returns current configuration
 POST /layername                   (application/json)         - New query setting for layername (e.g. {"query": "..."})
 GET  /layername/Z/X/Y/query       (text/plain)               - Query for a given layer, Zoom, and (X,Y).
 GET  /layername/Z/X/Y[.mvt|.json] (application/octet-stream) - Return JSON or Mapnick Vector Tile for given layer. Zoom, (X,Y).

@@ -19,6 +19,7 @@ import           Data.ByteString            as BS
 import           Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
 import           Data.Map                   as M
+import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                  as T
 import           Data.Text.Encoding         as TE
@@ -55,11 +56,11 @@ provisionLayer l query = do
   pure NoContent
 
 returnConfiguration ::(MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-               => m Text
+               => m Types.Config
 returnConfiguration = do
   cfgFile <- asks _ssConfigFile
-  configBs <- liftIO $ BS.readFile cfgFile
-  pure $ decodeUtf8 configBs
+  configBs <- liftIO $ LBS.readFile cfgFile
+  pure $ fromMaybe emptyConfig (decode configBs)
 
 getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Integer -> Integer -> Integer -> m Text
