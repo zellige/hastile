@@ -41,8 +41,7 @@ findFeatures layer zxy = do
   errOrResult <- liftIO $ P.use p sessTfs
   pure errOrResult
 
-getQuery' :: (MonadIO m, MonadReader ServerState m)
-          => Layer -> Coordinates -> m Text
+getQuery' :: (MonadReader ServerState m) => Layer -> Coordinates -> m Text
 getQuery' layer zxy = pure $ escape bbox4326 . _layerQuery $ layer
   where
     (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) = googleToBBoxM defaultTileSize (_zl zxy) (_xy zxy)
