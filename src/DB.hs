@@ -39,9 +39,7 @@ findFeatures layer zxy = do
   let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
   p <- asks _ssPool
   errOrResult <- liftIO $ P.use p sessTfs
-  pure $ case errOrResult of
-    Left e -> Left e
-    Right result -> Right result
+  pure errOrResult
 
 getQuery' :: (MonadIO m, MonadReader ServerState m)
           => Layer -> Coordinates -> m Text
