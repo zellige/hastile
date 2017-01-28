@@ -64,7 +64,10 @@ returnConfiguration = do
 
 getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Text -> Integer -> Integer -> Integer -> m Text
-getQuery l z x y = getQuery' l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
+getQuery l z x y = do
+  layer <- getLayerOrThrow l
+  query <- getQuery' layer (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
+  pure query
 
 getContent :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
@@ -87,25 +90,26 @@ getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
 getTile l zxy = do
   pp <- asks _ssPluginDir
   geoJson <- getJson' l zxy
-  lastModified <- getLastModified l
+  layer <- getLayerOrThrow l
   eet <- liftIO $ tileReturn geoJson pp
   case eet of
     Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
-    Right tile -> pure $ addHeader lastModified tile
+    Right tile -> pure $ addHeader (lastModified layer) tile
   where
     tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-         => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
+        => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
 getJson l zxy = do
-  lastModified <- getLastModified l
+  layer <- getLayerOrThrow l
   geoJson <- getJson' l zxy
-  pure $ addHeader lastModified . toStrict . encode $ geoJson
+  pure $ addHeader (lastModified layer) . toStrict . encode $ geoJson
 
 getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-          => Text -> Coordinates -> m GeoJson
+         => Text -> Coordinates -> m GeoJson
 getJson' l zxy = do
-  errorOrTfs <- findFeatures l zxy
+  layer <- getLayerOrThrow l
+  errorOrTfs <- findFeatures layer zxy
   case errorOrTfs of
     Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
     Right tfs -> pure $ mkGeoJSON tfs
@@ -121,3 +125,11 @@ mkFeature tf = toJSON featureMap
                                 , ("geometry", _tfGeometry tf)
                                 , ("properties", toJSON . _tfProperties $ tf)
                                 ] :: M.Map Text Value
+
+getLayerOrThrow :: (MonadIO m, MonadReader ServerState m, MonadError ServantErr m)
+                => Text -> m Layer
+getLayerOrThrow l = do
+  errorOrLayer <- getLayer l
+  case errorOrLayer of
+    Left LayerNotFound -> throwError $ err404 { errBody = "Layer not found :-(" }
+    Right layer -> pure layer
