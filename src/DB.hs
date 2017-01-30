@@ -33,7 +33,7 @@ defaultTileSize :: Pixels
 defaultTileSize = Pixels 2048
 
 findFeatures :: (MonadIO m, MonadReader ServerState m)
-          => Layer -> Coordinates -> m (Either P.UsageError [TileFeature])
+             => Layer -> Coordinates -> m (Either P.UsageError [TileFeature])
 findFeatures layer zxy = do
   sql <- mkQuery layer zxy
   let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
