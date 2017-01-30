@@ -35,6 +35,7 @@ For OSX:
  - `brew install postgis`
  - `brew install harfbuzz`
  - `git clone https://github.com/mapnik/mapnik.git`
+ - `cd mapnik`
  - `git checkout 8a8427daedb685b8f37fac487526255d575a715d`
  - `git submodule sync`
  - `git submodule update --init deps/mapbox/variant`
@@ -152,6 +153,7 @@ We assume tiles are requested in the spherical mercator (EPSG 3857 AKA EPSG 9009
 Helpful links
 -------------
 
+- [Mapbox Vector Tile Specification] (https://www.mapbox.com/vector-tiles/specification/)
 - [Tiles a la Google Maps](http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/)
 - [The Google Maps/Bing Maps Spherical Mercator Projection](https://alastaira.wordpress.com/2011/01/23/the-google-maps-bing-maps-spherical-mercator-projection/)
 - [vtile-encode - CLI that does GeoJSON to mvt](https://github.com/mapbox/mapnik-vector-tile/blob/master/bench/vtile-encode.cpp)
