@@ -11,12 +11,10 @@ import           System.Environment   (lookupEnv)
 import           Test.Tasty
 import           Test.Tasty.Golden
 
+import           DB
 import           MapboxVectorTile
 import           Tile
 import           Types
-
-tileSize :: Pixels
-tileSize = 2048
 
 main :: IO ()
 main = defaultMain integrationTest
@@ -32,9 +30,9 @@ integrationTest =
       actual = do
         bs <- LBS.readFile geoJsonFile
         let ebs = eitherDecode bs :: Either String GeoJson
-            decodeError = (error . ("Unable to decode " <> geoJsonFile <> ": ") <>)
+            decodeError = error . (("Unable to decode " <> geoJsonFile <> ": ") <>)
             geoJson = either decodeError id ebs
         pluginDir <- fromMaybe "/usr/local/lib/mapnik/input" <$> lookupEnv "MAPNIK_PLUGINS_DIR"
-        et <- fromGeoJSON tileSize geoJson layerName pluginDir coords
+        et <- fromGeoJSON defaultTileSize geoJson layerName pluginDir coords
         either (error . unpack . ("Failed to create tile: " <>)) (return . fromStrict) et
    in goldenVsString name golden actual
