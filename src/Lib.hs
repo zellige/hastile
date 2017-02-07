@@ -16,6 +16,7 @@ import           Control.Monad.Reader.Class
 import           Data.Aeson
 import           Data.Aeson.Encode.Pretty
 import           Data.ByteString            as BS
+import           Data.ByteString.Char8      as BS8
 import           Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
 import           Data.Map                   as M
@@ -26,6 +27,7 @@ import           Data.Text.Read             as DTR
 import           Data.Time
 import           GHC.Conc
 import           ListT
+import           Network.HTTP.Types.Header  (hLastModified)
 import           Servant
 import           STMContainers.Map          as STM
 
@@ -95,9 +97,15 @@ getTile l zxy = do
   eet <- liftIO $ tileReturn geoJson pp
   case eet of
     Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
-    Right tile -> pure $ addHeader (lastModified layer) tile
+    Right tile -> checkEmpty tile layer
   where
     tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
+
+checkEmpty :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+           => BS.ByteString -> Layer -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
+checkEmpty tile layer
+  | BS.null tile = throwError $ err204 { errHeaders = [(hLastModified, BS8.pack $ lastModified layer)] }
+  | otherwise = pure $ addHeader (lastModified layer) tile
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)

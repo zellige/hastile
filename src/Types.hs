@@ -20,6 +20,7 @@ import           Data.Text           as T
 import           Data.Time
 import           Hasql.Pool          as P
 import           Options.Generic
+import           Servant
 import           STMContainers.Map   as STM
 
 type GeoJson = M.Map Text Value
@@ -113,3 +114,10 @@ mkFeature tf = toJSON featureMap
                                 , ("geometry", _tfGeometry tf)
                                 , ("properties", toJSON . _tfProperties $ tf)
                                 ] :: M.Map Text Value
+
+err204 :: ServantErr
+err204 = ServantErr { errHTTPCode = 204
+                    , errReasonPhrase = "No Content"
+                    , errBody = ""
+                    , errHeaders = []
+                    }
