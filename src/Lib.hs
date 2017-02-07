@@ -95,9 +95,19 @@ getTile l zxy = do
   eet <- liftIO $ tileReturn geoJson pp
   case eet of
     Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
-    Right tile -> pure $ addHeader (lastModified layer) tile
+    Right tile -> checkEmpty tile layer
   where
     tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
+
+checkEmpty :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
+           => BS.ByteString -> Layer -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
+checkEmpty tile layer
+  | BS.null tile = throwError $ ServantErr { errHTTPCode = 204
+                    , errReasonPhrase = "No Content"
+                    , errBody = ""
+                    , errHeaders = []
+                    }
+  | otherwise = pure $ addHeader (lastModified layer) tile
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
         => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
