@@ -30,6 +30,7 @@ library
                      , hasql
                      , hasql-pool
                      , here
+                     , http-types
                      , list-t
                      , mtl
                      , optparse-generic
