@@ -99,21 +99,13 @@ data ServerState = ServerState { _ssPool           :: P.Pool
                                , _ssStateLayers    :: STM.Map Text Layer
                                }
 
-data TileFeature = TileFeature { _tfGeometry   :: Value
-                               , _tfProperties :: M.Map Text Text
+data TileFeature = TileFeature { _tfFeature :: Value
                                }
 
 mkGeoJSON :: [TileFeature] -> GeoJson
 mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
-                             , ("features", toJSON . fmap mkFeature $ tfs)
-                             ]
-
-mkFeature :: TileFeature -> Value
-mkFeature tf = toJSON featureMap
-  where featureMap = M.fromList [ ("type", String "Feature")
-                                , ("geometry", _tfGeometry tf)
-                                , ("properties", toJSON . _tfProperties $ tf)
-                                ] :: M.Map Text Value
+                           , ("features", toJSON . fmap _tfFeature $ tfs)
+                           ]
 
 err204 :: ServantErr
 err204 = ServantErr { errHTTPCode = 204
