@@ -15,6 +15,10 @@ GET  /layername/Z/X/Y[.mvt|.json] (application/octet-stream) - Return GeoJSON or
 Building
 --------
 
+### PostgreSQL
+
+To generate the GeoJSON feature (see below) requires PostgreSQL 9.5+.
+
 ### Mapnik
 
 Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik version that supports Mapbox vector tiles - 
