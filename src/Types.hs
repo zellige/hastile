@@ -99,12 +99,11 @@ data ServerState = ServerState { _ssPool           :: P.Pool
                                , _ssStateLayers    :: STM.Map Text Layer
                                }
 
-data TileFeature = TileFeature { _tfFeature :: Value
-                               }
+newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
 
 mkGeoJSON :: [TileFeature] -> GeoJson
 mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
-                           , ("features", toJSON . fmap _tfFeature $ tfs)
+                           , ("features", toJSON . fmap unTileFeature $ tfs)
                            ]
 
 err204 :: ServantErr
