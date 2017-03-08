@@ -6,12 +6,9 @@
 
 module DB where
 
-import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import           Data.ByteString            as BS
-import           Data.Map                   as M
-import           Data.Maybe                 (fromMaybe)
 import           Data.Monoid
 import           Data.Text                  as T
 import           Data.Text.Encoding         as TE
@@ -59,9 +56,7 @@ getLayer l = do
 
 mkStatement :: BS.ByteString -> HQ.Query () [TileFeature]
 mkStatement sql = HQ.statement sql
-    HE.unit (HD.rowsList (TileFeature <$> HD.value HD.json <*> propsValue)) False
-  where
-    propsValue = fmap (fromMaybe "") . M.fromList <$> HD.value (HD.hstore replicateM)
+    HE.unit (HD.rowsList (TileFeature <$> HD.value HD.json)) False
 
 -- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
 escape :: Text -> Text -> Text

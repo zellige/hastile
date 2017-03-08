@@ -15,6 +15,10 @@ GET  /layername/Z/X/Y[.mvt|.json] (application/octet-stream) - Return GeoJSON or
 Building
 --------
 
+### PostgreSQL
+
+To generate the GeoJSON feature (see below) requires PostgreSQL 9.5+.
+
 ### Mapnik
 
 Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik version that supports Mapbox vector tiles - 
@@ -98,11 +102,11 @@ The file contains settings for the database connection and layer configuration, 
   "db-connection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
   "layers": {
     "layer1": { 
-      "query": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer1_table)-'wkb_geometry'::text FROM layer1_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      "query": "SELECT geojson FROM layer1_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
       "last-modified": "2017-01-15T23:49:36Z"
     },
     "layer2": {
-      "query": "SELECT ST_AsGeoJSON(wkb_geometry), hstore(layer2_table)-'wkb_geometry'::text FROM layer2_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      "query": "SELECT geojson FROM layer2_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
       "last-modified": "2017-01-15T23:49:36Z"
     }
   }
@@ -110,6 +114,20 @@ The file contains settings for the database connection and layer configuration, 
 ```
 
 Where, db-connection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
+
+The layer table has two columns: a single GeoJSON formatted feature as JSON and the geometry.  The geometry is used to perform the spatial query and the geojson is the feature returned.
+
+To construct a table with a GeoJSON feature with all properties containing arbitrary columns from a table, create a materialized view like:
+```javascript
+CREATE MATERIALIZED VIEW layer1_table as SELECT jsonb_build_object(
+    'type',      'Feature',
+    'id',         ogc_fid,
+    'geometry',   ST_AsGeoJSON(wkb_geometry)::jsonb,
+    'properties', to_jsonb(row) - 'ogc_fid' - 'wkb_geometry'
+)::json as geojson, row.wkb_geometry as wkb_geometry FROM (SELECT * FROM source_layer1_table) row;
+```
+
+This will create the two columns required: geojson (a GeoJSON feature in JSON format) and the geometry column.
 
 You can configure other database, mapnik and HTTP port settings too:
 ```javascript
@@ -125,17 +143,17 @@ Hastile will replace `!bbox_4326!` with the SQL for a bounding box for the reque
 
 If you want to combine multiple tables into a single layer you can use UNION and MATERIALIZED VIEWS and then query it directly:
 ```SQL
-create materialized view layers as
-  SELECT ST_AsGeoJSON(wkb_geometry) as geojson, * FROM layer1_table
+CREATE MATERIALIZED VIEW layers AS
+  SELECT geojson FROM layer1_table
   UNION
-  SELECT ST_AsGeoJSON(wkb_geometry) as geojson, * FROM layer2_table
+  SELECT geojson FROM layer2_table
 ```
 
 Changing the configuration to:
 ```javascript
   "layers": {
     "layer": {
-      "query": "SELECT geojson, hstore(layers)-ARRAY['wkb_geometry','geojson'] FROM layers WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      "query": "SELECT geojson FROM layers WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
       ...
     }  
   }
