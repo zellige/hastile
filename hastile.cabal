@@ -40,6 +40,7 @@ library
                      , text
                      , time
                      , transformers
+                     , vectortiles
                      , wai
                      , word8
   default-language:    Haskell2010
