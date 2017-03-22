@@ -2,11 +2,9 @@
 
 module TileSpec where
 
-import           Control.Monad.IO.Class
+import           Control.Lens
 import qualified Data.ByteString                 as BS
-import           Data.Either
 import           Data.Map
-import           Data.Text                       (Text)
 import qualified Geography.VectorTile            as VT
 import qualified Geography.VectorTile.VectorTile as VVT
 import           Test.Hspec
@@ -29,15 +27,13 @@ testReadMvtFile = do
     it "Returns true for expected features" $
       True `shouldBe` True
 
+readMvtFile :: IO VVT.Layer
 readMvtFile = do
   mvt <- BS.readFile "test/integration/19781.mvt"
-  let decodeMvt = VT.decode mvt
-      decodedMvt = Prelude.head $ rights [decodeMvt]
-      layers = VVT._layers . Prelude.head $ rights [VT.tile decodedMvt]
+  let decodedMvt = VT.decode mvt ^?! _Right
+      layers = VVT._layers $ VT.tile decodedMvt ^?! _Right
       maybeLayer = Data.Map.lookup "open_traffic_adl" layers
-  pure maybeLayer
-
-readLayer = do
+  pure $ maybeLayer ^?! _Just
 
 -- Test for serialize/deserialize
 -- Test for empty queries.
