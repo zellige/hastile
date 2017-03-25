@@ -75,6 +75,7 @@ test-suite hastile-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base
+                     , aeson
                      , bytestring
                      , containers
                      , hastile                     
