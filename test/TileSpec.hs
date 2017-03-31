@@ -14,7 +14,9 @@ import           Data.Text                       (unpack)
 import           Data.Text
 import qualified Geography.VectorTile            as VT
 import qualified Geography.VectorTile.VectorTile as VVT
+import           System.Directory
 import           System.Environment              (lookupEnv)
+import           System.IO
 import           Test.Hspec
 
 import           DB
@@ -25,26 +27,25 @@ import           Types
 spec :: Spec
 spec = do
   testGoogleToBBoxM
+  testReadMvtFile
 
 testGoogleToBBoxM :: Spec
-testGoogleToBBoxM = do
-  describe "Can get a bounding box in 3857 metres from a google tile" $ do
+testGoogleToBBoxM =
+  describe "Can get a bounding box in 3857 metres from a google tile" $
     it "Returns the 3857 extent for zoom level 0" $
       googleToBBoxM 256 0 (GoogleTileCoords 0 0) `shouldBe` extent
 
--- "test/integration/19781.mvt"
 testReadMvtFile :: Spec
-testReadMvtFile = do
-  describe "Can read in number of features" $ do
-    it "Returns true for expected features" $
-      True `shouldBe` True
+testReadMvtFile =
+  describe "Can read in number of features" $
+    it "Returns true for expected features" $ withTempFile $ \f -> do
+     generateMvtAdelaide f
+     expectedLayer <- readMvtFile "test/integration/19781.mvt"
+     newLayer <- readMvtFile f
+     newLayer `shouldBe` expectedLayer
 
-
-writeNewMvtAdelaide :: FilePath -> IO ()
-generateMvtAdelaide filename = do
-  lbs <- generateMvtFile "test/integration/19781.json" "open_traffic_adl" (Coordinates 15 $ GoogleTileCoords 28999 19781)
-  _ <- LBS.writeFile filename lbs
-  return ()
+-- TODO - Test for empty queries.
+-- TODO - Implement fold for comparison when fails
 
 readMvtFile :: FilePath -> IO VVT.Layer
 readMvtFile filename = do
@@ -58,6 +59,12 @@ bsToLayer bs layerName = maybeLayer ^?! _Just
     layers = VVT._layers $ VT.tile decodedMvt ^?! _Right
     maybeLayer = Data.Map.lookup layerName layers
 
+generateMvtAdelaide :: FilePath -> IO ()
+generateMvtAdelaide filename = do
+  lbs <- generateMvtFile "test/integration/19781.json" "open_traffic_adl" (Coordinates 15 $ GoogleTileCoords 28999 19781)
+  _ <- LBS.writeFile filename lbs
+  return ()
+
 generateMvtFile :: FilePath -> Text -> Coordinates -> IO LBS.ByteString
 generateMvtFile geoJsonFile layerName coords = do
   bs <- LBS.readFile geoJsonFile
@@ -68,5 +75,9 @@ generateMvtFile geoJsonFile layerName coords = do
   et <- MapboxVectorTile.fromGeoJSON defaultTileSize geoJson layerName pluginDir coords
   either (error . unpack . ("Failed to create tile: " <>)) (pure . fromStrict) et
 
--- Test for serialize/deserialize
--- Test for empty queries.
+withTempFile :: (FilePath -> IO a) -> IO a
+withTempFile action = do
+  dir <- getTemporaryDirectory
+  (file, h) <- openTempFile dir ""
+  hClose h
+  action file <* removeFile file
