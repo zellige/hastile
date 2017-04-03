@@ -69,7 +69,8 @@ For Ubuntu 16.04:
  - `sudo apt-get install -y protobuf-compiler libprotoc-dev libprotozero-dev libprotoc9v5`
  - Turn on PIC
    - Edit ./gyp/build.gyp
-   - Under "mapnik_vector_tile_impl", "cflags_cc" (line 91 and 112) add '-fPIC'.
+   - In the section, "target_name": "mapnik_vector_tile_impl":
+     - Add '-fPIC' to both "cflags_cc" sections.
  - `make`
  - Create static libraries in:
    - `cd build/Release`
