@@ -66,7 +66,7 @@ For OSX:
  - Will produce files in ./build/Release/
 
 For Ubuntu 16.04:
- - `sudo apt-get install -y protobuf-compiler libprotoc-dev libprotoc9v5`
+ - `sudo apt-get install -y protobuf-compiler libprotoc-dev libprotozero-dev libprotoc9v5`
  - Turn on PIC
    - Edit ./gyp/build.gyp
    - Under "mapnik_vector_tile_impl", "cflags_cc" (line 91 and 112) add '-fPIC'.
