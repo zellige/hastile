@@ -56,6 +56,10 @@ For Ubuntu 16.04:
 
 ### Mapnik Vector Tile
 
+Run:
+ - `mapnik-config --input-plugins`
+ - Take the output and set the environment variable: MAPNIK_PLUGINS_DIR. e.g. export MAPNIK_PLUGINS_DIR=/usr/lib/mapnik/3.0/input
+
 You need to build this one from source:
  - `git clone https://github.com/mapbox/mapnik-vector-tile.git`
  - `cd mapnik-vector-tile`
@@ -93,7 +97,9 @@ If this does not work, build this using `build.sh`. You will likely have to edit
 
 Assuming mapnik-vector-tile and hastile projects are peers (underneath the same parent directory):
  - <code>export MAPNIK_VECTOR_TILE_SRC=\`pwd\`/../mapnik-vector-tile/</code>
+ - <code>export MAPNIK_PLUGINS_DIR=\`mapnik-config --input-plugins\`</code>
  - `stack build`
+ - `stack test`
 
 Configuration
 -------------
