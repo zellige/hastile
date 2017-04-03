@@ -59,6 +59,7 @@ For Ubuntu 16.04:
 You need to build this one from source:
  - `git clone https://github.com/mapbox/mapnik-vector-tile.git`
  - `cd mapnik-vector-tile`
+ - `git checkout 55eebb5b4439edec8fb8c1455e5ad9e1dc59670d`
 
 For OSX:
  - `brew install protobuf`
@@ -70,7 +71,7 @@ For Ubuntu 16.04:
  - Turn on PIC
    - Edit ./gyp/build.gyp
    - In the section, "target_name": "mapnik_vector_tile_impl":
-     - Add '-fPIC' to both "cflags_cc" sections.
+     - Add '-fPIC' to both "cflags_cc" sections (lines 91 and 112).
  - `make`
  - Create static libraries in:
    - `cd build/Release`
