@@ -27,7 +27,7 @@ library
                      , aeson-pretty
                      , bytestring
                      , containers
-                     , hasql                     
+                     , hasql
                      , hasql-pool
                      , here
                      , http-types
@@ -35,7 +35,7 @@ library
                      , list-t
                      , mtl
                      , optparse-generic
-                     , servant  
+                     , servant
                      , servant-server
                      , stm-containers
                      , text
