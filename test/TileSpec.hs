@@ -3,21 +3,20 @@
 module TileSpec where
 
 import           Control.Lens
-import           Data.Aeson
-import qualified Data.ByteString                 as BS
-import           Data.ByteString.Lazy            as LBS (ByteString, fromStrict,
+import           Data.Aeson                      (eitherDecode)
+import qualified Data.ByteString                 as BS (ByteString, readFile)
+import qualified Data.ByteString.Lazy            as LBS (ByteString, fromStrict,
                                                          readFile, writeFile)
-import           Data.Map
-import           Data.Maybe
-import           Data.Monoid
-import           Data.Text                       (unpack)
-import           Data.Text
+import           Data.Map                        (lookup)
+import           Data.Maybe                      (fromMaybe)
+import           Data.Monoid                     ((<>))
+import           Data.Text                       (Text, unpack)
 import qualified Geography.VectorTile            as VT
 import qualified Geography.VectorTile.VectorTile as VVT
-import           System.Directory
 import           System.Environment              (lookupEnv)
-import           System.IO
-import           Test.Hspec
+import           System.IO                       (hClose)
+import           System.IO.Temp                  (withSystemTempFile)
+import           Test.Hspec                      (Spec, describe, it, shouldBe)
 
 import           DB
 import           MapboxVectorTile
@@ -38,11 +37,12 @@ testGoogleToBBoxM =
 testReadMvtFile :: Spec
 testReadMvtFile =
   describe "Can read in number of features" $
-    it "Returns true for expected features" $ withTempFile $ \f -> do
-     generateMvtAdelaide f
-     expectedLayer <- readMvtFile "test/integration/19781.mvt"
-     newLayer <- readMvtFile f
-     newLayer `shouldBe` expectedLayer
+    it "Returns true for expected features" $ withSystemTempFile "tile" $ \f h -> do
+      hClose h
+      generateMvtAdelaide f
+      expectedLayer <- readMvtFile "test/integration/19781.mvt"
+      newLayer <- readMvtFile f
+      newLayer `shouldBe` expectedLayer
 
 -- TODO - Test for empty queries.
 -- TODO - Implement fold for comparison when fails
@@ -73,11 +73,4 @@ generateMvtFile geoJsonFile layerName coords = do
       geoJson = either decodeError id ebs
   pluginDir <- fromMaybe "/usr/local/lib/mapnik/input" <$> lookupEnv "MAPNIK_PLUGINS_DIR"
   et <- MapboxVectorTile.fromGeoJSON defaultTileSize geoJson layerName pluginDir coords
-  either (error . unpack . ("Failed to create tile: " <>)) (pure . fromStrict) et
-
-withTempFile :: (FilePath -> IO a) -> IO a
-withTempFile action = do
-  dir <- getTemporaryDirectory
-  (file, h) <- openTempFile dir ""
-  hClose h
-  action file <* removeFile file
+  either (error . unpack . ("Failed to create tile: " <>)) (pure . LBS.fromStrict) et
