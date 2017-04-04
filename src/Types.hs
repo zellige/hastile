@@ -118,23 +118,24 @@ err204 = ServantErr { errHTTPCode = 204
                     , errHeaders = []
                     }
 
-data MapboxVectorTile deriving Typeable
 data AlreadyJSON deriving Typeable
 
 instance Accept AlreadyJSON where
     contentType _ = "application" M.// "json"
 
-instance Accept MapboxVectorTile where
-    contentType _ = "application" M.// "vnd.mapbox-vector-tile"
-
 instance MimeRender AlreadyJSON Data.ByteString.Lazy.ByteString where
-    mimeRender _ = id
-
-instance MimeRender MapboxVectorTile Data.ByteString.Lazy.ByteString where
     mimeRender _ = id
 
 instance MimeRender AlreadyJSON BS.ByteString where
     mimeRender _ = fromStrict
+
+data MapboxVectorTile deriving Typeable
+
+instance Accept MapboxVectorTile where
+    contentType _ = "application" M.// "vnd.mapbox-vector-tile"
+
+instance MimeRender MapboxVectorTile Data.ByteString.Lazy.ByteString where
+    mimeRender _ = id
 
 instance MimeRender MapboxVectorTile BS.ByteString where
     mimeRender _ = fromStrict
