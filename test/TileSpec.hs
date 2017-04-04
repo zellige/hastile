@@ -18,9 +18,9 @@ import           System.IO                       (hClose)
 import           System.IO.Temp                  (withSystemTempFile)
 import           Test.Hspec                      (Spec, describe, it, shouldBe)
 
-import           DB
-import           MapboxVectorTile
-import           Tile
+import           DB                              (defaultTileSize)
+import           MapboxVectorTile                (fromGeoJSON)
+import           Tile                            (extent, googleToBBoxM)
 import           Types
 
 spec :: Spec
