@@ -22,7 +22,7 @@ import           Data.Text            as T
 import           Data.Time
 import           Data.Typeable
 import           Hasql.Pool           as P
-import qualified Network.HTTP.Media   as M
+import qualified Network.HTTP.Media   as HM
 import           Options.Generic
 import           Servant
 import           STMContainers.Map    as STM
@@ -121,7 +121,7 @@ err204 = ServantErr { errHTTPCode = 204
 data AlreadyJSON deriving Typeable
 
 instance Accept AlreadyJSON where
-    contentType _ = "application" M.// "json"
+    contentType _ = "application" HM.// "json"
 
 instance MimeRender AlreadyJSON Data.ByteString.Lazy.ByteString where
     mimeRender _ = id
@@ -132,7 +132,7 @@ instance MimeRender AlreadyJSON BS.ByteString where
 data MapboxVectorTile deriving Typeable
 
 instance Accept MapboxVectorTile where
-    contentType _ = "application" M.// "vnd.mapbox-vector-tile"
+    contentType _ = "application" HM.// "vnd.mapbox-vector-tile"
 
 instance MimeRender MapboxVectorTile Data.ByteString.Lazy.ByteString where
     mimeRender _ = id
