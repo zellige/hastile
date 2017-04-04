@@ -14,19 +14,24 @@ module Types where
 
 import           Control.Applicative
 import           Data.Aeson
-import           Data.Map            as M
+import qualified Data.ByteString      as BS
+import           Data.ByteString.Lazy (ByteString, fromStrict)
+import           Data.Map             as M
 import           Data.Maybe
-import           Data.Text           as T
+import           Data.Text            as T
 import           Data.Time
-import           Hasql.Pool          as P
+import           Data.Typeable
+import           Hasql.Pool           as P
+import qualified Network.HTTP.Media   as M
 import           Options.Generic
 import           Servant
-import           STMContainers.Map   as STM
+import           STMContainers.Map    as STM
 
 type GeoJson = M.Map Text Value
 
 newtype ZoomLevel = ZoomLevel { _z :: Integer
                               } deriving (Show, Eq, Num)
+
 data GoogleTileCoords = GoogleTileCoords { _x :: Integer
                                          , _y :: Integer
                                          } deriving (Eq, Show)
@@ -112,3 +117,24 @@ err204 = ServantErr { errHTTPCode = 204
                     , errBody = ""
                     , errHeaders = []
                     }
+
+data MapboxVectorTile deriving Typeable
+data AlreadyJSON deriving Typeable
+
+instance Accept AlreadyJSON where
+    contentType _ = "application" M.// "json"
+
+instance Accept MapboxVectorTile where
+    contentType _ = "application" M.// "vnd.mapbox-vector-tile"
+
+instance MimeRender AlreadyJSON Data.ByteString.Lazy.ByteString where
+    mimeRender _ = id
+
+instance MimeRender MapboxVectorTile Data.ByteString.Lazy.ByteString where
+    mimeRender _ = id
+
+instance MimeRender AlreadyJSON BS.ByteString where
+    mimeRender _ = fromStrict
+
+instance MimeRender MapboxVectorTile BS.ByteString where
+    mimeRender _ = fromStrict

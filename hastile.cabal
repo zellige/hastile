@@ -27,10 +27,11 @@ library
                      , aeson-pretty
                      , bytestring
                      , containers
-                     , hasql
+                     , hasql                     
                      , hasql-pool
                      , here
                      , http-types
+                     , http-media
                      , list-t
                      , mtl
                      , optparse-generic

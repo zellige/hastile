@@ -112,7 +112,7 @@ getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
 getJson l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
-  pure $ addHeader (lastModified layer) . toStrict . encode $ geoJson
+  pure $ addHeader (lastModified layer) (toStrict $ encode geoJson)
 
 getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
          => Layer -> Coordinates -> m GeoJson

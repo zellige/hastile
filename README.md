@@ -6,10 +6,11 @@ A Haskell tile server that produces GeoJSON or MVT (Mapbox Vector Tiles) from a 
 RESTful API
 -----------
 ```
-GET  /                            (application/json)         - Returns the current configuration.
-POST /layername                   (application/json)         - Add/overwrite the query setting for layername (e.g. {"query": "..."}).
-GET  /layername/Z/X/Y/query       (text/plain)               - Query for a given layername, Zoom, and (X,Y).
-GET  /layername/Z/X/Y[.mvt|.json] (application/octet-stream) - Return GeoJSON or Mapnick Vector Tile for given layername, Zoom, (X,Y).
+GET  /                         (application/json)         - Returns the current configuration.
+POST /layername                (application/json)         - Add/overwrite the query setting for layername (e.g. {"query": "..."}).
+GET  /layername/Z/X/Y/query    (text/plain)               - Query for a given layername, Zoom, and (X,Y).
+GET  /layername/Z/X/Y.mvt      (application/vnd.mapbox-vector-tile) - Return Mapnick Vector Tile for given layername, Zoom, (X,Y).
+GET  /layername/Z/X/Y.json     (application/json) - Return GeoJSON for given layername, Zoom, (X,Y).
 ```
 
 Building
