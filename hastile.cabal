@@ -31,10 +31,11 @@ library
                      , hasql-pool
                      , here
                      , http-types
+                     , http-media
                      , list-t
                      , mtl
                      , optparse-generic
-                     , servant  
+                     , servant
                      , servant-server
                      , stm-containers
                      , text

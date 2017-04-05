@@ -21,7 +21,7 @@ type YI = Capture "y" Integer
 type HastileApi =    Get '[JSON] Config
                 :<|> LayerName :> ReqBody '[JSON] LayerQuery :> Post '[JSON] NoContent
                 :<|> LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
-                :<|> LayerName :> Z :> X :> Y :> Get '[OctetStream] (Headers '[Header "Last-Modified" String] BS.ByteString)
+                :<|> LayerName :> Z :> X :> Y :> Get '[MapboxVectorTile, AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
 
 api :: Proxy HastileApi
 api = Proxy
