@@ -3,7 +3,6 @@
 module Tile ( extent
             , googleToBBoxM
             , BBox (..)
-            , GoogleTileCoords (..)
             , Metres (..)
             , Pixels (..)
             , ZoomLevel (..)
