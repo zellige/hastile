@@ -40,6 +40,10 @@ data Coordinates = Coordinates { _zl :: ZoomLevel
                                , _xy :: GoogleTileCoords
                                } deriving (Show, Eq)
 
+newtype Pixels = Pixels Integer deriving (Show, Eq, Num)
+instance ToJSON Pixels where
+  toJSON (Pixels n) = Number $ fromIntegral n
+
 data CmdLine = CmdLine { configFile :: FilePath
                        } deriving Generic
 instance ParseRecord CmdLine
@@ -68,15 +72,16 @@ data Config = Config { _configPgConnection       :: Text
                      , _configMapnikInputPlugins :: Maybe FilePath
                      , _configPort               :: Maybe Int
                      , _configLayers             :: M.Map Text Layer
+                     , _configTileBuffer         :: Maybe Pixels
                      } deriving (Show, Generic)
 
 emptyConfig :: Config
-emptyConfig = Config "" Nothing Nothing Nothing Nothing (fromList [])
+emptyConfig = Config "" Nothing Nothing Nothing Nothing (fromList []) Nothing
 
 instance FromJSON Config where
   parseJSON (Object o) =
        Config <$> o .: "db-connection" <*> o .:? "db-pool-size" <*> o .:? "db-timeout" <*>
-          o .:? "mapnik-input-plugins" <*> o .:? "port" <*> o .: "layers"
+          o .:? "mapnik-input-plugins" <*> o .:? "port" <*> o .: "layers" <*> (fmap . fmap) Pixels (o .:? "tile-buffer")
   parseJSON _ = Control.Applicative.empty
 
 instance ToJSON Config where
@@ -87,7 +92,8 @@ instance ToJSON Config where
       ("db-timeout" .=) <$> _configPgTimeout c,
       ("mapnik-input-plugins" .=) <$> _configMapnikInputPlugins c,
       ("port" .=) <$> _configPort c,
-      ("layers" .=) <$> Just (_configLayers c)
+      ("layers" .=) <$> Just (_configLayers c),
+      ("tile-buffer" .=) <$> Just (_configTileBuffer c)
     ]
 
 instance ToJSON Layer where

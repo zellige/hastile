@@ -12,7 +12,6 @@ import           Types
 
 newtype TileCoord  = TileCoord Integer deriving (Show, Eq, Num)
 newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional)
-newtype Pixels = Pixels Integer deriving (Show, Eq, Num)
 newtype Ratio n d = Ratio Double deriving (Show, Eq, Num, Floating, Fractional)
 
 data LatLon a = Lat Double
