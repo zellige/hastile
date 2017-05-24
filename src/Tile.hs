@@ -35,7 +35,6 @@ earthCircumference = 2 * maxExtent
 extent :: BBox Metres
 extent = BBox (-maxExtent) (-maxExtent) maxExtent maxExtent
 
--- | Add buffer to bound box.
 addBufferToBBox :: Pixels -> Pixels -> ZoomLevel -> BBox Metres -> BBox Metres
 addBufferToBBox tileSize buffer z (BBox llX llY urX urY) =
   hardLimit $ BBox (llX - bufferM) (llY - bufferM) (urX + bufferM) (urY + bufferM)
@@ -50,8 +49,9 @@ addBufferToBBox tileSize buffer z (BBox llX llY urX urY) =
 
 googleToBBoxM :: Pixels -> ZoomLevel -> GoogleTileCoords -> BBox Metres
 googleToBBoxM tileSize z g =
-  flipYs . fmap (flip (-) maxExtent . mPerPxToM mPerPx) $ googleToBBoxPx tileSize g
-  where mPerPx = mPerPxAtZoom earthCircumference tileSize z
+  flipYs . fmap googleTo3857 $ googleToBBoxPx tileSize g
+  where googleTo3857 coord = mPerPxToM mPerPx coord - maxExtent
+        mPerPx = mPerPxAtZoom earthCircumference tileSize z
         flipYs (BBox llX llY urX urY) = BBox llX (-llY) urX (-urY)
 
 googleToBBoxPx :: Pixels -> GoogleTileCoords -> BBox Pixels
