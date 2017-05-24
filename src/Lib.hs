@@ -10,6 +10,7 @@ module Lib
     , ServerState (..)
     ) where
 
+import           Control.Lens               ((^.))
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
@@ -57,7 +58,7 @@ provisionLayer l query = do
   pure NoContent
 
 returnConfiguration ::(MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-               => m Types.Config
+               => m Types.InputConfig
 returnConfiguration = do
   cfgFile <- asks _ssConfigFile
   configBs <- liftIO $ LBS.readFile cfgFile
@@ -94,12 +95,11 @@ getTile l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
   pp <- asks _ssPluginDir
-  eet <- liftIO $ tileReturn geoJson pp
+  buffer <- asks (^. ssBuffer)
+  eet <- liftIO $ fromGeoJSON defaultTileSize buffer geoJson l pp zxy
   case eet of
     Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
     Right tile -> checkEmpty tile layer
-  where
-    tileReturn geoJson' pp' = fromGeoJSON defaultTileSize geoJson' l pp' zxy
 
 checkEmpty :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
            => BS.ByteString -> Layer -> m (Headers '[Header "Last-Modified" String] BS.ByteString)

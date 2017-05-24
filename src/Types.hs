@@ -7,17 +7,19 @@
 {-# LANGUAGE NoMonomorphismRestriction  #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
 
 module Types where
 
 import           Control.Applicative
+import           Control.Lens         (Lens', makeLenses)
 import           Data.Aeson
 import qualified Data.ByteString      as BS
 import           Data.ByteString.Lazy (ByteString, fromStrict)
 import           Data.Map             as M
-import           Data.Maybe
+import           Data.Maybe           (catMaybes)
 import           Data.Text            as T
 import           Data.Time
 import           Data.Typeable
@@ -39,6 +41,10 @@ data GoogleTileCoords = GoogleTileCoords { _x :: Integer
 data Coordinates = Coordinates { _zl :: ZoomLevel
                                , _xy :: GoogleTileCoords
                                } deriving (Show, Eq)
+
+newtype Pixels = Pixels Integer deriving (Show, Eq, Num)
+instance ToJSON Pixels where
+  toJSON (Pixels n) = Number $ fromIntegral n
 
 data CmdLine = CmdLine { configFile :: FilePath
                        } deriving Generic
@@ -62,32 +68,59 @@ instance FromJSON Layer where
        Layer <$> o .: "query" <*> o .: "last-modified"
   parseJSON _ = Control.Applicative.empty
 
-data Config = Config { _configPgConnection       :: Text
-                     , _configPgPoolSize         :: Maybe Int
-                     , _configPgTimeout          :: Maybe NominalDiffTime
-                     , _configMapnikInputPlugins :: Maybe FilePath
-                     , _configPort               :: Maybe Int
-                     , _configLayers             :: M.Map Text Layer
+data InputConfig = InputConfig { _inputConfigPgConnection :: Text
+                     , _inputConfigPgPoolSize             :: Maybe Int
+                     , _inputConfigPgTimeout              :: Maybe NominalDiffTime
+                     , _inputConfigMapnikInputPlugins     :: Maybe FilePath
+                     , _inputConfigPort                   :: Maybe Int
+                     , _inputConfigLayers                 :: M.Map Text Layer
+                     , _inputConfigTileBuffer             :: Maybe Pixels
                      } deriving (Show, Generic)
 
-emptyConfig :: Config
-emptyConfig = Config "" Nothing Nothing Nothing Nothing (fromList [])
+makeLenses ''InputConfig
 
-instance FromJSON Config where
+data Config = Config { _configPgConnection       :: Text
+                     , _configPgPoolSize         :: Int
+                     , _configPgTimeout          :: NominalDiffTime
+                     , _configMapnikInputPlugins :: FilePath
+                     , _configPort               :: Int
+                     , _configLayers             :: M.Map Text Layer
+                     , _configTileBuffer         :: Pixels
+                     } deriving (Show, Generic)
+
+makeLenses ''Config
+
+emptyInputConfig :: InputConfig
+emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing (fromList []) Nothing
+
+instance FromJSON InputConfig where
   parseJSON (Object o) =
-       Config <$> o .: "db-connection" <*> o .:? "db-pool-size" <*> o .:? "db-timeout" <*>
-          o .:? "mapnik-input-plugins" <*> o .:? "port" <*> o .: "layers"
+       InputConfig <$> o .: "db-connection" <*> o .:? "db-pool-size" <*> o .:? "db-timeout" <*>
+          o .:? "mapnik-input-plugins" <*> o .:? "port" <*> o .: "layers" <*> (fmap . fmap) Pixels (o .:? "tile-buffer")
   parseJSON _ = Control.Applicative.empty
 
 instance ToJSON Config where
-  toJSON c = object $ catMaybes
+  toJSON c = object
     [
-      ("db-connection" .=) <$> Just (_configPgConnection c),
-      ("db-pool-size" .=) <$> _configPgPoolSize c,
-      ("db-timeout" .=) <$> _configPgTimeout c,
-      ("mapnik-input-plugins" .=) <$> _configMapnikInputPlugins c,
-      ("port" .=) <$> _configPort c,
-      ("layers" .=) <$> Just (_configLayers c)
+      ("db-connection" .= _configPgConnection c),
+      ("db-pool-size" .= _configPgPoolSize c),
+      ("db-timeout" .= _configPgTimeout c),
+      ("mapnik-input-plugins" .= _configMapnikInputPlugins c),
+      ("port" .= _configPort c),
+      ("layers" .= _configLayers c),
+      ("tile-buffer" .= _configTileBuffer c)
+    ]
+
+instance ToJSON InputConfig where
+  toJSON ic = object $ catMaybes
+    [
+      ("db-connection" .=) <$> Just (_inputConfigPgConnection ic),
+      ("db-pool-size" .=) <$> _inputConfigPgPoolSize ic,
+      ("db-timeout" .=) <$> _inputConfigPgTimeout ic,
+      ("mapnik-input-plugins" .=) <$> _inputConfigMapnikInputPlugins ic,
+      ("port" .=) <$> _inputConfigPort ic,
+      ("layers" .=) <$> Just (_inputConfigLayers ic),
+      ("tile-buffer" .=) <$> Just (_inputConfigTileBuffer ic)
     ]
 
 instance ToJSON Layer where
@@ -96,13 +129,16 @@ instance ToJSON Layer where
        "last-modified" .= _layerLastModified l
     ]
 
--- TODO: make lenses!
 data ServerState = ServerState { _ssPool           :: P.Pool
                                , _ssPluginDir      :: FilePath
                                , _ssConfigFile     :: FilePath
                                , _ssOriginalConfig :: Config
                                , _ssStateLayers    :: STM.Map Text Layer
                                }
+makeLenses ''ServerState
+
+ssBuffer :: Lens' ServerState Pixels
+ssBuffer = ssOriginalConfig . configTileBuffer
 
 newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
 

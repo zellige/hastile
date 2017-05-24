@@ -20,19 +20,33 @@ import           Test.Hspec                      (Spec, describe, it, shouldBe)
 
 import           DB                              (defaultTileSize)
 import           MapboxVectorTile                (fromGeoJSON)
-import           Tile                            (extent, googleToBBoxM)
+import           Tile                            (BBox (..), addBufferToBBox, extent, googleToBBoxM)
 import           Types
 
 spec :: Spec
 spec = do
   testGoogleToBBoxM
+  testBufferedBoundingBox
   testReadMvtFile
 
 testGoogleToBBoxM :: Spec
 testGoogleToBBoxM =
-  describe "Can get a bounding box in 3857 metres from a google tile" $
+  describe "googleToBBoxM" $
     it "Returns the 3857 extent for zoom level 0" $
       googleToBBoxM 256 0 (GoogleTileCoords 0 0) `shouldBe` extent
+
+-- TODO: Let's stop writing crappy tests and write properties
+testBufferedBoundingBox :: Spec
+testBufferedBoundingBox =
+  describe "addBufferToBBox" $ do
+    it "Hard limits to 3857 extent" $
+      let bbox = googleToBBoxM 256 0 (GoogleTileCoords 0 0)
+          buffered = addBufferToBBox 256 128 0 bbox
+       in buffered `shouldBe` extent
+    it "Adding a buffer does what it should" $
+      let bbox@(BBox llX llY urX urY) = googleToBBoxM 256 2 (GoogleTileCoords 1 1)
+          (BBox llX' llY' urX' urY') = addBufferToBBox 256 128 2 bbox
+       in all id [llX' < llX , llY' < llY , urX' > urX , urY' > urY] `shouldBe` True
 
 testReadMvtFile :: Spec
 testReadMvtFile =
@@ -72,5 +86,5 @@ generateMvtFile geoJsonFile layerName coords = do
       decodeError = error . (("Unable to decode " <> geoJsonFile <> ": ") <>)
       geoJson = either decodeError id ebs
   pluginDir <- fromMaybe "/usr/local/lib/mapnik/input" <$> lookupEnv "MAPNIK_PLUGINS_DIR"
-  et <- MapboxVectorTile.fromGeoJSON defaultTileSize geoJson layerName pluginDir coords
+  et <- MapboxVectorTile.fromGeoJSON defaultTileSize 128 geoJson layerName pluginDir coords
   either (error . unpack . ("Failed to create tile: " <>)) (pure . LBS.fromStrict) et

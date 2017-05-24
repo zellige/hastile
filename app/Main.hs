@@ -36,23 +36,33 @@ doIt cmdLine = do
     Left e -> do
       putStrLn $ "In file: " <> cfgFile <> "\nError: " <> e
       exitWith (ExitFailure 2)
-    Right config -> doItWithConfig cfgFile config
+    Right inputConfig -> doItWithConfig cfgFile $ addDefaults inputConfig
 
 doItWithConfig :: FilePath -> Config -> IO ()
 doItWithConfig cfgFile config = do
   let layers = _configLayers config
   layers' <- liftIO $ atomically STM.new :: IO (STM.Map Text Layer)
   forM_ (Data.Map.toList layers) $ \(k, v) -> atomically $ STM.insert v k layers'
-  let pgPoolSize' = fromMaybe 10 $ _configPgPoolSize config
-      pgTimeout' = fromMaybe 1 $ _configPgTimeout config
-      pluginDir' = fromMaybe "/usr/local/lib/mapnik/input" $ _configMapnikInputPlugins config
-      port' = fromMaybe 8080 $ _configPort config
-    in bracket (P.acquire (pgPoolSize', pgTimeout', encodeUtf8 $ _configPgConnection config))
+  let pgPoolSize= _configPgPoolSize config
+      pgTimeout = _configPgTimeout config
+      pluginDir = _configMapnikInputPlugins config
+      port = _configPort config
+      conn = encodeUtf8 $ _configPgConnection config
+    in bracket (P.acquire (pgPoolSize, pgTimeout, conn))
             P.release $
-              \p -> getWarp port' . serve api $ hastileService (ServerState p pluginDir' cfgFile config layers')
+              \p -> getWarp port . serve api $ hastileService (ServerState p pluginDir cfgFile config layers')
   pure ()
 
 getWarp :: Warp.Port -> Network.Wai.Application -> IO ()
 getWarp port' = Warp.run port' . cors (const $ Just policy)
            where
              policy = simpleCorsResourcePolicy { corsRequestHeaders = ["Content-Type"] }
+
+addDefaults :: InputConfig -> Config
+addDefaults ic = Config (_inputConfigPgConnection ic)
+                        (fromMaybe 10 $ _inputConfigPgPoolSize ic)
+                        (fromMaybe 1 $ _inputConfigPgTimeout ic)
+                        (fromMaybe "/usr/local/lib/mapnik/input" $ _inputConfigMapnikInputPlugins ic)
+                        (fromMaybe 8080 $ _inputConfigPort ic)
+                        (_inputConfigLayers ic)
+                        (fromMaybe 128 $ _inputConfigTileBuffer ic)

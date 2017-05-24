@@ -1,6 +1,8 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Tile ( extent
+module Tile ( addBufferToBBox
+            , extent
             , googleToBBoxM
             , BBox (..)
             , Metres (..)
@@ -11,8 +13,7 @@ module Tile ( extent
 import           Types
 
 newtype TileCoord  = TileCoord Integer deriving (Show, Eq, Num)
-newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional)
-newtype Pixels = Pixels Integer deriving (Show, Eq, Num)
+newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional, Ord)
 newtype Ratio n d = Ratio Double deriving (Show, Eq, Num, Floating, Fractional)
 
 data LatLon a = Lat Double
@@ -20,7 +21,7 @@ data LatLon a = Lat Double
               deriving (Show, Eq)
 
 -- SW and NE points given as W,S,E,N
-data BBox a = BBox a a a a deriving (Show, Eq)
+data BBox a = BBox a a a a deriving (Show, Eq, Functor)
 
 earthRadius :: Metres
 earthRadius = Metres 6378137
@@ -34,24 +35,34 @@ earthCircumference = 2 * maxExtent
 extent :: BBox Metres
 extent = BBox (-maxExtent) (-maxExtent) maxExtent maxExtent
 
+addBufferToBBox :: Pixels -> Pixels -> ZoomLevel -> BBox Metres -> BBox Metres
+addBufferToBBox tileSize buffer z (BBox llX llY urX urY) =
+  hardLimit $ BBox (llX - bufferM) (llY - bufferM) (urX + bufferM) (urY + bufferM)
+  where mPerPx = mPerPxAtZoom earthCircumference tileSize z
+        bufferM = mPerPxToM mPerPx buffer
+        -- Gots to hard limit the bounds because of buffering
+        hardLimit (BBox llX' llY' urX' urY') =
+          BBox (max llX' (- maxExtent))
+               (max llY' (- maxExtent))
+               (min urX' maxExtent)
+               (min urY' maxExtent)
+
 googleToBBoxM :: Pixels -> ZoomLevel -> GoogleTileCoords -> BBox Metres
 googleToBBoxM tileSize z g =
-  flipYs . transformBBox (flip (-) maxExtent . mPerPxToM mPerPx) $ googleToBBoxPx tileSize g
-  where mPerPx = mPerPxAtZoom earthCircumference tileSize z
+  flipYs . fmap googleTo3857 $ googleToBBoxPx tileSize g
+  where googleTo3857 coord = mPerPxToM mPerPx coord - maxExtent
+        mPerPx = mPerPxAtZoom earthCircumference tileSize z
         flipYs (BBox llX llY urX urY) = BBox llX (-llY) urX (-urY)
 
-transformBBox :: (a -> b) -> BBox a -> BBox b
-transformBBox f (BBox llX llY urX urY) = BBox (f llX) (f llY) (f urX) (f urY)
-
-googleToBBoxPx :: Pixels ->  GoogleTileCoords -> BBox Pixels
+googleToBBoxPx :: Pixels -> GoogleTileCoords -> BBox Pixels
 googleToBBoxPx tileSize (GoogleTileCoords gx gy) =
-  transformBBox ((* tileSize) . fromIntegral) $ BBox gx (gy + 1) (gx + 1) gy
+  fmap ((* tileSize) . fromIntegral) $ BBox gx (gy + 1) (gx + 1) gy
 
 pixelMaxExtent :: Pixels -> ZoomLevel -> Pixels
 pixelMaxExtent tile (ZoomLevel z) = (2 ^ z) * tile
 
 -- At each zoom level we double the number of tiles in both the x and y direction.
--- z = 0: 1 tile, z = 1: 2 * 2 = 4 tiles, z = 3: 8 * 8 = 64 tiles
+-- z = 0: 1 tile, z = 1: 2 * 2 = 4 tiles, z = 3: 4 * 4 = 16 tiles
 mPerPxAtZoom :: Metres -> Pixels -> ZoomLevel -> Ratio Metres Pixels
 mPerPxAtZoom (Metres m) tile z = Ratio $ m / fromIntegral p
   where (Pixels p) = pixelMaxExtent tile z

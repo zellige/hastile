@@ -20,12 +20,14 @@ import           Types
 {# enum mvtc_return_code as MvtcReturnCode {underscoreToCase} deriving (Eq) #}
 
 fromGeoJSON :: Pixels
+            -> Pixels
             -> GeoJson
             -> Text
             -> FilePath
             -> Coordinates
             -> IO (Either Text BS8.ByteString)
 fromGeoJSON (Pixels tileSize)
+            (Pixels buffer)
             geoJSON
             layerName
             inputPluginsPath
@@ -35,6 +37,7 @@ fromGeoJSON (Pixels tileSize)
   withCString inputPluginsPath $ \cInputPluginsPath -> do
     mvtcReturn <- MvtcReturn <$> (newForeignPtr mvtc_free_mvtc_return =<<
       {# call mvtc_from_geo_json #} (fromInteger tileSize)
+                                    (fromInteger buffer)
                                     cGeoJSON
                                     cLayerName
                                     cInputPluginsPath

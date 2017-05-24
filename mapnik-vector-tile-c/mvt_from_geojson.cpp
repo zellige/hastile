@@ -16,6 +16,7 @@ struct _mvtc_return {
 };
 
 mvtc_return * mvtc_from_geo_json(const int tile_size,
+                                 const int buffer_pixels,
                                  const char * geo_json,
                                  const char * layer_name,
                                  const char * mapnik_input_plugins_path,
@@ -46,7 +47,7 @@ mvtc_return * mvtc_from_geo_json(const int tile_size,
     lyr.set_datasource(mapnik::datasource_cache::instance().create(p));
     map.add_layer(lyr);
 
-    mapnik::vector_tile_impl::merc_tile out_tile(x, y, z, tile_size);
+    mapnik::vector_tile_impl::merc_tile out_tile(x, y, z, tile_size, buffer_pixels);
     mapnik::vector_tile_impl::processor ren(map);
     ren.set_area_threshold(area_threshold);
     ren.set_strictly_simple(strictly_simple);
@@ -76,7 +77,7 @@ const char * mvtc_get_mvt(mvtc_return * rv)
   return rv->mvt.c_str();
 }
 
-const int mvtc_get_mvt_size(mvtc_return * rv)
+int mvtc_get_mvt_size(mvtc_return * rv)
 {
   return rv->mvt_size;
 }
