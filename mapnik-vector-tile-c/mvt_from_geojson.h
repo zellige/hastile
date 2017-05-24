@@ -14,6 +14,7 @@ typedef enum {
 typedef struct _mvtc_return mvtc_return;
 
 mvtc_return * mvtc_from_geo_json(const int tile_size,
+                                 const int buffer_pixels,
                                  const char * geo_json,
                                  const char * layer_name,
                                  const char * mapnik_input_plugins_path,
@@ -23,7 +24,7 @@ mvtc_return * mvtc_from_geo_json(const int tile_size,
 
 const char * mvtc_get_mvt(mvtc_return * rv);
 
-const int mvtc_get_mvt_size(mvtc_return * rv);
+int mvtc_get_mvt_size(mvtc_return * rv);
 
 mvtc_return_code mvtc_get_return_code(mvtc_return * rv);
 

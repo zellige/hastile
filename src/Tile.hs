@@ -1,7 +1,8 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Tile ( extent
+module Tile ( addBufferToBBox
+            , extent
             , googleToBBoxM
             , BBox (..)
             , Metres (..)
@@ -12,7 +13,7 @@ module Tile ( extent
 import           Types
 
 newtype TileCoord  = TileCoord Integer deriving (Show, Eq, Num)
-newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional)
+newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional, Ord)
 newtype Ratio n d = Ratio Double deriving (Show, Eq, Num, Floating, Fractional)
 
 data LatLon a = Lat Double
@@ -34,15 +35,28 @@ earthCircumference = 2 * maxExtent
 extent :: BBox Metres
 extent = BBox (-maxExtent) (-maxExtent) maxExtent maxExtent
 
-googleToBBoxM :: Pixels -> Pixels -> ZoomLevel -> GoogleTileCoords -> BBox Metres
-googleToBBoxM tileSize buffer z g =
-  flipYs . fmap (flip (-) maxExtent . mPerPxToM mPerPx) $ googleToBBoxPx tileSize buffer g
+-- | Add buffer to bound box.
+addBufferToBBox :: Pixels -> Pixels -> ZoomLevel -> BBox Metres -> BBox Metres
+addBufferToBBox tileSize buffer z (BBox llX llY urX urY) =
+  hardLimit $ BBox (llX - bufferM) (llY - bufferM) (urX + bufferM) (urY + bufferM)
+  where mPerPx = mPerPxAtZoom earthCircumference tileSize z
+        bufferM = mPerPxToM mPerPx buffer
+        -- Gots to hard limit the bounds because of buffering
+        hardLimit (BBox llX' llY' urX' urY') =
+          BBox (max llX' (- maxExtent))
+               (max llY' (- maxExtent))
+               (min urX' maxExtent)
+               (min urY' maxExtent)
+
+googleToBBoxM :: Pixels -> ZoomLevel -> GoogleTileCoords -> BBox Metres
+googleToBBoxM tileSize z g =
+  flipYs . fmap (flip (-) maxExtent . mPerPxToM mPerPx) $ googleToBBoxPx tileSize g
   where mPerPx = mPerPxAtZoom earthCircumference tileSize z
         flipYs (BBox llX llY urX urY) = BBox llX (-llY) urX (-urY)
 
-googleToBBoxPx :: Pixels -> Pixels -> GoogleTileCoords -> BBox Pixels
-googleToBBoxPx tileSize buffer (GoogleTileCoords gx gy) =
-  fmap ((+ buffer) . (* tileSize) . fromIntegral) $ BBox gx (gy + 1) (gx + 1) gy
+googleToBBoxPx :: Pixels -> GoogleTileCoords -> BBox Pixels
+googleToBBoxPx tileSize (GoogleTileCoords gx gy) =
+  fmap ((* tileSize) . fromIntegral) $ BBox gx (gy + 1) (gx + 1) gy
 
 pixelMaxExtent :: Pixels -> ZoomLevel -> Pixels
 pixelMaxExtent tile (ZoomLevel z) = (2 ^ z) * tile

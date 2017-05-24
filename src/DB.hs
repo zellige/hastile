@@ -41,9 +41,11 @@ findFeatures layer zxy = do
 
 mkQuery :: (MonadReader ServerState m) => Layer -> Coordinates -> m Text
 mkQuery layer zxy =
-  do buffer <- asks (^. (ssOriginalConfig . configTileBuffer))
-     let (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
-           googleToBBoxM defaultTileSize buffer (_zl zxy) (_xy zxy)
+  do buffer <- asks (^. ssBuffer)
+     let zoom = _zl zxy
+         bboxM = googleToBBoxM defaultTileSize zoom (_xy zxy)
+         (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
+           addBufferToBBox defaultTileSize buffer zoom bboxM
          bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
                              \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
                              \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"

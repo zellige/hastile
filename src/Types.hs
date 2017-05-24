@@ -14,7 +14,7 @@
 module Types where
 
 import           Control.Applicative
-import           Control.Lens         (makeLenses)
+import           Control.Lens         (Lens', makeLenses)
 import           Data.Aeson
 import qualified Data.ByteString      as BS
 import           Data.ByteString.Lazy (ByteString, fromStrict)
@@ -136,6 +136,9 @@ data ServerState = ServerState { _ssPool           :: P.Pool
                                , _ssStateLayers    :: STM.Map Text Layer
                                }
 makeLenses ''ServerState
+
+ssBuffer :: Lens' ServerState Pixels
+ssBuffer = ssOriginalConfig . configTileBuffer
 
 newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
 
