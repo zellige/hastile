@@ -57,7 +57,7 @@ provisionLayer l query = do
   pure NoContent
 
 returnConfiguration ::(MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-               => m Types.Config
+               => m Types.InputConfig
 returnConfiguration = do
   cfgFile <- asks _ssConfigFile
   configBs <- liftIO $ LBS.readFile cfgFile

@@ -32,6 +32,7 @@ library
                      , here
                      , http-types
                      , http-media
+                     , lens
                      , list-t
                      , mtl
                      , optparse-generic

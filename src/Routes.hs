@@ -18,7 +18,7 @@ type X = Capture "x" Integer
 type Y = Capture "y" Text
 type YI = Capture "y" Integer
 
-type HastileApi =    Get '[JSON] Config
+type HastileApi =    Get '[JSON] InputConfig
                 :<|> LayerName :> ReqBody '[JSON] LayerQuery :> Post '[JSON] NoContent
                 :<|> LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
                 :<|> LayerName :> Z :> X :> Y :> Get '[MapboxVectorTile, AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)

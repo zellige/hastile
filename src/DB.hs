@@ -6,6 +6,7 @@
 
 module DB where
 
+import Control.Lens ((^.))
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import           Data.ByteString            as BS
@@ -39,12 +40,14 @@ findFeatures layer zxy = do
   pure errOrResult
 
 mkQuery :: (MonadReader ServerState m) => Layer -> Coordinates -> m Text
-mkQuery layer zxy = pure $ escape bbox4326 . _layerQuery $ layer
-  where
-    (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) = googleToBBoxM defaultTileSize (_zl zxy) (_xy zxy)
-    bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
-                        \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
-                        \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
+mkQuery layer zxy =
+  do buffer <- asks (^. (ssOriginalConfig . configTileBuffer))
+     let (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
+           googleToBBoxM defaultTileSize buffer (_zl zxy) (_xy zxy)
+         bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
+                             \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
+                             \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
+     pure $ escape bbox4326 . _layerQuery $ layer
 
 getLayer :: (MonadIO m, MonadReader ServerState m) => Text -> m (Either LayerError Layer)
 getLayer l = do
