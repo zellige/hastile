@@ -35,6 +35,7 @@ testGoogleToBBoxM =
     it "Returns the 3857 extent for zoom level 0" $
       googleToBBoxM 256 0 (GoogleTileCoords 0 0) `shouldBe` extent
 
+-- TODO: Let's stop writing crappy tests and write properties
 testBufferedBoundingBox :: Spec
 testBufferedBoundingBox =
   describe "addBufferToBBox" $ do
