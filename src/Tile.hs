@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Tile ( addBufferToBBox
@@ -56,7 +56,7 @@ googleToBBoxM tileSize z g =
 
 googleToBBoxPx :: Pixels -> GoogleTileCoords -> BBox Pixels
 googleToBBoxPx tileSize (GoogleTileCoords gx gy) =
-  fmap ((* tileSize) . fromIntegral) $ BBox gx (gy + 1) (gx + 1) gy
+  ((* tileSize) . fromIntegral) <$> BBox gx (gy + 1) (gx + 1) gy
 
 pixelMaxExtent :: Pixels -> ZoomLevel -> Pixels
 pixelMaxExtent tile (ZoomLevel z) = (2 ^ z) * tile
