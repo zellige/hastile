@@ -26,34 +26,10 @@ Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik versio
 3.0.11ish is currently used (supports MVT version 2).
 
 For OSX:
- - `brew install cairo --without-x --without-glib`
- - `brew install boost --with-icu4c`
- - `brew install icu4c`
- - `brew link icu4c`
- - `brew install boost-python`
- - `brew install proj`
- - `brew install jpeg`
- - `brew link jpeg`
- - `brew install libtiff`
- - `brew install gdal --with-libtiff=/usr/local/lib`
- - `brew install ossp-uuid`
- - `brew install postgis`
- - `brew install harfbuzz`
- - `git clone https://github.com/mapnik/mapnik.git`
- - `cd mapnik`
- - `git checkout 8a8427daedb685b8f37fac487526255d575a715d`
- - `git submodule sync`
- - `git submodule update --init deps/mapbox/variant`
- - `./configure && make && make install`
+ - [Compiling Mapnik 3.0.11](https://github.com/vlc/hastile/wiki/Compiling-Mapnik-3.0.11-for-OSX)
 
 For Ubuntu 16.04:
- - Add ubuntugis ppa
-  - add to /etc/apt/sources.list
-    - deb http://ppa.launchpad.net/ubuntugis/ubuntugis-experimental/ubuntu xenial main 
-    - deb-src http://ppa.launchpad.net/ubuntugis/ubuntugis-experimental/ubuntu xenial main 
-  - `sudo add-apt-repository ppa:ubuntugis/ubuntugis-experimental`
-  - `sudo apt-get update`
-  - `sudo apt-get install libmapnik3.0 libmapnik-dev`
+ - [Compiling Mapnik 3.0.11](https://github.com/vlc/hastile/wiki/Compiling-Mapnik-3.0.11-for-Ubuntu-16.04)
 
 ### Mapnik Vector Tile
 
