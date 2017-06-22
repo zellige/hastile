@@ -23,13 +23,11 @@ To generate the GeoJSON feature (see below) requires PostgreSQL 9.5+.
 ### Mapnik
 
 Mapnik is a C++ library that renders the tiles. hastile requires a Mapnik version that supports Mapbox vector tiles - 
-3.0.11ish is currently used (supports MVT version 2).
+3.0.11 is currently used (supports MVT version 2).
 
-For OSX:
- - [Compiling Mapnik 3.0.11](https://github.com/vlc/hastile/wiki/Compiling-Mapnik-3.0.11-for-OSX)
-
-For Ubuntu 16.04:
- - [Compiling Mapnik 3.0.11](https://github.com/vlc/hastile/wiki/Compiling-Mapnik-3.0.11-for-Ubuntu-16.04)
+Compiling:
+ - [OSX](https://github.com/vlc/hastile/wiki/Compiling-Mapnik-3.0.11-for-OSX)
+ - [Ubuntu 16.04](https://github.com/vlc/hastile/wiki/Compiling-Mapnik-3.0.11-for-Ubuntu-16.04)
 
 ### Mapnik Vector Tile
 
