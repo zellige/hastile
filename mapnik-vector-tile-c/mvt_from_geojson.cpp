@@ -30,7 +30,7 @@ mvtc_return * mvtc_from_geo_json(const int tile_size,
   try
   {
     double area_threshold = 0.1;
-    double simplify_distance = 0.0;
+    double simplify_distance = 1.0;
     bool strictly_simple = true;
     bool multi_polygon_union = false;
     mapnik::vector_tile_impl::polygon_fill_type fill_type = mapnik::vector_tile_impl::positive_fill;
