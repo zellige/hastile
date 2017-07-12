@@ -20,7 +20,8 @@ import           Test.Hspec                      (Spec, describe, it, shouldBe)
 
 import           DB                              (defaultTileSize)
 import           MapboxVectorTile                (fromGeoJSON)
-import           Tile                            (BBox (..), addBufferToBBox, extent, googleToBBoxM)
+import           Tile                            (BBox (..), addBufferToBBox,
+                                                  extent, googleToBBoxM)
 import           Types
 
 spec :: Spec
