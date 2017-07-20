@@ -178,7 +178,7 @@ mkGeoJSON :: [Value] -> [GJ.Feature]
 -- mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
 --                            , ("features", toJSON . fmap unTileFeature $ tfs)
 --                            ]
-mkGeoJSON v = fmap (\v -> x $ parseEither parseJSON v) v -- fmap unTileFeature tfs
+mkGeoJSON = fmap (x . parseEither parseJSON)
   where
     x = either (\_ -> GJ.Feature Nothing (GJ.GeometryCollection []) Null Nothing) id
 
