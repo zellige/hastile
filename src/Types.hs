@@ -188,7 +188,7 @@ instance ToJSON GJ.FeatureCollection where
 instance ToJSON GJ.Feature where
   toJSON f = object
     [ "id" .= GJ.identifier f
-    , ("type", String "Feature")
+    , "type" .= String "Feature"
     , "bbox" .= GJ.boundingBox f
     , "properties" .= GJ.properties f
     , "geometry" .= GJ.geometry f
