@@ -10,6 +10,7 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Types where
 
@@ -139,16 +140,6 @@ makeLenses ''ServerState
 ssBuffer :: Lens' ServerState Pixels
 ssBuffer = ssOriginalConfig . configTileBuffer
 
-newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
-
-type GeoJson = M.Map Text Value
-
-mkGeoJSON :: [TileFeature] -> [GJ.Feature]
--- mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
---                            , ("features", toJSON . fmap unTileFeature $ tfs)
---                            ]
-mkGeoJSON _ = undefined -- fmap unTileFeature tfs
-
 err204 :: ServantErr
 err204 = ServantErr { errHTTPCode = 204
                     , errReasonPhrase = "No Content"
@@ -177,3 +168,46 @@ instance MimeRender MapboxVectorTile Data.ByteString.Lazy.ByteString where
 
 instance MimeRender MapboxVectorTile BS.ByteString where
     mimeRender _ = fromStrict
+
+newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
+
+type GeoJson = M.Map Text Value
+
+mkGeoJSON :: [TileFeature] -> [GJ.Feature]
+-- mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
+--                            , ("features", toJSON . fmap unTileFeature $ tfs)
+--                            ]
+mkGeoJSON _ = undefined -- fmap unTileFeature tfs
+
+instance ToJSON GJ.FeatureCollection where
+  toJSON fc = object
+    [ "bbox" .= GJ.collectionBoundingBox fc
+    , "features" .= GJ.features fc
+    ]
+
+instance ToJSON GJ.Feature where
+  toJSON f = object
+    [ "id" .= GJ.identifier f
+    , ("type", String "Feature")
+    , "bbox" .= GJ.boundingBox f
+    , "properties" .= GJ.properties f
+    , "geometry" .= GJ.geometry f
+    ]
+
+instance ToJSON GJ.PointGeometry where
+  toJSON (GJ.PointGeometry coords) = toJSON coords
+
+instance ToJSON GJ.LineStringGeometry where
+  toJSON (GJ.LineStringGeometry ls) = toJSON ls
+
+instance ToJSON GJ.PolygonGeometry where
+  toJSON (GJ.PolygonGeometry ext holes) = toJSON (ext : holes)
+
+instance ToJSON GJ.Geometry where
+  toJSON (GJ.Point            po) = object [ "type" .= String "Point", "coordinates" .= po]
+  toJSON (GJ.MultiPoint      mpg) = object [ "type" .= String "MultiPoint", "coordinates" .= GJ.points mpg]
+  toJSON (GJ.LineString       ls) = object [ "type" .= String "LineString", "coordinates" .= ls]
+  toJSON (GJ.MultiLineString mls) = object [ "type" .= String "MultiLineString", "coordinates" .= GJ.lineStrings mls]
+  toJSON (GJ.Polygon          pg) = object [ "type" .= String "Polygon", "coordinates" .= pg]
+  toJSON (GJ.MultiPolygon    mpg) = object [ "type" .= String "MultiPolygon", "coordinates" .= GJ.polygons mpg]
+  toJSON (GJ.GeometryCollection geom) = object [ "type" .= String "GeometryCollection", "geometries" .= fmap toJSON geom ]
