@@ -6,9 +6,10 @@
 
 module DB where
 
-import Control.Lens ((^.))
+import           Control.Lens               ((^.))
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
+import           Data.Aeson
 import           Data.ByteString            as BS
 import           Data.Monoid
 import           Data.Text                  as T
@@ -31,7 +32,7 @@ defaultTileSize :: Pixels
 defaultTileSize = Pixels 2048
 
 findFeatures :: (MonadIO m, MonadReader ServerState m)
-             => Layer -> Coordinates -> m (Either P.UsageError [TileFeature])
+             => Layer -> Coordinates -> m (Either P.UsageError [Value])
 findFeatures layer zxy = do
   sql <- mkQuery layer zxy
   let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
@@ -59,9 +60,9 @@ getLayer l = do
     Nothing -> Left LayerNotFound
     Just layer -> Right layer
 
-mkStatement :: BS.ByteString -> HQ.Query () [TileFeature]
+mkStatement :: BS.ByteString -> HQ.Query () [Value]
 mkStatement sql = HQ.statement sql
-    HE.unit (HD.rowsList (TileFeature <$> HD.value HD.json)) False
+    HE.unit (HD.rowsList (HD.value HD.json)) False
 
 -- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
 escape :: Text -> Text -> Text

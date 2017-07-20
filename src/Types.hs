@@ -17,6 +17,7 @@ module Types where
 import           Control.Applicative
 import           Control.Lens           (Lens', makeLenses)
 import           Data.Aeson
+import           Data.Aeson.Types
 import qualified Data.ByteString        as BS
 import           Data.ByteString.Lazy   (ByteString, fromStrict)
 import qualified Data.Geography.GeoJSON as GJ
@@ -173,11 +174,13 @@ newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
 
 type GeoJson = M.Map Text Value
 
-mkGeoJSON :: [TileFeature] -> [GJ.Feature]
+mkGeoJSON :: [Value] -> [GJ.Feature]
 -- mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
 --                            , ("features", toJSON . fmap unTileFeature $ tfs)
 --                            ]
-mkGeoJSON _ = undefined -- fmap unTileFeature tfs
+mkGeoJSON v = fmap (\v -> x $ parseEither parseJSON v) v -- fmap unTileFeature tfs
+  where
+    x = either (\_ -> GJ.Feature Nothing (GJ.GeometryCollection []) Null Nothing) id
 
 instance ToJSON GJ.FeatureCollection where
   toJSON fc = object
