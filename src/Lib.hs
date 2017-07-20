@@ -20,6 +20,7 @@ import           Data.ByteString            as BS
 import           Data.ByteString.Char8      as BS8
 import           Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
+import qualified Data.Geography.GeoJSON     as GJ
 import           Data.Map                   as M
 import           Data.Monoid
 import           Data.Text                  as T
@@ -115,12 +116,12 @@ getJson l zxy = do
   pure $ addHeader (lastModified layer) (toStrict $ encode geoJson)
 
 getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-         => Layer -> Coordinates -> m GeoJson
+         => Layer -> Coordinates -> m GJ.FeatureCollection
 getJson' layer zxy = do
   errorOrTfs <- findFeatures layer zxy
   case errorOrTfs of
     Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
-    Right tfs -> pure $ mkGeoJSON tfs
+    Right tfs -> pure $ GJ.FeatureCollection Nothing (mkGeoJSON tfs)
 
 getLayerOrThrow :: (MonadIO m, MonadReader ServerState m, MonadError ServantErr m)
                 => Text -> m Layer

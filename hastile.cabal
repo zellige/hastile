@@ -27,6 +27,7 @@ library
                      , aeson-pretty
                      , bytestring
                      , containers
+                     , handa-geodata
                      , hasql
                      , hasql-pool
                      , here

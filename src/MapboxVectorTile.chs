@@ -12,6 +12,7 @@ import           Data.Text as T
 import           Foreign
 import           Data.Aeson
 import           Foreign.C.String (withCString, peekCString)
+import qualified Data.Geography.GeoJSON     as GJ
 
 import           Tile
 import           Types
@@ -21,7 +22,7 @@ import           Types
 
 fromGeoJSON :: Pixels
             -> Pixels
-            -> GeoJson
+            -> GJ.FeatureCollection
             -> Text
             -> FilePath
             -> Coordinates

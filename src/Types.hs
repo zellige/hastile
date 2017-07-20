@@ -14,22 +14,21 @@
 module Types where
 
 import           Control.Applicative
-import           Control.Lens         (Lens', makeLenses)
+import           Control.Lens           (Lens', makeLenses)
 import           Data.Aeson
-import qualified Data.ByteString      as BS
-import           Data.ByteString.Lazy (ByteString, fromStrict)
-import           Data.Map             as M
-import           Data.Maybe           (catMaybes)
-import           Data.Text            as T
+import qualified Data.ByteString        as BS
+import           Data.ByteString.Lazy   (ByteString, fromStrict)
+import qualified Data.Geography.GeoJSON as GJ
+import           Data.Map               as M
+import           Data.Maybe             (catMaybes)
+import           Data.Text              as T
 import           Data.Time
 import           Data.Typeable
-import           Hasql.Pool           as P
-import qualified Network.HTTP.Media   as HM
+import           Hasql.Pool             as P
+import qualified Network.HTTP.Media     as HM
 import           Options.Generic
 import           Servant
-import           STMContainers.Map    as STM
-
-type GeoJson = M.Map Text Value
+import           STMContainers.Map      as STM
 
 newtype ZoomLevel = ZoomLevel { _z :: Integer
                               } deriving (Show, Eq, Num)
@@ -142,10 +141,13 @@ ssBuffer = ssOriginalConfig . configTileBuffer
 
 newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
 
-mkGeoJSON :: [TileFeature] -> GeoJson
-mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
-                           , ("features", toJSON . fmap unTileFeature $ tfs)
-                           ]
+type GeoJson = M.Map Text Value
+
+mkGeoJSON :: [TileFeature] -> [GJ.Feature]
+-- mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
+--                            , ("features", toJSON . fmap unTileFeature $ tfs)
+--                            ]
+mkGeoJSON _ = undefined -- fmap unTileFeature tfs
 
 err204 :: ServantErr
 err204 = ServantErr { errHTTPCode = 204
