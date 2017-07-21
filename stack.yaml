@@ -37,9 +37,10 @@ resolver: lts-8.23
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - '.'
-# - location:
-#     git: git@github.com:sitewisely/zellige.git
-#     commit: eb91413e13f19fd2d028ebccc667c0d349928cce
+- location:
+    git: git@github.com:sitewisely/zellige.git
+    commit: df728adf2f3400477704fbac173c89d6b2566eec
+  extra-dep: true  
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:

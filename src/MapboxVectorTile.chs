@@ -37,8 +37,8 @@ fromGeoJSON (Pixels tileSize)
   withCString (T.unpack layerName) $ \cLayerName ->
   withCString inputPluginsPath $ \cInputPluginsPath -> do
     mvtcReturn <- MvtcReturn <$> (newForeignPtr mvtc_free_mvtc_return =<<
-      {# call mvtc_from_geo_json #} (fromInteger tileSize)
-                                    (fromInteger buffer)
+      {# call mvtc_from_geo_json #} (fromIntegral tileSize)
+                                    (fromIntegral buffer)
                                     cGeoJSON
                                     cLayerName
                                     cInputPluginsPath

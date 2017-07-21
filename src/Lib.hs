@@ -10,31 +10,35 @@ module Lib
     , ServerState (..)
     ) where
 
-import           Control.Lens               ((^.))
+import           Control.Lens                    ((^.))
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import           Data.Aeson
 import           Data.Aeson.Encode.Pretty
-import           Data.ByteString            as BS
-import           Data.ByteString.Char8      as BS8
-import           Data.ByteString.Lazy.Char8 as LBS
+import           Data.ByteString                 as BS
+import           Data.ByteString.Char8           as BS8
+import           Data.ByteString.Lazy.Char8      as LBS
 import           Data.Char
-import qualified Data.Geography.GeoJSON     as GJ
-import           Data.Map                   as M
+import qualified Data.Geography.GeoJSON          as GJ
+import qualified Data.Geometry.MapnikVectorTile  as DGM
+import qualified Data.Geometry.Types             as DGT
+import           Data.Map                        as M
 import           Data.Monoid
-import           Data.Text                  as T
-import           Data.Text.Encoding         as TE
-import           Data.Text.Read             as DTR
+import           Data.Text                       as T
+import           Data.Text.Encoding              as TE
+import           Data.Text.Read                  as DTR
 import           Data.Time
+import qualified Geography.VectorTile            as VT
+import qualified Geography.VectorTile.VectorTile as VVT
 import           GHC.Conc
 import           ListT
-import           Network.HTTP.Types.Header  (hLastModified)
+import           Network.HTTP.Types.Header       (hLastModified)
 import           Servant
-import           STMContainers.Map          as STM
+import           STMContainers.Map               as STM
 
 import           DB
-import           MapboxVectorTile
+--import           MapboxVectorTile
 import           Routes
 import           Tile
 import           Types
@@ -95,12 +99,17 @@ getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
 getTile l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
-  pp <- asks _ssPluginDir
+  --pp <- asks _ssPluginDir
   buffer <- asks (^. ssBuffer)
-  eet <- liftIO $ fromGeoJSON defaultTileSize buffer geoJson l pp zxy
-  case eet of
-    Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
-    Right tile -> checkEmpty tile layer
+  let gtc = DGT.GoogleTileCoords (_z . _zl $ zxy) (DGT.Coords (_x . _xy $ zxy) (_y . _xy $ zxy))
+      config = DGT.Config gtc (DGT.Pixels $ _pixels defaultTileSize + _pixels buffer) l 2
+  --eet <- liftIO $ fromGeoJSON defaultTileSize buffer geoJson l pp zxy
+      eet = DGM.createMvt config geoJson
+      tile = VT.encode . VT.untile $ VVT.VectorTile (fromList [(l, eet)])
+  checkEmpty tile layer
+  -- case eet of
+  --   Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
+  --   Right tile -> checkEmpty tile layer
 
 checkEmpty :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
            => BS.ByteString -> Layer -> m (Headers '[Header "Last-Modified" String] BS.ByteString)

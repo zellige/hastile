@@ -44,7 +44,8 @@ data Coordinates = Coordinates { _zl :: ZoomLevel
                                , _xy :: GoogleTileCoords
                                } deriving (Show, Eq)
 
-newtype Pixels = Pixels Integer deriving (Show, Eq, Num)
+newtype Pixels = Pixels { _pixels :: Int } deriving (Show, Eq, Num)
+
 instance ToJSON Pixels where
   toJSON (Pixels n) = Number $ fromIntegral n
 
