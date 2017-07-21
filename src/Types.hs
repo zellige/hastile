@@ -23,6 +23,7 @@ import           Data.ByteString.Lazy   (ByteString, fromStrict)
 import qualified Data.Geography.GeoJSON as GJ
 import           Data.Map               as M
 import           Data.Maybe             (catMaybes)
+import           Data.Monoid            ((<>))
 import           Data.Text              as T
 import           Data.Time
 import           Data.Typeable
@@ -181,18 +182,20 @@ mkGeoJSON = fmap (x . parseEither parseJSON)
 
 instance ToJSON GJ.FeatureCollection where
   toJSON fc = object
-    [ "bbox" .= GJ.collectionBoundingBox fc
-    , "features" .= GJ.features fc
-    ]
+    ([ "features" .= GJ.features fc
+    , "type" .= String "GeometryCollection"
+    ] <> getBbox (GJ.collectionBoundingBox fc))
 
 instance ToJSON GJ.Feature where
   toJSON f = object
-    [ "id" .= GJ.identifier f
+    ([ "id" .= GJ.identifier f
     , "type" .= String "Feature"
-    , "bbox" .= GJ.boundingBox f
     , "properties" .= GJ.properties f
     , "geometry" .= GJ.geometry f
-    ]
+    ] <> getBbox (GJ.boundingBox f))
+
+getBbox :: (ToJSON v, KeyValue t) => Maybe v -> [t]
+getBbox = maybe [] (\a -> ["bbox" .= a])
 
 instance ToJSON GJ.PointGeometry where
   toJSON (GJ.PointGeometry coords) = toJSON coords
