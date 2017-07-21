@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-8.19
+resolver: lts-8.23
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -37,6 +37,9 @@ resolver: lts-8.19
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - '.'
+# - location:
+#     git: git@github.com:sitewisely/zellige.git
+#     commit: eb91413e13f19fd2d028ebccc667c0d349928cce
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
