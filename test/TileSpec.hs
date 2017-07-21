@@ -3,12 +3,12 @@
 module TileSpec where
 
 import           Control.Lens
-import           Data.Aeson                      (eitherDecode)
 import qualified Data.ByteString                 as BS (ByteString, readFile)
 import qualified Data.ByteString.Lazy            as LBS (ByteString, fromStrict,
-                                                         readFile, writeFile)
+                                                         writeFile)
+import qualified Data.Geography.GeoJSON          as GJ
 import           Data.Map                        (lookup)
-import           Data.Maybe                      (fromMaybe)
+import           Data.Maybe                      (fromJust, fromMaybe)
 import           Data.Monoid                     ((<>))
 import           Data.Text                       (Text, unpack)
 import qualified Geography.VectorTile            as VT
@@ -82,10 +82,8 @@ generateMvtAdelaide filename = do
 
 generateMvtFile :: FilePath -> Text -> Coordinates -> IO LBS.ByteString
 generateMvtFile geoJsonFile layerName coords = do
-  bs <- LBS.readFile geoJsonFile
-  let ebs = eitherDecode bs :: Either String GeoJson
-      decodeError = error . (("Unable to decode " <> geoJsonFile <> ": ") <>)
-      geoJson = either decodeError id ebs
+  bs <- GJ.readGeoJSON geoJsonFile
+  let geoJson = fromJust bs
   pluginDir <- fromMaybe "/usr/local/lib/mapnik/input" <$> lookupEnv "MAPNIK_PLUGINS_DIR"
   et <- MapboxVectorTile.fromGeoJSON defaultTileSize 128 geoJson layerName pluginDir coords
   either (error . unpack . ("Failed to create tile: " <>)) (pure . LBS.fromStrict) et
