@@ -184,7 +184,7 @@ mkGeoJSON = fmap (x . parseEither parseJSON)
 instance ToJSON GJ.FeatureCollection where
   toJSON fc = object
     ([ "features" .= GJ.features fc
-    , "type" .= String "GeometryCollection"
+    , "type" .= String "FeatureCollection"
     ] <> getBbox (GJ.collectionBoundingBox fc))
 
 instance ToJSON GJ.Feature where
