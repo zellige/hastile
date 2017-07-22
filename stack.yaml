@@ -39,7 +39,7 @@ packages:
 - '.'
 - location:
     git: git@github.com:sitewisely/zellige.git
-    commit: df728adf2f3400477704fbac173c89d6b2566eec
+    commit: 0a76ab4c57361b7f18422da721565b8121ff9140
   extra-dep: true  
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)

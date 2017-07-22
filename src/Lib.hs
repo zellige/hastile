@@ -99,8 +99,7 @@ getTile l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
   buffer <- asks (^. ssBuffer)
-  let gtc = DGT.GoogleTileCoords (_z . _zl $ zxy) (DGT.Coords (_x . _xy $ zxy) (_y . _xy $ zxy))
-      config = DGT.Config gtc (DGT.Pixels $ _pixels defaultTileSize + _pixels buffer) l 2
+  let config = DGT.mkConfig l (_z . _zl $ zxy) (_x . _xy $ zxy, _y . _xy $ zxy) (DGT.Pixels $ _pixels buffer) (DGT.Pixels $ _pixels defaultTileSize)
       eet = DGM.createMvt config geoJson
       tile = VT.encode . VT.untile $ VVT.VectorTile (fromList [(l, eet)])
   checkEmpty tile layer
