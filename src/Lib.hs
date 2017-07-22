@@ -38,7 +38,6 @@ import           Servant
 import           STMContainers.Map               as STM
 
 import           DB
---import           MapboxVectorTile
 import           Routes
 import           Tile
 import           Types
@@ -99,11 +98,9 @@ getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
 getTile l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
-  --pp <- asks _ssPluginDir
   buffer <- asks (^. ssBuffer)
   let gtc = DGT.GoogleTileCoords (_z . _zl $ zxy) (DGT.Coords (_x . _xy $ zxy) (_y . _xy $ zxy))
       config = DGT.Config gtc (DGT.Pixels $ _pixels defaultTileSize + _pixels buffer) l 2
-  --eet <- liftIO $ fromGeoJSON defaultTileSize buffer geoJson l pp zxy
       eet = DGM.createMvt config geoJson
       tile = VT.encode . VT.untile $ VVT.VectorTile (fromList [(l, eet)])
   checkEmpty tile layer
