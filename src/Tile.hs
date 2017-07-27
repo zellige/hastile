@@ -4,11 +4,22 @@
 module Tile ( addBufferToBBox
             , extent
             , googleToBBoxM
+            , mkTile
             , BBox (..)
             , Metres (..)
             , Pixels (..)
             , ZoomLevel (..)
             ) where
+
+import qualified Data.ByteString.Char8           as BS8
+import qualified Data.Geography.GeoJSON          as GJ
+import qualified Data.Geometry.MapnikVectorTile  as DGM
+import qualified Data.Geometry.Types             as DGT
+import qualified Data.Map                        as M
+import qualified Data.Text                       as T
+import qualified Geography.VectorTile            as VT
+import qualified Geography.VectorTile.VectorTile as VVT
+
 
 import           Types
 
@@ -69,3 +80,9 @@ mPerPxAtZoom (Metres m) tile z = Ratio $ m / fromIntegral p
 
 mPerPxToM :: Ratio Metres Pixels -> Pixels -> Metres
 mPerPxToM (Ratio r) (Pixels p) = Metres $ r * fromIntegral p
+
+mkTile :: T.Text -> Coordinates -> Pixels -> GJ.FeatureCollection -> BS8.ByteString
+mkTile l zxy buffer geoJson =  VT.encode . VT.untile $ VVT.VectorTile (M.fromList [(l, eet)])
+  where
+    config = DGT.mkConfig l (_z . _zl $ zxy) (_x . _xy $ zxy, _y . _xy $ zxy) (DGT.Pixels $ _pixels buffer) (DGT.Pixels $ _pixels defaultTileSize)
+    eet = DGM.createMvt config geoJson
