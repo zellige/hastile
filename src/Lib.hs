@@ -10,32 +10,29 @@ module Lib
     , ServerState (..)
     ) where
 
-import           Control.Lens                    ((^.))
+import           Control.Lens               ((^.))
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
-import           Control.Monad.Reader.Class
+import           Control.Monad.Reader.Class as RC
+import           Control.Monad.Trans.Reader as TR
 import           Data.Aeson
 import           Data.Aeson.Encode.Pretty
-import           Data.ByteString                 as BS
-import           Data.ByteString.Char8           as BS8
-import           Data.ByteString.Lazy.Char8      as LBS
+import           Data.ByteString            as BS
+import           Data.ByteString.Char8      as BS8
+import           Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
-import qualified Data.Geography.GeoJSON          as GJ
-import qualified Data.Geometry.MapnikVectorTile  as DGM
-import qualified Data.Geometry.Types             as DGT
-import           Data.Map                        as M
+import qualified Data.Geography.GeoJSON     as GJ
+import           Data.Map                   as M
 import           Data.Monoid
-import           Data.Text                       as T
-import           Data.Text.Encoding              as TE
-import           Data.Text.Read                  as DTR
+import qualified Data.Text                  as T
+import           Data.Text.Encoding         as TE
+import           Data.Text.Read             as DTR
 import           Data.Time
-import qualified Geography.VectorTile            as VT
-import qualified Geography.VectorTile.VectorTile as VVT
 import           GHC.Conc
 import           ListT
-import           Network.HTTP.Types.Header       (hLastModified)
+import           Network.HTTP.Types.Header  (hLastModified)
 import           Servant
-import           STMContainers.Map               as STM
+import           STMContainers.Map          as STM
 
 import           DB
 import           Routes
@@ -44,15 +41,15 @@ import           Types
 
 hastileService :: ServerState -> Server HastileApi
 hastileService state =
-  enter (runReaderTNat state) (returnConfiguration :<|> provisionLayer :<|> getQuery :<|> getContent)
+  enter (runReaderTNat state :: TR.ReaderT ServerState Handler :~> Handler) (returnConfiguration :<|> provisionLayer :<|> getQuery :<|> getContent)
 
 stmMapToList :: STM.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
 
 provisionLayer :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-               => Text -> LayerQuery -> m NoContent
+               => T.Text -> LayerQuery -> m NoContent
 provisionLayer l query = do
-  r <- ask
+  r <- RC.ask
   let (ls, cfgFile, originalCfg) = (,,) <$> _ssStateLayers <*> _ssConfigFile <*> _ssOriginalConfig $ r
   lastModifiedTime <- liftIO getCurrentTime
   newLayers <- liftIO . atomically $ do
@@ -64,28 +61,28 @@ provisionLayer l query = do
 returnConfiguration ::(MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
                => m Types.InputConfig
 returnConfiguration = do
-  cfgFile <- asks _ssConfigFile
+  cfgFile <- RC.asks _ssConfigFile
   configBs <- liftIO $ LBS.readFile cfgFile
   case eitherDecode configBs of
     Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
     Right c -> pure c
 
 getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-         => Text -> Integer -> Integer -> Integer -> m Text
+         => T.Text -> Integer -> Integer -> Integer -> m T.Text
 getQuery l z x y = do
   layer <- getLayerOrThrow l
   query <- mkQuery layer (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
   pure query
 
 getContent :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Integer -> Integer -> Text -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
+        => T.Text -> Integer -> Integer -> T.Text -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
 getContent l z x stringY
   | ".mvt" `T.isSuffixOf` stringY = getAnything getTile l z x stringY
   | ".json" `T.isSuffixOf` stringY = getAnything getJson l z x stringY
   | otherwise = throwError $ err400 { errBody = "Unknown request: " <> fromStrict (TE.encodeUtf8 stringY) }
 
 getAnything :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-            => (t -> Coordinates -> m a) -> t -> Integer -> Integer -> Text -> m a
+            => (t -> Coordinates -> m a) -> t -> Integer -> Integer -> T.Text -> m a
 getAnything f l z x stringY =
   case getIntY stringY of
     Left e -> fail $ show e
@@ -94,18 +91,12 @@ getAnything f l z x stringY =
     getIntY s = decimal $ T.takeWhile isNumber s
 
 getTile :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-         => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
+         => T.Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
 getTile l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
-  buffer <- asks (^. ssBuffer)
-  let config = DGT.mkConfig l (_z . _zl $ zxy) (_x . _xy $ zxy, _y . _xy $ zxy) (DGT.Pixels $ _pixels buffer) (DGT.Pixels $ _pixels defaultTileSize)
-      eet = DGM.createMvt config geoJson
-      tile = VT.encode . VT.untile $ VVT.VectorTile (fromList [(l, eet)])
-  checkEmpty tile layer
-  -- case eet of
-  --   Left e -> throwError $ err500 { errBody = fromStrict $ TE.encodeUtf8 e }
-  --   Right tile -> checkEmpty tile layer
+  buffer <- RC.asks (^. ssBuffer)
+  checkEmpty (mkTile l zxy buffer geoJson) layer
 
 checkEmpty :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
            => BS.ByteString -> Layer -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
@@ -114,7 +105,7 @@ checkEmpty tile layer
   | otherwise = pure $ addHeader (lastModified layer) tile
 
 getJson :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-        => Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
+        => T.Text -> Coordinates -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
 getJson l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
@@ -129,7 +120,7 @@ getJson' layer zxy = do
     Right tfs -> pure $ GJ.FeatureCollection Nothing (mkGeoJSON tfs)
 
 getLayerOrThrow :: (MonadIO m, MonadReader ServerState m, MonadError ServantErr m)
-                => Text -> m Layer
+                => T.Text -> m Layer
 getLayerOrThrow l = do
   errorOrLayer <- getLayer l
   case errorOrLayer of

@@ -33,6 +33,10 @@ import           Options.Generic
 import           Servant
 import           STMContainers.Map      as STM
 
+
+defaultTileSize :: Pixels
+defaultTileSize = Pixels 2048
+
 newtype ZoomLevel = ZoomLevel { _z :: Integer
                               } deriving (Show, Eq, Num)
 
