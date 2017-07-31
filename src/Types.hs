@@ -14,7 +14,7 @@
 
 module Types where
 
-import           Control.Applicative
+import qualified Control.Applicative    as A
 import           Control.Lens           (Lens', makeLenses)
 import           Data.Aeson
 import           Data.Aeson.Types
@@ -64,16 +64,15 @@ instance ToJSON LayerQuery where
 
 instance FromJSON LayerQuery where
   parseJSON (Object o) = LayerQuery <$> o .: "query"
-  parseJSON _ = Control.Applicative.empty
+  parseJSON _          = A.empty
 
 data Layer = Layer { _layerQuery        :: Text
                    , _layerLastModified :: UTCTime
                    } deriving (Show, Eq, Generic)
 
 instance FromJSON Layer where
-  parseJSON (Object o) =
-       Layer <$> o .: "query" <*> o .: "last-modified"
-  parseJSON _ = Control.Applicative.empty
+  parseJSON (Object o) = Layer <$> o .: "query" <*> o .: "last-modified"
+  parseJSON _          = A.empty
 
 data InputConfig = InputConfig { _inputConfigPgConnection :: Text
                      , _inputConfigPgPoolSize             :: Maybe Int
@@ -101,21 +100,19 @@ emptyInputConfig :: InputConfig
 emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing (fromList []) Nothing
 
 instance FromJSON InputConfig where
-  parseJSON (Object o) =
-       InputConfig <$> o .: "db-connection" <*> o .:? "db-pool-size" <*> o .:? "db-timeout" <*>
-          o .:? "mapnik-input-plugins" <*> o .:? "port" <*> o .: "layers" <*> (fmap . fmap) Pixels (o .:? "tile-buffer")
-  parseJSON _ = Control.Applicative.empty
+  parseJSON (Object o) = InputConfig <$> o .: "db-connection" <*> o .:? "db-pool-size" <*> o .:? "db-timeout" <*>
+    o .:? "mapnik-input-plugins" <*> o .:? "port" <*> o .: "layers" <*> (fmap . fmap) Pixels (o .:? "tile-buffer")
+  parseJSON _ = A.empty
 
 instance ToJSON Config where
   toJSON c = object
-    [
-      ("db-connection" .= _configPgConnection c),
-      ("db-pool-size" .= _configPgPoolSize c),
-      ("db-timeout" .= _configPgTimeout c),
-      ("mapnik-input-plugins" .= _configMapnikInputPlugins c),
-      ("port" .= _configPort c),
-      ("layers" .= _configLayers c),
-      ("tile-buffer" .= _configTileBuffer c)
+    [ "db-connection" .= _configPgConnection c
+    , "db-pool-size" .= _configPgPoolSize c
+    , "db-timeout" .= _configPgTimeout c
+    , "mapnik-input-plugins" .= _configMapnikInputPlugins c
+    , "port" .= _configPort c
+    , "layers" .= _configLayers c
+    , "tile-buffer" .= _configTileBuffer c
     ]
 
 instance ToJSON InputConfig where
