@@ -14,7 +14,6 @@
 
 module Types where
 
-import qualified Control.Applicative    as A
 import           Control.Lens           (Lens', makeLenses)
 import           Data.Aeson
 import           Data.Aeson.Types
@@ -63,16 +62,14 @@ instance ToJSON LayerQuery where
   toJSON (LayerQuery lq) = object [ "query" .= lq ]
 
 instance FromJSON LayerQuery where
-  parseJSON (Object o) = LayerQuery <$> o .: "query"
-  parseJSON _          = A.empty
+  parseJSON = withObject "Layer Query" $ \o -> LayerQuery <$> o .: "query"
 
 data Layer = Layer { _layerQuery        :: Text
                    , _layerLastModified :: UTCTime
                    } deriving (Show, Eq, Generic)
 
 instance FromJSON Layer where
-  parseJSON (Object o) = Layer <$> o .: "query" <*> o .: "last-modified"
-  parseJSON _          = A.empty
+  parseJSON = withObject "Layer" $ \o -> Layer <$> o .: "query" <*> o .: "last-modified"
 
 data InputConfig = InputConfig { _inputConfigPgConnection :: Text
                      , _inputConfigPgPoolSize             :: Maybe Int
@@ -100,9 +97,14 @@ emptyInputConfig :: InputConfig
 emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing (fromList []) Nothing
 
 instance FromJSON InputConfig where
-  parseJSON (Object o) = InputConfig <$> o .: "db-connection" <*> o .:? "db-pool-size" <*> o .:? "db-timeout" <*>
-    o .:? "mapnik-input-plugins" <*> o .:? "port" <*> o .: "layers" <*> (fmap . fmap) Pixels (o .:? "tile-buffer")
-  parseJSON _ = A.empty
+  parseJSON = withObject "Config" $ \o -> InputConfig
+    <$> o .: "db-connection"
+    <*> o .:? "db-pool-size"
+    <*> o .:? "db-timeout"
+    <*> o .:? "mapnik-input-plugins"
+    <*> o .:? "port"
+    <*> o .: "layers"
+    <*> (fmap . fmap) Pixels (o .:? "tile-buffer")
 
 instance ToJSON Config where
   toJSON c = object
