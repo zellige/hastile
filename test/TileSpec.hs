@@ -79,6 +79,6 @@ generateMvtAdelaide filename = do
 generateMvtFile :: FilePath -> T.Text -> Coordinates -> IO LBS.ByteString
 generateMvtFile geoJsonFile layerName coords = do
   mvt <- MVT.readGeoJson geoJsonFile
-  let x = mkTile layerName coords (Pixels 128) mvt
+  x <- mkTile layerName coords (Pixels 128) mvt
   pure $ LBS.fromStrict x
 

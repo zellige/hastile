@@ -64,7 +64,7 @@ returnConfiguration = do
   cfgFile <- RC.asks _ssConfigFile
   configBs <- liftIO $ LBS.readFile cfgFile
   case eitherDecode configBs of
-    Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
+    Left e  -> throwError $ err500 { errBody = LBS.pack $ show e }
     Right c -> pure c
 
 getQuery :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
@@ -85,7 +85,7 @@ getAnything :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
             => (t -> Coordinates -> m a) -> t -> Integer -> Integer -> T.Text -> m a
 getAnything f l z x stringY =
   case getIntY stringY of
-    Left e -> fail $ show e
+    Left e       -> fail $ show e
     Right (y, _) -> f l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
   where
     getIntY s = decimal $ T.takeWhile isNumber s
@@ -96,7 +96,8 @@ getTile l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
   buffer <- RC.asks (^. ssBuffer)
-  checkEmpty (mkTile l zxy buffer geoJson) layer
+  tile <- liftIO $ mkTile l zxy buffer geoJson
+  checkEmpty tile layer
 
 checkEmpty :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
            => BS.ByteString -> Layer -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
@@ -116,7 +117,7 @@ getJson' :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
 getJson' layer zxy = do
   errorOrTfs <- findFeatures layer zxy
   case errorOrTfs of
-    Left e -> throwError $ err500 { errBody = LBS.pack $ show e }
+    Left e    -> throwError $ err500 { errBody = LBS.pack $ show e }
     Right tfs -> pure $ GJ.FeatureCollection Nothing (mkGeoJSON tfs)
 
 getLayerOrThrow :: (MonadIO m, MonadReader ServerState m, MonadError ServantErr m)

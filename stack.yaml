@@ -38,8 +38,8 @@ resolver: lts-9.0
 packages:
 - '.'
 - location:
-   git: git@github.com:sitewisely/zellige.git
-   commit: 0345b59b994925572b61c9c85af6193a6321c10f
+    git: git@github.com:sitewisely/zellige.git
+    commit: master
   extra-dep: true  
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
