@@ -53,10 +53,12 @@ getWarp port' = Warp.run port' . cors (const $ Just policy)
              policy = simpleCorsResourcePolicy { corsRequestHeaders = ["Content-Type"] }
 
 addDefaults :: InputConfig -> Config
-addDefaults ic = Config (_inputConfigPgConnection ic)
-                        (fromMaybe 10 $ _inputConfigPgPoolSize ic)
-                        (fromMaybe 1 $ _inputConfigPgTimeout ic)
-                        (fromMaybe "/usr/local/lib/mapnik/input" $ _inputConfigMapnikInputPlugins ic)
-                        (fromMaybe 8080 $ _inputConfigPort ic)
-                        (_inputConfigLayers ic)
-                        (fromMaybe 128 $ _inputConfigTileBuffer ic)
+addDefaults InputConfig{..} =
+  Config
+    _inputConfigPgConnection
+    (fromMaybe 10 _inputConfigPgPoolSize)
+    (fromMaybe 1 _inputConfigPgTimeout)
+    (fromMaybe "/usr/local/lib/mapnik/input" _inputConfigMapnikInputPlugins)
+    (fromMaybe 8080 _inputConfigPort)
+    _inputConfigLayers
+    (fromMaybe 128 _inputConfigTileBuffer)
