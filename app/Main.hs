@@ -42,14 +42,9 @@ doItWithConfig :: FilePath -> Config -> IO ()
 doItWithConfig cfgFile config@Config{..} = do
   layers <- atomically STM.new :: IO (STM.Map Text Layer)
   forM_ (Data.Map.toList _configLayers) $ \(k, v) -> atomically $ STM.insert v k layers
-  let pgPoolSize= _configPgPoolSize
-      pgTimeout = _configPgTimeout
-      pluginDir = _configMapnikInputPlugins
-      port = _configPort
-      conn = encodeUtf8 _configPgConnection
-    in bracket (P.acquire (pgPoolSize, pgTimeout, conn))
-            P.release $
-              \p -> getWarp port . serve api $ hastileService (ServerState p pluginDir cfgFile config layers)
+  bracket (P.acquire (_configPgPoolSize, _configPgTimeout, encodeUtf8 _configPgConnection))
+    P.release $
+      \p -> getWarp _configPort . serve api $ hastileService (ServerState p _configMapnikInputPlugins cfgFile config layers)
   pure ()
 
 getWarp :: Warp.Port -> Network.Wai.Application -> IO ()
