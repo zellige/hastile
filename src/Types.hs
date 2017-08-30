@@ -137,12 +137,13 @@ instance ToJSON Layer where
        "last-modified" .= _layerLastModified l
     ]
 
-data ServerState = ServerState { _ssPool           :: P.Pool
-                               , _ssPluginDir      :: FilePath
-                               , _ssConfigFile     :: FilePath
-                               , _ssOriginalConfig :: Config
-                               , _ssStateLayers    :: STM.Map Text Layer
-                               }
+data ServerState = ServerState
+  { _ssPool           :: P.Pool
+  , _ssPluginDir      :: FilePath
+  , _ssConfigFile     :: FilePath
+  , _ssOriginalConfig :: Config
+  , _ssStateLayers    :: STM.Map Text Layer
+  }
 makeLenses ''ServerState
 
 ssBuffer :: Lens' ServerState Pixels
