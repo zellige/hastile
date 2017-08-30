@@ -15,6 +15,8 @@
 module Types where
 
 import           Control.Lens           (Lens', makeLenses)
+import           Control.Monad.Except   (MonadError)
+import           Control.Monad.Reader   (MonadIO, MonadReader, ReaderT)
 import           Data.Aeson
 import           Data.Aeson.Types
 import qualified Data.ByteString        as BS
@@ -52,8 +54,9 @@ newtype Pixels = Pixels { _pixels :: Int } deriving (Show, Eq, Num)
 instance ToJSON Pixels where
   toJSON (Pixels n) = Number $ fromIntegral n
 
-data CmdLine = CmdLine { configFile :: FilePath
-                       } deriving Generic
+newtype CmdLine = CmdLine
+  { configFile :: FilePath
+  } deriving Generic
 instance ParseRecord CmdLine
 
 newtype LayerQuery = LayerQuery { unLayerQuery :: Text } deriving (Show, Eq)
@@ -221,3 +224,7 @@ instance ToJSON GJ.Geometry where
   toJSON (GJ.Polygon          pg) = object [ "type" .= String "Polygon", "coordinates" .= pg]
   toJSON (GJ.MultiPolygon    mpg) = object [ "type" .= String "MultiPolygon", "coordinates" .= GJ.polygons mpg]
   toJSON (GJ.GeometryCollection geom) = object [ "type" .= String "GeometryCollection", "geometries" .= fmap toJSON geom ]
+
+newtype ActionHandler a = ActionHandler
+  { runActionHandler :: ReaderT ServerState Handler a
+  } deriving (Functor, Applicative, Monad, MonadReader ServerState, MonadError ServantErr, MonadIO)

@@ -17,11 +17,10 @@ import qualified Network.Wai                 as W
 import qualified Network.Wai.Handler.Warp    as W
 import qualified Network.Wai.Middleware.Cors as W
 import           Options.Generic
-import qualified Servant                     as S
 import           STMContainers.Map           as STM
 import qualified System.Exit                 as SE
 
-import           Lib
+import           Server
 import           Types
 
 main :: IO ()
@@ -41,9 +40,10 @@ doItWithConfig :: FilePath -> Config -> IO ()
 doItWithConfig cfgFile config@Config{..} = do
   layers <- atomically STM.new :: IO (STM.Map Text Layer)
   F.forM_ (M.toList _configLayers) $ \(k, v) -> atomically $ STM.insert v k layers
-  CE.bracket (P.acquire (_configPgPoolSize, _configPgTimeout, DTE.encodeUtf8 _configPgConnection))
-    P.release $
-      \p -> getWarp _configPort . S.serve api $ hastileService (ServerState p _configMapnikInputPlugins cfgFile config layers)
+  CE.bracket
+    (P.acquire (_configPgPoolSize, _configPgTimeout, DTE.encodeUtf8 _configPgConnection))
+    P.release
+    (\p -> getWarp _configPort (runServer (ServerState p _configMapnikInputPlugins cfgFile config layers)))
   pure ()
 
 getWarp :: W.Port -> W.Application -> IO ()

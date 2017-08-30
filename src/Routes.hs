@@ -1,12 +1,12 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Routes where
 
 import           Data.ByteString as BS
+import           Data.Proxy      as P
 import           Data.Text       as T
 import           Servant
 
@@ -18,10 +18,12 @@ type X = Capture "x" Integer
 type Y = Capture "y" Text
 type YI = Capture "y" Integer
 
-type HastileApi =    Get '[JSON] InputConfig
-                :<|> LayerName :> ReqBody '[JSON] LayerQuery :> Post '[JSON] NoContent
-                :<|> LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
-                :<|> LayerName :> Z :> X :> Y :> Get '[MapboxVectorTile, AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
+type HastileApi =
+  Get '[JSON] InputConfig
+    :<|> LayerName :> ReqBody '[JSON] LayerQuery :> Post '[JSON] NoContent
+    :<|> LayerName :> Z :> X :> YI :> "query" :> Get '[PlainText] Text
+    :<|> LayerName :> Z :> X :> Y :> Get '[MapboxVectorTile, AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
 
-api :: Proxy HastileApi
-api = Proxy
+hastileApi :: P.Proxy HastileApi
+hastileApi = P.Proxy
+
