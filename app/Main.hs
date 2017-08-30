@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Main where
 
 import           Control.Exception.Base
-import           Control.Monad.IO.Class
 import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.Foldable
@@ -39,18 +39,17 @@ doIt cmdLine = do
     Right inputConfig -> doItWithConfig cfgFile $ addDefaults inputConfig
 
 doItWithConfig :: FilePath -> Config -> IO ()
-doItWithConfig cfgFile config = do
-  let layers = _configLayers config
-  layers' <- liftIO $ atomically STM.new :: IO (STM.Map Text Layer)
-  forM_ (Data.Map.toList layers) $ \(k, v) -> atomically $ STM.insert v k layers'
-  let pgPoolSize= _configPgPoolSize config
-      pgTimeout = _configPgTimeout config
-      pluginDir = _configMapnikInputPlugins config
-      port = _configPort config
-      conn = encodeUtf8 $ _configPgConnection config
+doItWithConfig cfgFile config@Config{..} = do
+  layers <- atomically STM.new :: IO (STM.Map Text Layer)
+  forM_ (Data.Map.toList _configLayers) $ \(k, v) -> atomically $ STM.insert v k layers
+  let pgPoolSize= _configPgPoolSize
+      pgTimeout = _configPgTimeout
+      pluginDir = _configMapnikInputPlugins
+      port = _configPort
+      conn = encodeUtf8 _configPgConnection
     in bracket (P.acquire (pgPoolSize, pgTimeout, conn))
             P.release $
-              \p -> getWarp port . serve api $ hastileService (ServerState p pluginDir cfgFile config layers')
+              \p -> getWarp port . serve api $ hastileService (ServerState p pluginDir cfgFile config layers)
   pure ()
 
 getWarp :: Warp.Port -> Network.Wai.Application -> IO ()

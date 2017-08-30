@@ -71,25 +71,27 @@ data Layer = Layer { _layerQuery        :: Text
 instance FromJSON Layer where
   parseJSON = withObject "Layer" $ \o -> Layer <$> o .: "query" <*> o .: "last-modified"
 
-data InputConfig = InputConfig { _inputConfigPgConnection :: Text
-                     , _inputConfigPgPoolSize             :: Maybe Int
-                     , _inputConfigPgTimeout              :: Maybe NominalDiffTime
-                     , _inputConfigMapnikInputPlugins     :: Maybe FilePath
-                     , _inputConfigPort                   :: Maybe Int
-                     , _inputConfigLayers                 :: M.Map Text Layer
-                     , _inputConfigTileBuffer             :: Maybe Pixels
-                     } deriving (Show, Generic)
+data InputConfig = InputConfig
+  { _inputConfigPgConnection       :: Text
+  , _inputConfigPgPoolSize         :: Maybe Int
+  , _inputConfigPgTimeout          :: Maybe NominalDiffTime
+  , _inputConfigMapnikInputPlugins :: Maybe FilePath
+  , _inputConfigPort               :: Maybe Int
+  , _inputConfigLayers             :: M.Map Text Layer
+  , _inputConfigTileBuffer         :: Maybe Pixels
+  } deriving (Show, Generic)
 
 makeLenses ''InputConfig
 
-data Config = Config { _configPgConnection       :: Text
-                     , _configPgPoolSize         :: Int
-                     , _configPgTimeout          :: NominalDiffTime
-                     , _configMapnikInputPlugins :: FilePath
-                     , _configPort               :: Int
-                     , _configLayers             :: M.Map Text Layer
-                     , _configTileBuffer         :: Pixels
-                     } deriving (Show, Generic)
+data Config = Config
+  { _configPgConnection       :: Text
+  , _configPgPoolSize         :: Int
+  , _configPgTimeout          :: NominalDiffTime
+  , _configMapnikInputPlugins :: FilePath
+  , _configPort               :: Int
+  , _configLayers             :: M.Map Text Layer
+  , _configTileBuffer         :: Pixels
+  } deriving (Show, Generic)
 
 makeLenses ''Config
 
