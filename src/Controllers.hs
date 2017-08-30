@@ -87,8 +87,7 @@ getTile l zxy = do
   tile <- liftIO $ mkTile l zxy buffer geoJson
   checkEmpty tile layer
 
-checkEmpty :: (MonadIO m, MonadError ServantErr m, MonadReader ServerState m)
-           => BS.ByteString -> Layer -> m (Headers '[Header "Last-Modified" String] BS.ByteString)
+checkEmpty :: BS.ByteString -> Layer -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 checkEmpty tile layer
   | BS.null tile = throwError $ err204 { errHeaders = [(hLastModified, BS8.pack $ lastModified layer)] }
   | otherwise = pure $ addHeader (lastModified layer) tile
