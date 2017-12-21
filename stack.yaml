@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-9.0
+resolver: lts-10.0
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -40,12 +40,17 @@ packages:
 - location:
     git: git@github.com:sitewisely/zellige.git
     commit: master
+  extra-dep: true
+- location:
+    git: https://github.com/achirkin/hs-geojson.git
+    commit: 84e02c31ee4f26eabf2d78f4c8fb664d9f7eea38
   extra-dep: true  
+    
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps:
- - hasql-pool-0.4.1
- - handa-geodata-0.2.0.1
+extra-deps: 
+  - handa-geodata-0.2.0.1
+  - validation-0.5.5
 
 # Override default flag values for local packages and extra-deps
 flags: {}

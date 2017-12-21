@@ -10,13 +10,14 @@ import           Control.Lens               ((^.))
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class as RC
-import           Data.Aeson
+import qualified Data.Aeson                 as A
 import           Data.Aeson.Encode.Pretty
 import           Data.ByteString            as BS
 import           Data.ByteString.Char8      as BS8
 import           Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
 import qualified Data.Geography.GeoJSON     as GJ
+import qualified Data.Geospatial            as DG
 import           Data.Map                   as M
 import           Data.Monoid
 import qualified Data.Text                  as T
@@ -55,7 +56,7 @@ returnConfiguration :: ActionHandler Types.InputConfig
 returnConfiguration = do
   cfgFile <- RC.asks _ssConfigFile
   configBs <- liftIO $ LBS.readFile cfgFile
-  case eitherDecode configBs of
+  case A.eitherDecode configBs of
     Left e  -> throwError $ err500 { errBody = LBS.pack $ show e }
     Right c -> pure c
 
@@ -95,11 +96,18 @@ checkEmpty tile layer
 getJson :: T.Text -> Coordinates -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 getJson l zxy = do
   layer <- getLayerOrThrow l
-  geoJson <- getJson' layer zxy
-  pure $ addHeader (lastModified layer) (toStrict $ encode geoJson)
+  geoJson <- getJson'' layer zxy
+  pure $ addHeader (lastModified layer) (toStrict $ A.encode geoJson)
 
-getJson' :: Layer -> Coordinates -> ActionHandler GJ.FeatureCollection
+getJson' :: Layer -> Coordinates -> ActionHandler (DG.GeoFeatureCollection A.Value)
 getJson' layer zxy = do
+  errorOrTfs <- findFeatures layer zxy
+  case errorOrTfs of
+    Left e    -> throwError $ err500 { errBody = LBS.pack $ show e }
+    Right tfs -> pure $ DG.GeoFeatureCollection Nothing (mkGeoJSON' tfs)
+
+getJson'' :: Layer -> Coordinates -> ActionHandler GJ.FeatureCollection
+getJson'' layer zxy = do
   errorOrTfs <- findFeatures layer zxy
   case errorOrTfs of
     Left e    -> throwError $ err500 { errBody = LBS.pack $ show e }
