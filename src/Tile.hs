@@ -83,8 +83,8 @@ mPerPxToM (Ratio r) (Pixels p) = Metres $ r * fromIntegral p
 
 mkTile :: T.Text -> Coordinates -> Pixels -> GJ.FeatureCollection -> IO BS8.ByteString
 mkTile l zxy buffer geoJson = do
-  eet <- DGM.createMvt config geoJson
-  pure (VT.encode . VT.untile $ VVT.VectorTile (M.fromList [(l, eet)]))
+  mvt <- DGM.createMvt config geoJson
+  pure $ DGM.encodeMvt mvt
   where
     config = DGT.mkConfig l (_z . _zl $ zxy) (_x . _xy $ zxy, _y . _xy $ zxy) (DGT.Pixels $ _pixels buffer) (DGT.Pixels $ _pixels defaultTileSize)
 
