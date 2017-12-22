@@ -42,8 +42,8 @@ packages:
     commit: master
   extra-dep: true
 - location:
-    git: https://github.com/achirkin/hs-geojson.git
-    commit: 84e02c31ee4f26eabf2d78f4c8fb664d9f7eea38
+    git: https://github.com/sitewisely/hs-geojson.git
+    commit: master
   extra-dep: true  
     
 # Dependency packages to be pulled from upstream that are not in the resolver
