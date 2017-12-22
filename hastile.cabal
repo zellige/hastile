@@ -26,7 +26,6 @@ library
                      , bytestring
                      , containers
                      , geojson
-                     , handa-geodata
                      , hasql
                      , hasql-pool
                      , here
@@ -79,7 +78,6 @@ test-suite hastile-test
                      , bytestring
                      , containers
                      , directory
-                     , handa-geodata
                      , hastile                     
                      , hspec
                      , lens

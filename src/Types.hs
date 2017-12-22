@@ -14,26 +14,24 @@
 
 module Types where
 
-import           Control.Lens           (Lens', makeLenses)
-import           Control.Monad.Except   (MonadError)
-import           Control.Monad.Reader   (MonadIO, MonadReader, ReaderT)
-import           Data.Aeson             as A
-import           Data.Aeson.Types       as AT
-import qualified Data.ByteString        as BS
-import           Data.ByteString.Lazy   (ByteString, fromStrict)
-import qualified Data.Geography.GeoJSON as GJ
-import qualified Data.Geospatial        as DG
-import           Data.Map               as M
-import           Data.Maybe             (catMaybes)
-import           Data.Monoid            ((<>))
-import           Data.Text              as T
+import           Control.Lens         (Lens', makeLenses)
+import           Control.Monad.Except (MonadError)
+import           Control.Monad.Reader (MonadIO, MonadReader, ReaderT)
+import           Data.Aeson           as A
+import           Data.Aeson.Types     as AT
+import qualified Data.ByteString      as BS
+import           Data.ByteString.Lazy (ByteString, fromStrict)
+import qualified Data.Geospatial      as DG
+import           Data.Map             as M
+import           Data.Maybe           (catMaybes)
+import           Data.Text            as T
 import           Data.Time
 import           Data.Typeable
-import           Hasql.Pool             as P
-import qualified Network.HTTP.Media     as HM
+import           Hasql.Pool           as P
+import qualified Network.HTTP.Media   as HM
 import           Options.Generic
 import           Servant
-import           STMContainers.Map      as STM
+import           STMContainers.Map    as STM
 
 
 defaultTileSize :: Pixels
@@ -192,52 +190,10 @@ instance MimeRender MapboxVectorTile BS.ByteString where
 
 newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
 
-type GeoJson = M.Map Text Value
-
-mkGeoJSON :: [Value] -> [GJ.Feature]
+mkGeoJSON :: [Value] -> [DG.GeoFeature AT.Value]
 mkGeoJSON = fmap (x . parseEither parseJSON)
   where
-    x = either (\_ -> GJ.Feature Nothing (GJ.GeometryCollection []) Null Nothing) id
-
-mkGeoJSON' :: [Value] -> [DG.GeoFeature AT.Value]
-mkGeoJSON' = fmap (x . parseEither parseJSON)
-  where
     x = either (\_ -> DG.GeoFeature Nothing (DG.Collection []) Null Nothing) id
-
-instance ToJSON GJ.FeatureCollection where
-  toJSON fc = object
-    ([ "features" .= GJ.features fc
-    , "type" .= String "FeatureCollection"
-    ] <> getBbox (GJ.collectionBoundingBox fc))
-
-instance ToJSON GJ.Feature where
-  toJSON f = object
-    ([ "id" .= GJ.identifier f
-    , "type" .= String "Feature"
-    , "properties" .= GJ.properties f
-    , "geometry" .= GJ.geometry f
-    ] <> getBbox (GJ.boundingBox f))
-
-getBbox :: (ToJSON v, KeyValue t) => Maybe v -> [t]
-getBbox = maybe [] (\a -> ["bbox" .= a])
-
-instance ToJSON GJ.PointGeometry where
-  toJSON (GJ.PointGeometry coords) = toJSON coords
-
-instance ToJSON GJ.LineStringGeometry where
-  toJSON (GJ.LineStringGeometry ls) = toJSON ls
-
-instance ToJSON GJ.PolygonGeometry where
-  toJSON (GJ.PolygonGeometry ext holes) = toJSON (ext : holes)
-
-instance ToJSON GJ.Geometry where
-  toJSON (GJ.Point            po) = object [ "type" .= String "Point", "coordinates" .= po]
-  toJSON (GJ.MultiPoint      mpg) = object [ "type" .= String "MultiPoint", "coordinates" .= GJ.points mpg]
-  toJSON (GJ.LineString       ls) = object [ "type" .= String "LineString", "coordinates" .= ls]
-  toJSON (GJ.MultiLineString mls) = object [ "type" .= String "MultiLineString", "coordinates" .= GJ.lineStrings mls]
-  toJSON (GJ.Polygon          pg) = object [ "type" .= String "Polygon", "coordinates" .= pg]
-  toJSON (GJ.MultiPolygon    mpg) = object [ "type" .= String "MultiPolygon", "coordinates" .= GJ.polygons mpg]
-  toJSON (GJ.GeometryCollection geom) = object [ "type" .= String "GeometryCollection", "geometries" .= fmap toJSON geom ]
 
 newtype ActionHandler a = ActionHandler
   { runActionHandler :: ReaderT ServerState Handler a

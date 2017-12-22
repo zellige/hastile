@@ -16,7 +16,6 @@ import           Data.ByteString            as BS
 import           Data.ByteString.Char8      as BS8
 import           Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
-import qualified Data.Geography.GeoJSON     as GJ
 import qualified Data.Geospatial            as DG
 import           Data.Map                   as M
 import           Data.Monoid
@@ -96,7 +95,7 @@ checkEmpty tile layer
 getJson :: T.Text -> Coordinates -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 getJson l zxy = do
   layer <- getLayerOrThrow l
-  geoJson <- getJson'' layer zxy
+  geoJson <- getJson' layer zxy
   pure $ addHeader (lastModified layer) (toStrict $ A.encode geoJson)
 
 getJson' :: Layer -> Coordinates -> ActionHandler (DG.GeoFeatureCollection A.Value)
@@ -104,14 +103,7 @@ getJson' layer zxy = do
   errorOrTfs <- findFeatures layer zxy
   case errorOrTfs of
     Left e    -> throwError $ err500 { errBody = LBS.pack $ show e }
-    Right tfs -> pure $ DG.GeoFeatureCollection Nothing (mkGeoJSON' tfs)
-
-getJson'' :: Layer -> Coordinates -> ActionHandler GJ.FeatureCollection
-getJson'' layer zxy = do
-  errorOrTfs <- findFeatures layer zxy
-  case errorOrTfs of
-    Left e    -> throwError $ err500 { errBody = LBS.pack $ show e }
-    Right tfs -> pure $ GJ.FeatureCollection Nothing (mkGeoJSON tfs)
+    Right tfs -> pure $ DG.GeoFeatureCollection Nothing (mkGeoJSON tfs)
 
 getLayerOrThrow :: T.Text -> ActionHandler Layer
 getLayerOrThrow l = do
