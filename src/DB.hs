@@ -6,12 +6,13 @@
 
 module DB where
 
-import Control.Lens ((^.))
+import           Control.Lens               ((^.))
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
+import           Data.Aeson
 import           Data.ByteString            as BS
 import           Data.Monoid
-import           Data.Text                  as T
+import qualified Data.Text                  as T
 import           Data.Text.Encoding         as TE
 import           Data.Time
 import           GHC.Conc
@@ -27,11 +28,8 @@ import           Types
 
 data LayerError = LayerNotFound
 
-defaultTileSize :: Pixels
-defaultTileSize = Pixels 2048
-
 findFeatures :: (MonadIO m, MonadReader ServerState m)
-             => Layer -> Coordinates -> m (Either P.UsageError [TileFeature])
+             => Layer -> Coordinates -> m (Either P.UsageError [Value])
 findFeatures layer zxy = do
   sql <- mkQuery layer zxy
   let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
@@ -39,7 +37,7 @@ findFeatures layer zxy = do
   errOrResult <- liftIO $ P.use p sessTfs
   pure errOrResult
 
-mkQuery :: (MonadReader ServerState m) => Layer -> Coordinates -> m Text
+mkQuery :: (MonadReader ServerState m) => Layer -> Coordinates -> m T.Text
 mkQuery layer zxy =
   do buffer <- asks (^. ssBuffer)
      let zoom = _zl zxy
@@ -51,7 +49,7 @@ mkQuery layer zxy =
                              \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
      pure $ escape bbox4326 . _layerQuery $ layer
 
-getLayer :: (MonadIO m, MonadReader ServerState m) => Text -> m (Either LayerError Layer)
+getLayer :: (MonadIO m, MonadReader ServerState m) => T.Text -> m (Either LayerError Layer)
 getLayer l = do
   ls <- asks _ssStateLayers
   result <- liftIO . atomically $ STM.lookup l ls
@@ -59,17 +57,17 @@ getLayer l = do
     Nothing -> Left LayerNotFound
     Just layer -> Right layer
 
-mkStatement :: BS.ByteString -> HQ.Query () [TileFeature]
+mkStatement :: BS.ByteString -> HQ.Query () [Value]
 mkStatement sql = HQ.statement sql
-    HE.unit (HD.rowsList (TileFeature <$> HD.value HD.json)) False
+    HE.unit (HD.rowsList (HD.value HD.json)) False
 
 -- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
-escape :: Text -> Text -> Text
-escape bbox query = T.concat . fmap replace' . T.split (== '!') $ query
+escape :: T.Text -> T.Text -> T.Text
+escape bbox = T.concat . fmap replace' . T.split (== '!')
   where
     replace' "bbox_4326" = bbox
     replace' t = t
 
 lastModified :: Layer -> String
-lastModified layer = T.unpack $ dropEnd 3 (T.pack rfc822Str) <> "GMT"
+lastModified layer = T.unpack $ T.dropEnd 3 (T.pack rfc822Str) <> "GMT"
        where rfc822Str = formatTime defaultTimeLocale rfc822DateFormat $ _layerLastModified layer

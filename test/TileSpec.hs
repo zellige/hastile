@@ -3,25 +3,21 @@
 module TileSpec where
 
 import           Control.Lens
-import           Data.Aeson                      (eitherDecode)
 import qualified Data.ByteString                 as BS (ByteString, readFile)
 import qualified Data.ByteString.Lazy            as LBS (ByteString, fromStrict,
-                                                         readFile, writeFile)
+                                                         writeFile)
+import qualified Data.Geometry.MapnikVectorTile  as MVT
 import           Data.Map                        (lookup)
-import           Data.Maybe                      (fromMaybe)
-import           Data.Monoid                     ((<>))
-import           Data.Text                       (Text, unpack)
+import qualified Data.Text                       as T
 import qualified Geography.VectorTile            as VT
 import qualified Geography.VectorTile.VectorTile as VVT
-import           System.Environment              (lookupEnv)
 import           System.IO                       (hClose)
 import           System.IO.Temp                  (withSystemTempFile)
 import           Test.Hspec                      (Spec, describe, it, shouldBe)
 
-import           DB                              (defaultTileSize)
-import           MapboxVectorTile                (fromGeoJSON)
+
 import           Tile                            (BBox (..), addBufferToBBox,
-                                                  extent, googleToBBoxM)
+                                                  extent, googleToBBoxM, mkTile)
 import           Types
 
 spec :: Spec
@@ -67,7 +63,7 @@ readMvtFile filename = do
   bs <- BS.readFile filename
   pure $ bsToLayer bs "open_traffic_adl"
 
-bsToLayer :: BS.ByteString -> Text -> VVT.Layer
+bsToLayer :: BS.ByteString -> T.Text -> VVT.Layer
 bsToLayer bs layerName = maybeLayer ^?! _Just
   where
     decodedMvt = VT.decode bs ^?! _Right
@@ -78,14 +74,11 @@ generateMvtAdelaide :: FilePath -> IO ()
 generateMvtAdelaide filename = do
   lbs <- generateMvtFile "test/integration/19781.json" "open_traffic_adl" (Coordinates 15 $ GoogleTileCoords 28999 19781)
   _ <- LBS.writeFile filename lbs
-  return ()
+  pure ()
 
-generateMvtFile :: FilePath -> Text -> Coordinates -> IO LBS.ByteString
+generateMvtFile :: FilePath -> T.Text -> Coordinates -> IO LBS.ByteString
 generateMvtFile geoJsonFile layerName coords = do
-  bs <- LBS.readFile geoJsonFile
-  let ebs = eitherDecode bs :: Either String GeoJson
-      decodeError = error . (("Unable to decode " <> geoJsonFile <> ": ") <>)
-      geoJson = either decodeError id ebs
-  pluginDir <- fromMaybe "/usr/local/lib/mapnik/input" <$> lookupEnv "MAPNIK_PLUGINS_DIR"
-  et <- MapboxVectorTile.fromGeoJSON defaultTileSize 128 geoJson layerName pluginDir coords
-  either (error . unpack . ("Failed to create tile: " <>)) (pure . LBS.fromStrict) et
+  mvt <- MVT.readGeoJson geoJsonFile
+  x <- mkTile layerName coords (Pixels 128) mvt
+  pure $ LBS.fromStrict x
+

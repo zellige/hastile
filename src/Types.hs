@@ -10,14 +10,18 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Types where
 
-import           Control.Applicative
 import           Control.Lens         (Lens', makeLenses)
-import           Data.Aeson
+import           Control.Monad.Except (MonadError)
+import           Control.Monad.Reader (MonadIO, MonadReader, ReaderT)
+import           Data.Aeson           as A
+import           Data.Aeson.Types     as AT
 import qualified Data.ByteString      as BS
 import           Data.ByteString.Lazy (ByteString, fromStrict)
+import qualified Data.Geospatial      as DG
 import           Data.Map             as M
 import           Data.Maybe           (catMaybes)
 import           Data.Text            as T
@@ -29,64 +33,75 @@ import           Options.Generic
 import           Servant
 import           STMContainers.Map    as STM
 
-type GeoJson = M.Map Text Value
 
-newtype ZoomLevel = ZoomLevel { _z :: Integer
-                              } deriving (Show, Eq, Num)
+defaultTileSize :: Pixels
+defaultTileSize = Pixels 2048
 
-data GoogleTileCoords = GoogleTileCoords { _x :: Integer
-                                         , _y :: Integer
-                                         } deriving (Eq, Show)
+newtype ZoomLevel = ZoomLevel
+  { _z :: Integer
+  } deriving (Show, Eq, Num)
 
-data Coordinates = Coordinates { _zl :: ZoomLevel
-                               , _xy :: GoogleTileCoords
-                               } deriving (Show, Eq)
+data GoogleTileCoords = GoogleTileCoords
+  { _x :: Integer
+  , _y :: Integer
+  } deriving (Eq, Show)
 
-newtype Pixels = Pixels Integer deriving (Show, Eq, Num)
+data Coordinates = Coordinates
+  { _zl :: ZoomLevel
+  , _xy :: GoogleTileCoords
+  } deriving (Show, Eq)
+
+newtype Pixels = Pixels
+  { _pixels :: Int
+  } deriving (Show, Eq, Num)
+
 instance ToJSON Pixels where
   toJSON (Pixels n) = Number $ fromIntegral n
 
-data CmdLine = CmdLine { configFile :: FilePath
-                       } deriving Generic
+newtype CmdLine = CmdLine
+  { configFile :: FilePath
+  } deriving Generic
 instance ParseRecord CmdLine
 
-newtype LayerQuery = LayerQuery { unLayerQuery :: Text } deriving (Show, Eq)
+newtype LayerQuery = LayerQuery
+  { unLayerQuery :: Text
+  } deriving (Show, Eq)
 
 instance ToJSON LayerQuery where
   toJSON (LayerQuery lq) = object [ "query" .= lq ]
 
 instance FromJSON LayerQuery where
-  parseJSON (Object o) = LayerQuery <$> o .: "query"
-  parseJSON _ = Control.Applicative.empty
+  parseJSON = withObject "Layer Query" $ \o -> LayerQuery <$> o .: "query"
 
-data Layer = Layer { _layerQuery        :: Text
-                   , _layerLastModified :: UTCTime
-                   } deriving (Show, Eq, Generic)
+data Layer = Layer
+  { _layerQuery        :: Text
+  , _layerLastModified :: UTCTime
+  } deriving (Show, Eq, Generic)
 
 instance FromJSON Layer where
-  parseJSON (Object o) =
-       Layer <$> o .: "query" <*> o .: "last-modified"
-  parseJSON _ = Control.Applicative.empty
+  parseJSON = withObject "Layer" $ \o -> Layer <$> o .: "query" <*> o .: "last-modified"
 
-data InputConfig = InputConfig { _inputConfigPgConnection :: Text
-                     , _inputConfigPgPoolSize             :: Maybe Int
-                     , _inputConfigPgTimeout              :: Maybe NominalDiffTime
-                     , _inputConfigMapnikInputPlugins     :: Maybe FilePath
-                     , _inputConfigPort                   :: Maybe Int
-                     , _inputConfigLayers                 :: M.Map Text Layer
-                     , _inputConfigTileBuffer             :: Maybe Pixels
-                     } deriving (Show, Generic)
+data InputConfig = InputConfig
+  { _inputConfigPgConnection       :: Text
+  , _inputConfigPgPoolSize         :: Maybe Int
+  , _inputConfigPgTimeout          :: Maybe NominalDiffTime
+  , _inputConfigMapnikInputPlugins :: Maybe FilePath
+  , _inputConfigPort               :: Maybe Int
+  , _inputConfigLayers             :: M.Map Text Layer
+  , _inputConfigTileBuffer         :: Maybe Pixels
+  } deriving (Show, Generic)
 
 makeLenses ''InputConfig
 
-data Config = Config { _configPgConnection       :: Text
-                     , _configPgPoolSize         :: Int
-                     , _configPgTimeout          :: NominalDiffTime
-                     , _configMapnikInputPlugins :: FilePath
-                     , _configPort               :: Int
-                     , _configLayers             :: M.Map Text Layer
-                     , _configTileBuffer         :: Pixels
-                     } deriving (Show, Generic)
+data Config = Config
+  { _configPgConnection       :: Text
+  , _configPgPoolSize         :: Int
+  , _configPgTimeout          :: NominalDiffTime
+  , _configMapnikInputPlugins :: FilePath
+  , _configPort               :: Int
+  , _configLayers             :: M.Map Text Layer
+  , _configTileBuffer         :: Pixels
+  } deriving (Show, Generic)
 
 makeLenses ''Config
 
@@ -94,21 +109,24 @@ emptyInputConfig :: InputConfig
 emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing (fromList []) Nothing
 
 instance FromJSON InputConfig where
-  parseJSON (Object o) =
-       InputConfig <$> o .: "db-connection" <*> o .:? "db-pool-size" <*> o .:? "db-timeout" <*>
-          o .:? "mapnik-input-plugins" <*> o .:? "port" <*> o .: "layers" <*> (fmap . fmap) Pixels (o .:? "tile-buffer")
-  parseJSON _ = Control.Applicative.empty
+  parseJSON = withObject "Config" $ \o -> InputConfig
+    <$> o .: "db-connection"
+    <*> o .:? "db-pool-size"
+    <*> o .:? "db-timeout"
+    <*> o .:? "mapnik-input-plugins"
+    <*> o .:? "port"
+    <*> o .: "layers"
+    <*> (fmap . fmap) Pixels (o .:? "tile-buffer")
 
 instance ToJSON Config where
   toJSON c = object
-    [
-      ("db-connection" .= _configPgConnection c),
-      ("db-pool-size" .= _configPgPoolSize c),
-      ("db-timeout" .= _configPgTimeout c),
-      ("mapnik-input-plugins" .= _configMapnikInputPlugins c),
-      ("port" .= _configPort c),
-      ("layers" .= _configLayers c),
-      ("tile-buffer" .= _configTileBuffer c)
+    [ "db-connection" .= _configPgConnection c
+    , "db-pool-size" .= _configPgPoolSize c
+    , "db-timeout" .= _configPgTimeout c
+    , "mapnik-input-plugins" .= _configMapnikInputPlugins c
+    , "port" .= _configPort c
+    , "layers" .= _configLayers c
+    , "tile-buffer" .= _configTileBuffer c
     ]
 
 instance ToJSON InputConfig where
@@ -129,23 +147,17 @@ instance ToJSON Layer where
        "last-modified" .= _layerLastModified l
     ]
 
-data ServerState = ServerState { _ssPool           :: P.Pool
-                               , _ssPluginDir      :: FilePath
-                               , _ssConfigFile     :: FilePath
-                               , _ssOriginalConfig :: Config
-                               , _ssStateLayers    :: STM.Map Text Layer
-                               }
+data ServerState = ServerState
+  { _ssPool           :: P.Pool
+  , _ssPluginDir      :: FilePath
+  , _ssConfigFile     :: FilePath
+  , _ssOriginalConfig :: Config
+  , _ssStateLayers    :: STM.Map Text Layer
+  }
 makeLenses ''ServerState
 
 ssBuffer :: Lens' ServerState Pixels
 ssBuffer = ssOriginalConfig . configTileBuffer
-
-newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
-
-mkGeoJSON :: [TileFeature] -> GeoJson
-mkGeoJSON tfs = M.fromList [ ("type", String "FeatureCollection")
-                           , ("features", toJSON . fmap unTileFeature $ tfs)
-                           ]
 
 err204 :: ServantErr
 err204 = ServantErr { errHTTPCode = 204
@@ -175,3 +187,14 @@ instance MimeRender MapboxVectorTile Data.ByteString.Lazy.ByteString where
 
 instance MimeRender MapboxVectorTile BS.ByteString where
     mimeRender _ = fromStrict
+
+newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
+
+mkGeoJSON :: [Value] -> [DG.GeoFeature AT.Value]
+mkGeoJSON = fmap (x . parseEither parseJSON)
+  where
+    x = either (\_ -> DG.GeoFeature Nothing (DG.Collection []) Null Nothing) id
+
+newtype ActionHandler a = ActionHandler
+  { runActionHandler :: ReaderT ServerState Handler a
+  } deriving (Functor, Applicative, Monad, MonadReader ServerState, MonadError ServantErr, MonadIO)
