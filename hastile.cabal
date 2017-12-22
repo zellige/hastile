@@ -41,7 +41,6 @@ library
                      , text
                      , time
                      , transformers
-                     , vectortiles
                      , wai
                      , word8
                      , zellige

@@ -38,14 +38,18 @@ resolver: lts-10.0
 packages:
 - '.'
 - location:
-    git: git@github.com:sitewisely/zellige.git
+    git: https://github.com/sitewisely/hs-geojson.git
     commit: master
   extra-dep: true
 - location:
-    git: https://github.com/sitewisely/hs-geojson.git
+    git: https://github.com/sitewisely/vectortiles.git
     commit: master
-  extra-dep: true  
-    
+  extra-dep: true
+- location:
+    git: https://github.com/sitewisely/zellige.git
+    commit: master
+  extra-dep: true
+
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: 
