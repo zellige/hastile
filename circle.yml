@@ -10,16 +10,16 @@ dependencies:
     - tar -xvzf /tmp/stack.tar.gz -C /tmp/stack/
     - sudo mv /tmp/stack/stack-1.6.1-linux-x86_64/stack /usr/local/bin/stack
   override:
-    - stack setup --no-terminal
-    - stack build --no-system-ghc --only-configure --no-terminal
+    - stack setup --stack-yaml stack-ci.yaml --no-terminal
+    - stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal
 
 compile:
   override:
-    - stack build --no-terminal
+    - stack build  --stack-yaml stack-ci.yaml --no-terminal
 
 test:
   override:
-    - stack test --no-terminal
+    - stack test  --stack-yaml stack-ci.yaml --no-terminal
 
 deployment:
   staging:
