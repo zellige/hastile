@@ -14,25 +14,26 @@
 
 module Types where
 
-import           Control.Lens         (Lens', makeLenses)
-import           Control.Monad.Except (MonadError)
-import           Control.Monad.Reader (MonadIO, MonadReader, ReaderT)
-import           Data.Aeson           as A
-import           Data.Aeson.Types     as AT
-import qualified Data.ByteString      as BS
-import           Data.ByteString.Lazy (ByteString, fromStrict)
-import qualified Data.Geospatial      as DG
-import           Data.Map             as M
-import           Data.Maybe           (catMaybes)
-import qualified Data.Scientific      as S
-import           Data.Text            as T
+import           Control.Lens              (Lens', makeLenses)
+import           Control.Monad.Except      (MonadError)
+import           Control.Monad.Reader      (MonadIO, MonadReader, ReaderT)
+import           Data.Aeson                as A
+import           Data.Aeson.Types          as AT
+import qualified Data.ByteString           as BS
+import           Data.ByteString.Lazy      (ByteString, fromStrict)
+import qualified Data.Geometry.Types.Types as DGT
+import qualified Data.Geospatial           as DG
+import           Data.Map                  as M
+import           Data.Maybe                (catMaybes)
+import qualified Data.Scientific           as S
+import           Data.Text                 as T
 import           Data.Time
 import           Data.Typeable
-import           Hasql.Pool           as P
-import qualified Network.HTTP.Media   as HM
+import           Hasql.Pool                as P
+import qualified Network.HTTP.Media        as HM
 import           Options.Generic
 import           Servant
-import           STMContainers.Map    as STM
+import           STMContainers.Map         as STM
 
 -- Pixels
 
@@ -54,22 +55,6 @@ defaultTileSize = Pixels 2048
 
 -- Layer
 
-data Layer = Layer
-  { _layerQuery        :: Text
-  , _layerLastModified :: UTCTime
-  } deriving (Show, Eq, Generic)
-
-instance FromJSON Layer where
-  parseJSON = withObject "Layer" $ \o -> Layer
-    <$> o .: "query"
-    <*> o .: "last-modified"
-
-instance ToJSON Layer where
-  toJSON l = object
-    [  "query"         .= _layerQuery l,
-       "last-modified" .= _layerLastModified l
-    ]
-
 newtype LayerQuery = LayerQuery
   { unLayerQuery :: Text
   } deriving (Show, Eq)
@@ -82,6 +67,59 @@ instance ToJSON LayerQuery where
 instance FromJSON LayerQuery where
   parseJSON = withObject "Layer Query" $ \o -> LayerQuery
     <$> o .: "query"
+
+data Layer = Layer
+  { _layerQuery        :: Text
+  , _layerLastModified :: UTCTime
+  , _layerAlgorithms   :: Algorithms
+  } deriving (Show, Eq, Generic)
+
+instance FromJSON Layer where
+  parseJSON = withObject "Layer" $ \o -> Layer
+    <$> o .: "query"
+    <*> o .: "last-modified"
+    <*> o .: "algorithms"
+
+instance ToJSON Layer where
+  toJSON l = object
+    [ "query"         .= _layerQuery l
+    , "last-modified" .= _layerLastModified l
+    , "algorithms"    .= _layerAlgorithms l
+    ]
+
+-- Zoom dependant simplification algorithms
+
+-- TODO use map Strict
+type Algorithms = M.Map DGT.ZoomLevel SimplificationAlgorithm
+
+getAlgorithm :: DGT.ZoomLevel -> Layer -> SimplificationAlgorithm
+getAlgorithm z layer = getAlgorithm' z (_layerAlgorithms layer)
+
+getAlgorithm' :: DGT.ZoomLevel -> Algorithms -> SimplificationAlgorithm
+getAlgorithm' z algos = case M.lookupLE z algos of
+  Nothing        -> NoAlgorithm
+  Just (_, algo) -> algo
+
+data SimplificationAlgorithm = NoAlgorithm
+  | Quantize
+  | Visvalingam
+  | DouglasPeucker
+  deriving (Eq, Show)
+
+instance ToJSON SimplificationAlgorithm where
+  toJSON algo = String $ case algo of
+    NoAlgorithm    -> "none"
+    Quantize       -> "quantize"
+    Visvalingam    -> "visvalingam"
+    DouglasPeucker -> "douglas-peucker"
+
+instance FromJSON SimplificationAlgorithm where
+  parseJSON = withText "SimplificationAlgorithm" $ \t -> case t of
+    "none"            -> pure NoAlgorithm
+    "quantize"        -> pure Quantize
+    "visvalingam"     -> pure Visvalingam
+    "douglas-peucker" -> pure DouglasPeucker
+    _                 -> fail "Unknown algorithm"
 
 -- Config
 
@@ -96,6 +134,17 @@ data InputConfig = InputConfig
   } deriving (Show, Generic)
 
 makeLenses ''InputConfig
+
+instance ToJSON InputConfig where
+  toJSON ic = object $ catMaybes
+    [ ("db-connection" .=)        <$> Just (_inputConfigPgConnection ic)
+    , ("db-pool-size" .=)         <$> _inputConfigPgPoolSize ic
+    , ("db-timeout" .=)           <$> _inputConfigPgTimeout ic
+    , ("mapnik-input-plugins" .=) <$> _inputConfigMapnikInputPlugins ic
+    , ("port" .=)                 <$> _inputConfigPort ic
+    , ("layers" .=)               <$> Just (_inputConfigLayers ic)
+    , ("tile-buffer" .=)          <$> Just (_inputConfigTileBuffer ic)
+    ]
 
 instance FromJSON InputConfig where
   parseJSON = withObject "Config" $ \o -> InputConfig
@@ -124,25 +173,13 @@ makeLenses ''Config
 
 instance ToJSON Config where
   toJSON c = object
-    [ "db-connection" .= _configPgConnection c
-    , "db-pool-size" .= _configPgPoolSize c
-    , "db-timeout" .= _configPgTimeout c
+    [ "db-connection"        .= _configPgConnection c
+    , "db-pool-size"         .= _configPgPoolSize c
+    , "db-timeout"           .= _configPgTimeout c
     , "mapnik-input-plugins" .= _configMapnikInputPlugins c
-    , "port" .= _configPort c
-    , "layers" .= _configLayers c
-    , "tile-buffer" .= _configTileBuffer c
-    ]
-
-instance ToJSON InputConfig where
-  toJSON ic = object $ catMaybes
-    [
-      ("db-connection" .=) <$> Just (_inputConfigPgConnection ic),
-      ("db-pool-size" .=) <$> _inputConfigPgPoolSize ic,
-      ("db-timeout" .=) <$> _inputConfigPgTimeout ic,
-      ("mapnik-input-plugins" .=) <$> _inputConfigMapnikInputPlugins ic,
-      ("port" .=) <$> _inputConfigPort ic,
-      ("layers" .=) <$> Just (_inputConfigLayers ic),
-      ("tile-buffer" .=) <$> Just (_inputConfigTileBuffer ic)
+    , "port"                 .= _configPort c
+    , "layers"               .= _configLayers c
+    , "tile-buffer"          .= _configTileBuffer c
     ]
 
 -- Types
