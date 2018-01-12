@@ -86,7 +86,7 @@ getTile l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
   buffer <- RC.asks (^. ssBuffer)
-  tile <- liftIO $ mkTile l zxy buffer 5 geoJson
+  tile <- liftIO $ mkTile l zxy buffer 1 geoJson
   checkEmpty tile layer
 
 checkEmpty :: BS.ByteString -> Layer -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
