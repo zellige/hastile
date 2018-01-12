@@ -16,6 +16,7 @@ import           Data.ByteString            as BS
 import           Data.ByteString.Char8      as BS8
 import           Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
+import qualified Data.Geometry.Types.Types  as DGT
 import qualified Data.Geospatial            as DG
 import           Data.Map                   as M
 import           Data.Monoid
@@ -63,7 +64,7 @@ returnConfiguration = do
 getQuery :: T.Text -> Natural -> Integer -> Integer -> ActionHandler T.Text
 getQuery l z x y = do
   layer <- getLayerOrThrow l
-  query <- mkQuery layer (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
+  query <- mkQuery layer (DGT.mkGoogleTileCoords z x y)
   pure query
 
 getContent :: T.Text -> Natural -> Integer -> T.Text -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
@@ -72,15 +73,15 @@ getContent l z x stringY
   | ".json" `T.isSuffixOf` stringY = getAnything getJson l z x stringY
   | otherwise = throwError $ err400 { errBody = "Unknown request: " <> fromStrict (TE.encodeUtf8 stringY) }
 
-getAnything :: (t -> Coordinates -> ActionHandler a) -> t -> Natural -> Integer -> T.Text -> ActionHandler a
+getAnything :: (t -> DGT.GoogleTileCoords -> ActionHandler a) -> t -> Natural -> Integer -> T.Text -> ActionHandler a
 getAnything f l z x stringY =
   case getIntY stringY of
     Left e       -> fail $ show e
-    Right (y, _) -> f l (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
+    Right (y, _) -> f l (DGT.mkGoogleTileCoords z x y)
   where
     getIntY s = decimal $ T.takeWhile isNumber s
 
-getTile :: T.Text -> Coordinates -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
+getTile :: T.Text -> DGT.GoogleTileCoords -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 getTile l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
@@ -93,13 +94,13 @@ checkEmpty tile layer
   | BS.null tile = throwError $ err204 { errHeaders = [(hLastModified, BS8.pack $ lastModified layer)] }
   | otherwise = pure $ addHeader (lastModified layer) tile
 
-getJson :: T.Text -> Coordinates -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
+getJson :: T.Text -> DGT.GoogleTileCoords -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 getJson l zxy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
   pure $ addHeader (lastModified layer) (toStrict $ A.encode geoJson)
 
-getJson' :: Layer -> Coordinates -> ActionHandler (DG.GeoFeatureCollection A.Value)
+getJson' :: Layer -> DGT.GoogleTileCoords -> ActionHandler (DG.GeoFeatureCollection A.Value)
 getJson' layer zxy = do
   errorOrTfs <- findFeatures layer zxy
   case errorOrTfs of

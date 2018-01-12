@@ -11,6 +11,7 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import           Data.Aeson
 import           Data.ByteString            as BS
+import qualified Data.Geometry.Types.Types  as DGT
 import           Data.Monoid
 import qualified Data.Text                  as T
 import           Data.Text.Encoding         as TE
@@ -29,7 +30,7 @@ import           Types
 data LayerError = LayerNotFound
 
 findFeatures :: (MonadIO m, MonadReader ServerState m)
-             => Layer -> Coordinates -> m (Either P.UsageError [Value])
+             => Layer ->  DGT.GoogleTileCoords -> m (Either P.UsageError [Value])
 findFeatures layer zxy = do
   sql <- mkQuery layer zxy
   let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
@@ -37,11 +38,11 @@ findFeatures layer zxy = do
   errOrResult <- liftIO $ P.use p sessTfs
   pure errOrResult
 
-mkQuery :: (MonadReader ServerState m) => Layer -> Coordinates -> m T.Text
+mkQuery :: (MonadReader ServerState m) => Layer -> DGT.GoogleTileCoords -> m T.Text
 mkQuery layer zxy =
   do buffer <- asks (^. ssBuffer)
-     let zoom = _zl zxy
-         bboxM = googleToBBoxM defaultTileSize zoom (_xy zxy)
+     let zoom = DGT._gtcZoom zxy
+         bboxM = googleToBBoxM defaultTileSize zxy
          (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
            addBufferToBBox defaultTileSize buffer zoom bboxM
          bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
