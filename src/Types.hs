@@ -29,7 +29,6 @@ import           Data.Time
 import           Data.Typeable
 import           Hasql.Pool           as P
 import qualified Network.HTTP.Media   as HM
-import           Numeric.Natural      (Natural)
 import           Options.Generic
 import           Servant
 import           STMContainers.Map    as STM
@@ -37,20 +36,6 @@ import           STMContainers.Map    as STM
 
 defaultTileSize :: Pixels
 defaultTileSize = Pixels 2048
-
-newtype ZoomLevel = ZoomLevel
-  { _z :: Natural
-  } deriving (Show, Eq, Num)
-
-data GoogleTileCoords = GoogleTileCoords
-  { _x :: Integer
-  , _y :: Integer
-  } deriving (Eq, Show)
-
-data Coordinates = Coordinates
-  { _zl :: ZoomLevel
-  , _xy :: GoogleTileCoords
-  } deriving (Show, Eq)
 
 newtype Pixels = Pixels
   { _pixels :: Int

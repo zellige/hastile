@@ -8,7 +8,6 @@ module Tile ( addBufferToBBox
             , BBox (..)
             , Metres (..)
             , Pixels (..)
-            , ZoomLevel (..)
             ) where
 
 import qualified Data.Aeson                     as A
@@ -43,7 +42,7 @@ earthCircumference = 2 * maxExtent
 extent :: BBox Metres
 extent = BBox (-maxExtent) (-maxExtent) maxExtent maxExtent
 
-addBufferToBBox :: Pixels -> Pixels -> ZoomLevel -> BBox Metres -> BBox Metres
+addBufferToBBox :: Pixels -> Pixels -> DGT.ZoomLevel -> BBox Metres -> BBox Metres
 addBufferToBBox tileSize buffer z (BBox llX llY urX urY) =
   hardLimit $ BBox (llX - bufferM) (llY - bufferM) (urX + bufferM) (urY + bufferM)
   where mPerPx = mPerPxAtZoom earthCircumference tileSize z
@@ -55,34 +54,33 @@ addBufferToBBox tileSize buffer z (BBox llX llY urX urY) =
                (min urX' maxExtent)
                (min urY' maxExtent)
 
-googleToBBoxM :: Pixels -> ZoomLevel -> GoogleTileCoords -> BBox Metres
-googleToBBoxM tileSize z g =
-  flipYs . fmap googleTo3857 $ googleToBBoxPx tileSize g
+googleToBBoxM :: Pixels -> DGT.GoogleTileCoords -> BBox Metres
+googleToBBoxM tileSize g =
+  flipYs . fmap googleTo3857 $ googleToBBoxPx tileSize (DGT._gtcCoords g)
   where googleTo3857 coord = mPerPxToM mPerPx coord - maxExtent
-        mPerPx = mPerPxAtZoom earthCircumference tileSize z
+        mPerPx = mPerPxAtZoom earthCircumference tileSize (DGT._gtcZoom g)
         flipYs (BBox llX llY urX urY) = BBox llX (-llY) urX (-urY)
 
-googleToBBoxPx :: Pixels -> GoogleTileCoords -> BBox Pixels
-googleToBBoxPx tileSize (GoogleTileCoords gx gy) =
+googleToBBoxPx :: Pixels -> DGT.Coords -> BBox Pixels
+googleToBBoxPx tileSize (DGT.Coords gx gy) =
   ((* tileSize) . fromIntegral) <$> BBox gx (gy + 1) (gx + 1) gy
 
-pixelMaxExtent :: Pixels -> ZoomLevel -> Pixels
-pixelMaxExtent tile (ZoomLevel z) = (2 ^ z) * tile
+pixelMaxExtent :: Pixels -> DGT.ZoomLevel -> Pixels
+pixelMaxExtent tile z = (2 ^ z) * tile
 
 -- At each zoom level we double the number of tiles in both the x and y direction.
 -- z = 0: 1 tile, z = 1: 2 * 2 = 4 tiles, z = 3: 4 * 4 = 16 tiles
-mPerPxAtZoom :: Metres -> Pixels -> ZoomLevel -> Ratio Metres Pixels
+mPerPxAtZoom :: Metres -> Pixels -> DGT.ZoomLevel -> Ratio Metres Pixels
 mPerPxAtZoom (Metres m) tile z = Ratio $ m / fromIntegral p
   where (Pixels p) = pixelMaxExtent tile z
 
 mPerPxToM :: Ratio Metres Pixels -> Pixels -> Metres
 mPerPxToM (Ratio r) (Pixels p) = Metres $ r * fromIntegral p
 
-mkTile :: T.Text -> Coordinates -> Pixels -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
+mkTile :: T.Text -> DGT.GoogleTileCoords -> Pixels -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
 mkTile l zxy buffer geoJson = do
   mvt <- DGM.createMvt config geoJson
   pure $ DGM.encodeMvt mvt
   where
-    config = DGT.mkConfig l (_z . _zl $ zxy) (_x . _xy $ zxy, _y . _xy $ zxy) (DGT.Pixels $ _pixels buffer) (DGT.Pixels $ _pixels defaultTileSize)
-
-
+    coords = DGT._gtcCoords zxy
+    config = DGT.mkConfig l (DGT._gtcZoom zxy) (DGT._coordsX coords, DGT._coordsY coords) (DGT.Pixels $ _pixels buffer) (DGT.Pixels $ _pixels defaultTileSize)
