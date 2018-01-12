@@ -35,6 +35,7 @@ library
                      , list-t
                      , mtl
                      , optparse-generic
+                     , scientific
                      , servant
                      , servant-server
                      , stm-containers

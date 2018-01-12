@@ -24,6 +24,7 @@ import           Data.ByteString.Lazy (ByteString, fromStrict)
 import qualified Data.Geospatial      as DG
 import           Data.Map             as M
 import           Data.Maybe           (catMaybes)
+import qualified Data.Scientific      as S
 import           Data.Text            as T
 import           Data.Time
 import           Data.Typeable
@@ -33,9 +34,7 @@ import           Options.Generic
 import           Servant
 import           STMContainers.Map    as STM
 
-
-defaultTileSize :: Pixels
-defaultTileSize = Pixels 2048
+-- Pixels
 
 newtype Pixels = Pixels
   { _pixels :: Int
@@ -44,20 +43,16 @@ newtype Pixels = Pixels
 instance ToJSON Pixels where
   toJSON (Pixels n) = Number $ fromIntegral n
 
-newtype CmdLine = CmdLine
-  { configFile :: FilePath
-  } deriving Generic
-instance ParseRecord CmdLine
+instance FromJSON Pixels where
+  parseJSON = withScientific "Pixels" $ \s ->
+    case (S.toBoundedInteger s :: Maybe Int) of
+      Nothing -> fail "Not a bounded Integer"
+      Just n  -> pure $ Pixels n
 
-newtype LayerQuery = LayerQuery
-  { unLayerQuery :: Text
-  } deriving (Show, Eq)
+defaultTileSize :: Pixels
+defaultTileSize = Pixels 2048
 
-instance ToJSON LayerQuery where
-  toJSON (LayerQuery lq) = object [ "query" .= lq ]
-
-instance FromJSON LayerQuery where
-  parseJSON = withObject "Layer Query" $ \o -> LayerQuery <$> o .: "query"
+-- Layer
 
 data Layer = Layer
   { _layerQuery        :: Text
@@ -65,7 +60,30 @@ data Layer = Layer
   } deriving (Show, Eq, Generic)
 
 instance FromJSON Layer where
-  parseJSON = withObject "Layer" $ \o -> Layer <$> o .: "query" <*> o .: "last-modified"
+  parseJSON = withObject "Layer" $ \o -> Layer
+    <$> o .: "query"
+    <*> o .: "last-modified"
+
+instance ToJSON Layer where
+  toJSON l = object
+    [  "query"         .= _layerQuery l,
+       "last-modified" .= _layerLastModified l
+    ]
+
+newtype LayerQuery = LayerQuery
+  { unLayerQuery :: Text
+  } deriving (Show, Eq)
+
+instance ToJSON LayerQuery where
+  toJSON (LayerQuery lq) = object
+    [ "query" .= lq
+    ]
+
+instance FromJSON LayerQuery where
+  parseJSON = withObject "Layer Query" $ \o -> LayerQuery
+    <$> o .: "query"
+
+-- Config
 
 data InputConfig = InputConfig
   { _inputConfigPgConnection       :: Text
@@ -79,6 +97,19 @@ data InputConfig = InputConfig
 
 makeLenses ''InputConfig
 
+instance FromJSON InputConfig where
+  parseJSON = withObject "Config" $ \o -> InputConfig
+    <$> o .:  "db-connection"
+    <*> o .:? "db-pool-size"
+    <*> o .:? "db-timeout"
+    <*> o .:? "mapnik-input-plugins"
+    <*> o .:? "port"
+    <*> o .:  "layers"
+    <*> o .:? "tile-buffer"
+
+emptyInputConfig :: InputConfig
+emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing (fromList []) Nothing
+
 data Config = Config
   { _configPgConnection       :: Text
   , _configPgPoolSize         :: Int
@@ -90,19 +121,6 @@ data Config = Config
   } deriving (Show, Generic)
 
 makeLenses ''Config
-
-emptyInputConfig :: InputConfig
-emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing (fromList []) Nothing
-
-instance FromJSON InputConfig where
-  parseJSON = withObject "Config" $ \o -> InputConfig
-    <$> o .: "db-connection"
-    <*> o .:? "db-pool-size"
-    <*> o .:? "db-timeout"
-    <*> o .:? "mapnik-input-plugins"
-    <*> o .:? "port"
-    <*> o .: "layers"
-    <*> (fmap . fmap) Pixels (o .:? "tile-buffer")
 
 instance ToJSON Config where
   toJSON c = object
@@ -127,30 +145,7 @@ instance ToJSON InputConfig where
       ("tile-buffer" .=) <$> Just (_inputConfigTileBuffer ic)
     ]
 
-instance ToJSON Layer where
-  toJSON l = object
-    [  "query" .= _layerQuery l,
-       "last-modified" .= _layerLastModified l
-    ]
-
-data ServerState = ServerState
-  { _ssPool           :: P.Pool
-  , _ssPluginDir      :: FilePath
-  , _ssConfigFile     :: FilePath
-  , _ssOriginalConfig :: Config
-  , _ssStateLayers    :: STM.Map Text Layer
-  }
-makeLenses ''ServerState
-
-ssBuffer :: Lens' ServerState Pixels
-ssBuffer = ssOriginalConfig . configTileBuffer
-
-err204 :: ServantErr
-err204 = ServantErr { errHTTPCode = 204
-                    , errReasonPhrase = "No Content"
-                    , errBody = ""
-                    , errHeaders = []
-                    }
+-- Types
 
 data AlreadyJSON deriving Typeable
 
@@ -174,13 +169,47 @@ instance MimeRender MapboxVectorTile Data.ByteString.Lazy.ByteString where
 instance MimeRender MapboxVectorTile BS.ByteString where
     mimeRender _ = fromStrict
 
-newtype TileFeature = TileFeature { unTileFeature :: Value } deriving (Show, Eq)
+newtype TileFeature = TileFeature
+  { unTileFeature :: Value
+  } deriving (Show, Eq)
+
+-- Command line args
+
+newtype CmdLine = CmdLine
+  { configFile :: FilePath
+  } deriving Generic
+
+instance ParseRecord CmdLine
+
+-- App types
+
+data ServerState = ServerState
+  { _ssPool           :: P.Pool
+  , _ssPluginDir      :: FilePath
+  , _ssConfigFile     :: FilePath
+  , _ssOriginalConfig :: Config
+  , _ssStateLayers    :: STM.Map Text Layer
+  }
+
+makeLenses ''ServerState
+
+ssBuffer :: Lens' ServerState Pixels
+ssBuffer = ssOriginalConfig . configTileBuffer
+
+newtype ActionHandler a = ActionHandler
+  { runActionHandler :: ReaderT ServerState Handler a
+  } deriving (Functor, Applicative, Monad, MonadReader ServerState, MonadError ServantErr, MonadIO)
+
+-- Helpers
 
 mkGeoJSON :: [Value] -> [DG.GeoFeature AT.Value]
 mkGeoJSON = fmap (x . parseEither parseJSON)
   where
     x = either (\_ -> DG.GeoFeature Nothing (DG.Collection []) Null Nothing) id
 
-newtype ActionHandler a = ActionHandler
-  { runActionHandler :: ReaderT ServerState Handler a
-  } deriving (Functor, Applicative, Monad, MonadReader ServerState, MonadError ServantErr, MonadIO)
+err204 :: ServantErr
+err204 = ServantErr { errHTTPCode = 204
+                    , errReasonPhrase = "No Content"
+                    , errBody = ""
+                    , errHeaders = []
+                    }
