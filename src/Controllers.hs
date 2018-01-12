@@ -26,6 +26,7 @@ import           Data.Time
 import           GHC.Conc
 import           ListT
 import           Network.HTTP.Types.Header  (hLastModified)
+import           Numeric.Natural            (Natural)
 import           Servant
 import           STMContainers.Map          as STM
 
@@ -59,19 +60,19 @@ returnConfiguration = do
     Left e  -> throwError $ err500 { errBody = LBS.pack $ show e }
     Right c -> pure c
 
-getQuery :: T.Text -> Integer -> Integer -> Integer -> ActionHandler T.Text
+getQuery :: T.Text -> Natural -> Integer -> Integer -> ActionHandler T.Text
 getQuery l z x y = do
   layer <- getLayerOrThrow l
   query <- mkQuery layer (Coordinates (ZoomLevel z) (GoogleTileCoords x y))
   pure query
 
-getContent :: T.Text -> Integer -> Integer -> T.Text -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
+getContent :: T.Text -> Natural -> Integer -> T.Text -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 getContent l z x stringY
   | ".mvt" `T.isSuffixOf` stringY = getAnything getTile l z x stringY
   | ".json" `T.isSuffixOf` stringY = getAnything getJson l z x stringY
   | otherwise = throwError $ err400 { errBody = "Unknown request: " <> fromStrict (TE.encodeUtf8 stringY) }
 
-getAnything :: (t -> Coordinates -> ActionHandler a) -> t -> Integer -> Integer -> T.Text -> ActionHandler a
+getAnything :: (t -> Coordinates -> ActionHandler a) -> t -> Natural -> Integer -> T.Text -> ActionHandler a
 getAnything f l z x stringY =
   case getIntY stringY of
     Left e       -> fail $ show e

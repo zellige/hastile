@@ -78,7 +78,7 @@ mPerPxAtZoom (Metres m) tile z = Ratio $ m / fromIntegral p
 mPerPxToM :: Ratio Metres Pixels -> Pixels -> Metres
 mPerPxToM (Ratio r) (Pixels p) = Metres $ r * fromIntegral p
 
-mkTile :: T.Text -> Coordinates -> Pixels -> Pixels -> (DG.GeoFeatureCollection A.Value) -> IO BS8.ByteString
+mkTile :: T.Text -> Coordinates -> Pixels -> Pixels-> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
 mkTile l zxy buffer quantizePixels geoJson = do
   mvt <- DGM.createMvt config geoJson
   pure $ DGM.encodeMvt mvt
