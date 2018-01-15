@@ -83,10 +83,11 @@ getAnything f l z x stringY =
 
 getTile :: T.Text -> DGT.GoogleTileCoords -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 getTile l zxy = do
-  layer <- getLayerOrThrow l
+  layer   <- getLayerOrThrow l
   geoJson <- getJson' layer zxy
-  buffer <- RC.asks (^. ssBuffer)
-  tile <- liftIO $ mkTile l zxy buffer 1 geoJson
+  buffer  <- RC.asks (^. ssBuffer)
+  let simplificationAlgorithm = getAlgorithm (DGT._gtcZoom zxy) layer
+  tile    <- liftIO $ mkTile l zxy buffer (_layerQuantize layer) simplificationAlgorithm geoJson
   checkEmpty tile layer
 
 checkEmpty :: BS.ByteString -> Layer -> ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
