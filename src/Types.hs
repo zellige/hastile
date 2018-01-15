@@ -23,7 +23,7 @@ import qualified Data.ByteString           as BS
 import           Data.ByteString.Lazy      (ByteString, fromStrict)
 import qualified Data.Geometry.Types.Types as DGT
 import qualified Data.Geospatial           as DG
-import           Data.Map                  as M
+import           Data.Map.Strict           as M
 import           Data.Maybe                (catMaybes)
 import qualified Data.Scientific           as S
 import           Data.Text                 as T
