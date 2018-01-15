@@ -83,5 +83,5 @@ mkTile l zxy buffer quantizePixels _ geoJson = do
   pure $ DGM.encodeMvt mvt
   where
     coords       = DGT._gtcCoords zxy
-    convertPixel = DGT.Pixels . _pixels
+    convertPixel = DGT.Pixels . (fromIntegral . toInteger) . _pixels
     config       = DGT.mkConfig l (DGT._gtcZoom zxy) (DGT._coordsX coords, DGT._coordsY coords) (convertPixel buffer) (convertPixel defaultTileSize) (convertPixel quantizePixels)
