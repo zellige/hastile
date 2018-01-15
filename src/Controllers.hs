@@ -42,13 +42,13 @@ hastileServer = returnConfiguration :<|> provisionLayer :<|> getQuery :<|> getCo
 stmMapToList :: STM.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
 
-provisionLayer :: T.Text -> LayerQuery -> ActionHandler NoContent
-provisionLayer l query = do
+provisionLayer :: T.Text -> LayerRequest -> ActionHandler NoContent
+provisionLayer l request = do
   r <- RC.ask
   let (ls, cfgFile, originalCfg) = (,,) <$> _ssStateLayers <*> _ssConfigFile <*> _ssOriginalConfig $ r
   lastModifiedTime <- liftIO getCurrentTime
   newLayers <- liftIO . atomically $ do
-    STM.insert (Layer (unLayerQuery query) lastModifiedTime) l ls
+    STM.insert (requestToLayer request lastModifiedTime) l ls
     stmMapToList ls
   liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {_configLayers = fromList newLayers}))
   pure NoContent

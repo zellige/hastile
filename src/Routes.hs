@@ -21,9 +21,9 @@ type YI = Capture "y" Integer
 
 type HastileApi =
   Get '[JSON] InputConfig
-    :<|> LayerName :> ReqBody '[JSON] LayerQuery :> Post '[JSON] NoContent
-    :<|> LayerName :> Z :> X :> YI :> "query"    :> Get '[PlainText] Text
-    :<|> LayerName :> Z :> X :> Y                :> Get '[MapboxVectorTile, AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
+    :<|> LayerName :> ReqBody '[JSON] LayerRequest :> Post '[JSON] NoContent
+    :<|> LayerName :> Z :> X :> YI :> "query"      :> Get '[PlainText] Text
+    :<|> LayerName :> Z :> X :> Y                  :> Get '[MapboxVectorTile, AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
 
 hastileApi :: P.Proxy HastileApi
 hastileApi = P.Proxy

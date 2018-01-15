@@ -55,18 +55,27 @@ defaultTileSize = Pixels 2048
 
 -- Layer types
 
-newtype LayerQuery = LayerQuery
-  { unLayerQuery :: Text
+data LayerRequest = LayerRequest
+  { _lrQuery      :: Text
+  , _lrQuantize   :: Pixels
+  , _lrAlgorithms :: Algorithms
   } deriving (Show, Eq)
 
-instance ToJSON LayerQuery where
-  toJSON (LayerQuery lq) = object
-    [ "query" .= lq
+instance FromJSON LayerRequest where
+  parseJSON = withObject "LayerRequest" $ \o -> LayerRequest
+    <$> o .: "query"
+    <*> o .: "quantize"
+    <*> o .: "simplify"
+
+instance ToJSON LayerRequest where
+  toJSON lr = object
+    [ "query"    .= _lrQuery lr
+    , "quantize" .= _lrQuantize lr
+    , "simplify" .= _lrAlgorithms lr
     ]
 
-instance FromJSON LayerQuery where
-  parseJSON = withObject "Layer Query" $ \o -> LayerQuery
-    <$> o .: "query"
+requestToLayer :: LayerRequest -> UTCTime -> Layer
+requestToLayer (LayerRequest que qua al) time = Layer que time qua al
 
 data Layer = Layer
   { _layerQuery        :: Text
