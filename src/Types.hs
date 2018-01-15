@@ -53,7 +53,7 @@ instance FromJSON Pixels where
 defaultTileSize :: Pixels
 defaultTileSize = Pixels 2048
 
--- Layer
+-- Layer types
 
 newtype LayerQuery = LayerQuery
   { unLayerQuery :: Text
@@ -71,6 +71,7 @@ instance FromJSON LayerQuery where
 data Layer = Layer
   { _layerQuery        :: Text
   , _layerLastModified :: UTCTime
+  , _layerQuantize     :: Pixels
   , _layerAlgorithms   :: Algorithms
   } deriving (Show, Eq, Generic)
 
@@ -78,13 +79,15 @@ instance FromJSON Layer where
   parseJSON = withObject "Layer" $ \o -> Layer
     <$> o .: "query"
     <*> o .: "last-modified"
-    <*> o .: "algorithms"
+    <*> o .: "quantize"
+    <*> o .: "simplify"
 
 instance ToJSON Layer where
   toJSON l = object
     [ "query"         .= _layerQuery l
     , "last-modified" .= _layerLastModified l
-    , "algorithms"    .= _layerAlgorithms l
+    , "quantize"      .= _layerQuantize l
+    , "simplify"      .= _layerAlgorithms l
     ]
 
 -- Zoom dependant simplification algorithms
@@ -101,7 +104,6 @@ getAlgorithm' z algos = case M.lookupLE z algos of
   Just (_, algo) -> algo
 
 data SimplificationAlgorithm = NoAlgorithm
-  | Quantize
   | Visvalingam
   | DouglasPeucker
   deriving (Eq, Show)
@@ -109,14 +111,12 @@ data SimplificationAlgorithm = NoAlgorithm
 instance ToJSON SimplificationAlgorithm where
   toJSON algo = String $ case algo of
     NoAlgorithm    -> "none"
-    Quantize       -> "quantize"
     Visvalingam    -> "visvalingam"
     DouglasPeucker -> "douglas-peucker"
 
 instance FromJSON SimplificationAlgorithm where
   parseJSON = withText "SimplificationAlgorithm" $ \t -> case t of
     "none"            -> pure NoAlgorithm
-    "quantize"        -> pure Quantize
     "visvalingam"     -> pure Visvalingam
     "douglas-peucker" -> pure DouglasPeucker
     _                 -> fail "Unknown algorithm"
