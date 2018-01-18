@@ -21,43 +21,30 @@ import           Data.Aeson                as A
 import           Data.Aeson.Types          as AT
 import qualified Data.ByteString           as BS
 import           Data.ByteString.Lazy      (ByteString, fromStrict)
-import qualified Data.Geometry.Types.Types as DGT
 import qualified Data.Geospatial           as DG
 import           Data.Map.Strict           as M
 import           Data.Maybe                (catMaybes)
-import qualified Data.Scientific           as S
 import           Data.Text                 as T
 import           Data.Time
 import           Data.Typeable
 import           Hasql.Pool                as P
 import qualified Network.HTTP.Media        as HM
+import           Numeric.Natural           (Natural)
 import           Options.Generic
 import           Servant
 import           STMContainers.Map         as STM
 
--- Pixels
 
-newtype Pixels = Pixels
-  { _pixels :: Int
-  } deriving (Show, Eq, Num)
+import qualified Data.Geometry.Types.Types as DGT
 
-instance ToJSON Pixels where
-  toJSON (Pixels n) = Number $ fromIntegral n
-
-instance FromJSON Pixels where
-  parseJSON = withScientific "Pixels" $ \s ->
-    case (S.toBoundedInteger s :: Maybe Int) of
-      Nothing -> fail "Not a bounded Integer"
-      Just n  -> pure $ Pixels n
-
-defaultTileSize :: Pixels
-defaultTileSize = Pixels 2048
+defaultTileSize :: DGT.Pixels
+defaultTileSize = 2048
 
 -- Layer types
 
 data LayerRequest = LayerRequest
   { _lrQuery      :: Text
-  , _lrQuantize   :: Pixels
+  , _lrQuantize   :: DGT.Pixels
   , _lrAlgorithms :: Algorithms
   } deriving (Show, Eq)
 
@@ -80,7 +67,7 @@ requestToLayer (LayerRequest que qua al) time = Layer que time qua al
 data Layer = Layer
   { _layerQuery        :: Text
   , _layerLastModified :: UTCTime
-  , _layerQuantize     :: Pixels
+  , _layerQuantize     :: DGT.Pixels
   , _layerAlgorithms   :: Algorithms
   } deriving (Show, Eq, Generic)
 
@@ -101,13 +88,15 @@ instance ToJSON Layer where
 
 -- Zoom dependant simplification algorithms
 
--- TODO use map Strict
-type Algorithms = M.Map DGT.ZoomLevel SimplificationAlgorithm
+type ZoomLevel = Natural
 
-getAlgorithm :: DGT.ZoomLevel -> Layer -> SimplificationAlgorithm
+-- TODO use map Strict
+type Algorithms = M.Map ZoomLevel SimplificationAlgorithm
+
+getAlgorithm :: ZoomLevel -> Layer -> SimplificationAlgorithm
 getAlgorithm z layer = getAlgorithm' z (_layerAlgorithms layer)
 
-getAlgorithm' :: DGT.ZoomLevel -> Algorithms -> SimplificationAlgorithm
+getAlgorithm' :: ZoomLevel -> Algorithms -> SimplificationAlgorithm
 getAlgorithm' z algos = case M.lookupLE z algos of
   Nothing        -> NoAlgorithm
   Just (_, algo) -> algo
@@ -139,7 +128,7 @@ data InputConfig = InputConfig
   , _inputConfigMapnikInputPlugins :: Maybe FilePath
   , _inputConfigPort               :: Maybe Int
   , _inputConfigLayers             :: M.Map Text Layer
-  , _inputConfigTileBuffer         :: Maybe Pixels
+  , _inputConfigTileBuffer         :: Maybe DGT.Pixels
   } deriving (Show, Generic)
 
 makeLenses ''InputConfig
@@ -175,7 +164,7 @@ data Config = Config
   , _configMapnikInputPlugins :: FilePath
   , _configPort               :: Int
   , _configLayers             :: M.Map Text Layer
-  , _configTileBuffer         :: Pixels
+  , _configTileBuffer         :: DGT.Pixels
   } deriving (Show, Generic)
 
 makeLenses ''Config
@@ -239,7 +228,7 @@ data ServerState = ServerState
 
 makeLenses ''ServerState
 
-ssBuffer :: Lens' ServerState Pixels
+ssBuffer :: Lens' ServerState DGT.Pixels
 ssBuffer = ssOriginalConfig . configTileBuffer
 
 newtype ActionHandler a = ActionHandler

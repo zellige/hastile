@@ -7,17 +7,16 @@ module Tile ( addBufferToBBox
             , mkTile
             , BBox (..)
             , Metres (..)
-            , Pixels (..)
             ) where
 
 import qualified Data.Aeson                     as A
 import qualified Data.ByteString.Char8          as BS8
 import qualified Data.Geometry.MapnikVectorTile as DGM
-import qualified Data.Geometry.Types.Types      as DGT
+import qualified Data.Geometry.Types.Types      as DGTT
 import qualified Data.Geospatial                as DG
 import qualified Data.Text                      as T
 
-import           Types
+import qualified Types                          as T
 
 newtype TileCoord  = TileCoord Integer deriving (Show, Eq, Num)
 newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional, Ord)
@@ -42,7 +41,7 @@ earthCircumference = 2 * maxExtent
 extent :: BBox Metres
 extent = BBox (-maxExtent) (-maxExtent) maxExtent maxExtent
 
-addBufferToBBox :: Pixels -> Pixels -> DGT.ZoomLevel -> BBox Metres -> BBox Metres
+addBufferToBBox :: DGTT.Pixels -> DGTT.Pixels -> T.ZoomLevel -> BBox Metres -> BBox Metres
 addBufferToBBox tileSize buffer z (BBox llX llY urX urY) =
   hardLimit $ BBox (llX - bufferM) (llY - bufferM) (urX + bufferM) (urY + bufferM)
   where mPerPx = mPerPxAtZoom earthCircumference tileSize z
@@ -54,34 +53,33 @@ addBufferToBBox tileSize buffer z (BBox llX llY urX urY) =
                (min urX' maxExtent)
                (min urY' maxExtent)
 
-googleToBBoxM :: Pixels -> DGT.GoogleTileCoords -> BBox Metres
-googleToBBoxM tileSize g =
-  flipYs . fmap googleTo3857 $ googleToBBoxPx tileSize (DGT._gtcCoords g)
+googleToBBoxM :: DGTT.Pixels -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> BBox Metres
+googleToBBoxM tileSize z xy =
+  flipYs . fmap googleTo3857 $ googleToBBoxPx tileSize xy
   where googleTo3857 coord = mPerPxToM mPerPx coord - maxExtent
-        mPerPx = mPerPxAtZoom earthCircumference tileSize (DGT._gtcZoom g)
+        mPerPx = mPerPxAtZoom earthCircumference tileSize z
         flipYs (BBox llX llY urX urY) = BBox llX (-llY) urX (-urY)
 
-googleToBBoxPx :: Pixels -> DGT.Coords -> BBox Pixels
-googleToBBoxPx tileSize (DGT.Coords gx gy) =
-  ((* tileSize) . fromIntegral) <$> BBox gx (gy + 1) (gx + 1) gy
+googleToBBoxPx :: DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> BBox DGTT.Pixels
+googleToBBoxPx tileSize (x, y) =
+  ((* tileSize) . fromIntegral) <$> BBox x (y + 1) (x + 1) y
 
-pixelMaxExtent :: Pixels -> DGT.ZoomLevel -> Pixels
+pixelMaxExtent :: DGTT.Pixels -> T.ZoomLevel -> DGTT.Pixels
 pixelMaxExtent tile z = (2 ^ z) * tile
 
 -- At each zoom level we double the number of tiles in both the x and y direction.
 -- z = 0: 1 tile, z = 1: 2 * 2 = 4 tiles, z = 3: 4 * 4 = 16 tiles
-mPerPxAtZoom :: Metres -> Pixels -> DGT.ZoomLevel -> Ratio Metres Pixels
+mPerPxAtZoom :: Metres -> DGTT.Pixels -> T.ZoomLevel -> Ratio Metres DGTT.Pixels
 mPerPxAtZoom (Metres m) tile z = Ratio $ m / fromIntegral p
-  where (Pixels p) = pixelMaxExtent tile z
+  where p = pixelMaxExtent tile z
 
-mPerPxToM :: Ratio Metres Pixels -> Pixels -> Metres
-mPerPxToM (Ratio r) (Pixels p) = Metres $ r * fromIntegral p
+mPerPxToM :: Ratio Metres DGTT.Pixels -> DGTT.Pixels -> Metres
+mPerPxToM (Ratio r) p = Metres $ r * fromIntegral p
 
-mkTile :: T.Text -> DGT.GoogleTileCoords -> Pixels -> Pixels -> SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
-mkTile l zxy buffer quantizePixels _ geoJson = do
+-- mkConfig :: Text -> Pixels -> (Pixels, Pixels) -> Pixels -> Pixels -> Pixels -> Config
+mkTile :: T.Text -> DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> DGTT.Pixels -> DGTT.Pixels -> T.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
+mkTile l z xy buffer quantizePixels _ geoJson = do
   mvt <- DGM.createMvt config geoJson
   pure $ DGM.encodeMvt mvt
   where
-    coords       = DGT._gtcCoords zxy
-    convertPixel = DGT.Pixels . (fromIntegral . toInteger) . _pixels
-    config       = DGT.mkConfig l (DGT._gtcZoom zxy) (DGT._coordsX coords, DGT._coordsY coords) (convertPixel buffer) (convertPixel defaultTileSize) (convertPixel quantizePixels)
+    config = DGTT.mkConfig l z xy buffer T.defaultTileSize quantizePixels

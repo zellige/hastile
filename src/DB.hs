@@ -11,7 +11,6 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import           Data.Aeson
 import           Data.ByteString            as BS
-import qualified Data.Geometry.Types.Types  as DGT
 import           Data.Monoid
 import qualified Data.Text                  as T
 import           Data.Text.Encoding         as TE
@@ -24,38 +23,39 @@ import qualified Hasql.Query                as HQ
 import qualified Hasql.Session              as HS
 import           STMContainers.Map          as STM
 
+import qualified Data.Geometry.Types.Types  as DGTT
+
 import           Tile
-import           Types
+import qualified Types                      as T
 
 data LayerError = LayerNotFound
 
-findFeatures :: (MonadIO m, MonadReader ServerState m)
-             => Layer ->  DGT.GoogleTileCoords -> m (Either P.UsageError [Value])
-findFeatures layer zxy = do
-  sql <- mkQuery layer zxy
+findFeatures :: (MonadIO m, MonadReader T.ServerState m)
+             => T.Layer -> DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> m (Either P.UsageError [Value])
+findFeatures layer z xy = do
+  sql <- mkQuery layer z xy
   let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
-  p <- asks _ssPool
+  p <- asks T._ssPool
   errOrResult <- liftIO $ P.use p sessTfs
   pure errOrResult
 
-mkQuery :: (MonadReader ServerState m) => Layer -> DGT.GoogleTileCoords -> m T.Text
-mkQuery layer zxy =
-  do buffer <- asks (^. ssBuffer)
-     let zoom = DGT._gtcZoom zxy
-         bboxM = googleToBBoxM defaultTileSize zxy
+mkQuery :: (MonadReader T.ServerState m) => T.Layer -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m T.Text
+mkQuery layer z xy =
+  do buffer <- asks (^. T.ssBuffer)
+     let bboxM = googleToBBoxM T.defaultTileSize z xy
          (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
-           addBufferToBBox defaultTileSize buffer zoom bboxM
+           addBufferToBBox T.defaultTileSize buffer z bboxM
          bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
                              \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
                              \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
-     pure $ escape bbox4326 . _layerQuery $ layer
+     pure $ escape bbox4326 . T._layerQuery $ layer
 
-getLayer :: (MonadIO m, MonadReader ServerState m) => T.Text -> m (Either LayerError Layer)
+getLayer :: (MonadIO m, MonadReader T.ServerState m) => T.Text -> m (Either LayerError T.Layer)
 getLayer l = do
-  ls <- asks _ssStateLayers
+  ls <- asks T._ssStateLayers
   result <- liftIO . atomically $ STM.lookup l ls
   pure $ case result of
-    Nothing -> Left LayerNotFound
+    Nothing    -> Left LayerNotFound
     Just layer -> Right layer
 
 mkStatement :: BS.ByteString -> HQ.Query () [Value]
@@ -67,8 +67,8 @@ escape :: T.Text -> T.Text -> T.Text
 escape bbox = T.concat . fmap replace' . T.split (== '!')
   where
     replace' "bbox_4326" = bbox
-    replace' t = t
+    replace' t           = t
 
-lastModified :: Layer -> String
+lastModified :: T.Layer -> String
 lastModified layer = T.unpack $ T.dropEnd 3 (T.pack rfc822Str) <> "GMT"
-       where rfc822Str = formatTime defaultTimeLocale rfc822DateFormat $ _layerLastModified layer
+       where rfc822Str = formatTime defaultTimeLocale rfc822DateFormat $ T._layerLastModified layer

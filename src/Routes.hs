@@ -5,25 +5,26 @@
 
 module Routes where
 
-import           Data.ByteString as BS
-import           Data.Proxy      as P
-import           Data.Text       as T
-import           Numeric.Natural (Natural)
+import qualified Data.ByteString           as BS
+import qualified Data.Proxy                as P
+import qualified Data.Text                 as T
 import           Servant
 
-import           Types
+import qualified Data.Geometry.Types.Types as DGTT
 
-type LayerName = Capture "layer" Text
-type Z = Capture "z" Natural
-type X = Capture "x" Integer
-type Y = Capture "y" Text
-type YI = Capture "y" Integer
+import qualified Types                     as T
+
+type LayerName = Capture "layer" T.Text
+type Z = Capture "z" T.ZoomLevel
+type X = Capture "x" DGTT.Pixels
+type Y = Capture "y" T.Text
+type YI = Capture "y" DGTT.Pixels
 
 type HastileApi =
-  Get '[JSON] InputConfig
-    :<|> LayerName :> ReqBody '[JSON] LayerRequest :> Post '[JSON] NoContent
-    :<|> LayerName :> Z :> X :> YI :> "query"      :> Get '[PlainText] Text
-    :<|> LayerName :> Z :> X :> Y                  :> Get '[MapboxVectorTile, AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
+  Get '[JSON] T.InputConfig
+    :<|> LayerName :> ReqBody '[JSON] T.LayerRequest :> Post '[JSON] NoContent
+    :<|> LayerName :> Z :> X :> YI :> "query"        :> Get '[PlainText] T.Text
+    :<|> LayerName :> Z :> X :> Y                    :> Get '[T.MapboxVectorTile, T.AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
 
 hastileApi :: P.Proxy HastileApi
 hastileApi = P.Proxy
