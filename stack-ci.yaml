@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-10.3
+resolver: nightly-2018-01-27
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -39,10 +39,6 @@ packages:
 - '.'
 - location:
     git: https://github.com/sitewisely/hs-geojson.git
-    commit: master
-  extra-dep: true
-- location:
-    git: https://github.com/sitewisely/vectortiles.git
     commit: master
   extra-dep: true
 - location:

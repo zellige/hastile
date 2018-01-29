@@ -3,22 +3,21 @@
 module TileSpec where
 
 import           Control.Lens
-import qualified Data.ByteString                 as BS (ByteString, readFile)
-import qualified Data.ByteString.Lazy            as LBS (ByteString, fromStrict,
-                                                         writeFile)
-import qualified Data.Geometry.MapnikVectorTile  as MVT
-import qualified Data.Geometry.Types.Types       as DGT
-import           Data.Map                        (lookup)
-import qualified Data.Text                       as T
-import qualified Geography.VectorTile            as VT
-import qualified Geography.VectorTile.VectorTile as VVT
-import           System.IO                       (hClose)
-import           System.IO.Temp                  (withSystemTempFile)
-import           Test.Hspec                      (Spec, describe, it, shouldBe)
+import qualified Data.ByteString                as BS (ByteString, readFile)
+import qualified Data.ByteString.Lazy           as LBS (ByteString, fromStrict,
+                                                        writeFile)
+import qualified Data.Geometry.MapnikVectorTile as MVT
+import qualified Data.Geometry.Types.Types      as DGT
+import qualified Data.HashMap.Strict            as HM
+import qualified Data.Text                      as T
+import qualified Geography.VectorTile           as VT
+import           System.IO                      (hClose)
+import           System.IO.Temp                 (withSystemTempFile)
+import           Test.Hspec                     (Spec, describe, it, shouldBe)
 
 
-import           Tile                            (BBox (..), addBufferToBBox,
-                                                  extent, googleToBBoxM, mkTile)
+import           Tile                           (BBox (..), addBufferToBBox,
+                                                 extent, googleToBBoxM, mkTile)
 import           Types
 
 spec :: Spec
@@ -59,17 +58,16 @@ testReadMvtFile =
 -- TODO - Test for empty queries.
 -- TODO - Implement fold for comparison when fails
 
-readMvtFile :: FilePath -> IO VVT.Layer
+readMvtFile :: FilePath -> IO VT.Layer
 readMvtFile filename = do
   bs <- BS.readFile filename
   pure $ bsToLayer bs "open_traffic_adl"
 
-bsToLayer :: BS.ByteString -> T.Text -> VVT.Layer
+bsToLayer :: BS.ByteString -> LBS.ByteString -> VT.Layer
 bsToLayer bs layerName = maybeLayer ^?! _Just
   where
-    decodedMvt = VT.decode bs ^?! _Right
-    layers = VVT._layers $ VT.tile decodedMvt ^?! _Right
-    maybeLayer = Data.Map.lookup layerName layers
+    layers = VT._layers $ VT.tile bs ^?! _Right
+    maybeLayer = HM.lookup layerName layers
 
 generateMvtAdelaide :: FilePath -> IO ()
 generateMvtAdelaide filename = do
