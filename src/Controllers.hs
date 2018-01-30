@@ -38,7 +38,13 @@ import qualified Tile                       as T
 import qualified Types                      as T
 
 hastileServer :: ServerT R.HastileApi T.ActionHandler
-hastileServer = returnConfiguration :<|> (\l -> provisionLayer l :<|> (\z x -> getQuery l z x :<|> getContent l z x))
+hastileServer = returnConfiguration :<|> layerServer
+
+layerServer :: ServerT R.LayerApi T.ActionHandler
+layerServer l = provisionLayer l :<|> coordsServer l
+
+coordsServer :: T.Text -> Natural -> Natural -> ServerT R.HastileContentApi T.ActionHandler
+coordsServer l z x = getQuery l z x :<|> getContent l z x
 
 stmMapToList :: STM.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
