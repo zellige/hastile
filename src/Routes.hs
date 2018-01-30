@@ -22,10 +22,13 @@ type YI = Capture "y" DGTT.Pixels
 
 type HastileApi =
   Get '[JSON] T.InputConfig
-    :<|> LayerName :> ReqBody '[JSON] T.LayerRequest :> Post '[JSON] NoContent
-    :<|> LayerName :> Z :> X :> (
-           YI :> "query" :> Get '[PlainText] T.Text
-      :<|> Y  :> Get '[T.MapboxVectorTile, T.AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString))
+    :<|> LayerName :>
+      (    ReqBody '[JSON] T.LayerRequest :> Post '[JSON] NoContent
+      :<|> Z :> X :>
+        (    YI :> "query" :> Get '[PlainText] T.Text
+        :<|> Y             :> Get '[T.MapboxVectorTile, T.AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
+      )
+    )
 
 hastileApi :: P.Proxy HastileApi
 hastileApi = P.Proxy
