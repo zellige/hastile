@@ -15,7 +15,7 @@ import qualified Data.Geometry.Types.Types as DGTT
 import qualified Types                     as T
 
 type LayerName = Capture "layer" T.Text
-type Z = Capture "z" T.ZoomLevel
+type Z = Capture "z" DGTT.ZoomLevel
 type X = Capture "x" DGTT.Pixels
 type Y = Capture "y" T.Text
 type YI = Capture "y" DGTT.Pixels

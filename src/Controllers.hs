@@ -80,7 +80,7 @@ getContent l z x stringY
   | ".json" `T.isSuffixOf` stringY = getAnything getJson l z x stringY
   | otherwise = throwError $ err400 { errBody = "Unknown request: " <> fromStrict (TE.encodeUtf8 stringY) }
 
-getAnything :: (t -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler a) -> t -> T.ZoomLevel -> DGTT.Pixels -> T.Text -> T.ActionHandler a
+getAnything :: (t -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler a) -> t -> DGTT.ZoomLevel -> DGTT.Pixels -> T.Text -> T.ActionHandler a
 getAnything f l z x stringY =
   case getY stringY of
     Left e       -> fail $ show e
@@ -88,7 +88,7 @@ getAnything f l z x stringY =
   where
     getY s = decimal $ T.takeWhile isNumber s
 
-getTile :: T.Text -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
+getTile :: T.Text -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 getTile l z xy = do
   layer   <- getLayerOrThrow l
   geoJson <- getJson' layer z xy
@@ -102,13 +102,13 @@ checkEmpty tile layer
   | BS.null tile = throwError $ T.err204 { errHeaders = [(hLastModified, BS8.pack $ DB.lastModified layer)] }
   | otherwise = pure $ addHeader (DB.lastModified layer) tile
 
-getJson :: T.Text -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
+getJson :: T.Text -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 getJson l z xy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer z xy
   pure $ addHeader (DB.lastModified layer) (toStrict $ A.encode geoJson)
 
-getJson' :: T.Layer -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (DG.GeoFeatureCollection A.Value)
+getJson' :: T.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (DG.GeoFeatureCollection A.Value)
 getJson' layer z xy = do
   errorOrTfs <- DB.findFeatures layer z xy
   case errorOrTfs of

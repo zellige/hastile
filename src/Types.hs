@@ -14,37 +14,36 @@
 
 module Types where
 
-import           Control.Lens              (Lens', makeLenses)
-import           Control.Monad.Except      (MonadError)
-import           Control.Monad.Reader      (MonadIO, MonadReader, ReaderT)
-import           Data.Aeson                as A
-import           Data.Aeson.Types          as AT
-import qualified Data.ByteString           as BS
-import           Data.ByteString.Lazy      (ByteString, fromStrict)
-import qualified Data.Geospatial           as DG
-import           Data.Map.Strict           as M
-import           Data.Maybe                (catMaybes)
-import           Data.Text                 as T
+import           Control.Lens                 (Lens', makeLenses)
+import           Control.Monad.Except         (MonadError)
+import           Control.Monad.Reader         (MonadIO, MonadReader, ReaderT)
+import           Data.Aeson                   as A
+import           Data.Aeson.Types             as AT
+import qualified Data.ByteString              as BS
+import           Data.ByteString.Lazy         (ByteString, fromStrict)
+import qualified Data.Geospatial              as DG
+import           Data.Map.Strict              as M
+import           Data.Maybe                   (catMaybes)
+import           Data.Text                    as T
 import           Data.Time
 import           Data.Typeable
-import           Hasql.Pool                as P
-import qualified Network.HTTP.Media        as HM
-import           Numeric.Natural           (Natural)
+import           Hasql.Pool                   as P
+import qualified Network.HTTP.Media           as HM
 import           Options.Generic
 import           Servant
-import           STMContainers.Map         as STM
+import           STMContainers.Map            as STM
 
+import qualified Data.Geometry.Types.Simplify as DGTS
+import qualified Data.Geometry.Types.Types    as DGTT
 
-import qualified Data.Geometry.Types.Types as DGT
-
-defaultTileSize :: DGT.Pixels
+defaultTileSize :: DGTT.Pixels
 defaultTileSize = 2048
 
 -- Layer types
 
 data LayerRequest = LayerRequest
   { _lrQuery      :: Text
-  , _lrQuantize   :: DGT.Pixels
+  , _lrQuantize   :: DGTT.Pixels
   , _lrAlgorithms :: Algorithms
   } deriving (Show, Eq)
 
@@ -67,7 +66,7 @@ requestToLayer (LayerRequest que qua al) time = Layer que time qua al
 data Layer = Layer
   { _layerQuery        :: Text
   , _layerLastModified :: UTCTime
-  , _layerQuantize     :: DGT.Pixels
+  , _layerQuantize     :: DGTT.Pixels
   , _layerAlgorithms   :: Algorithms
   } deriving (Show, Eq, Generic)
 
@@ -88,36 +87,16 @@ instance ToJSON Layer where
 
 -- Zoom dependant simplification algorithms
 
-type ZoomLevel = Natural
-
 -- TODO use map Strict
-type Algorithms = M.Map ZoomLevel SimplificationAlgorithm
+type Algorithms = M.Map DGTT.ZoomLevel DGTS.SimplificationAlgorithm
 
-getAlgorithm :: ZoomLevel -> Layer -> SimplificationAlgorithm
+getAlgorithm :: DGTT.ZoomLevel -> Layer -> DGTS.SimplificationAlgorithm
 getAlgorithm z layer = getAlgorithm' z (_layerAlgorithms layer)
 
-getAlgorithm' :: ZoomLevel -> Algorithms -> SimplificationAlgorithm
+getAlgorithm' :: DGTT.ZoomLevel -> Algorithms -> DGTS.SimplificationAlgorithm
 getAlgorithm' z algos = case M.lookupLE z algos of
-  Nothing        -> NoAlgorithm
+  Nothing        -> DGTS.NoAlgorithm
   Just (_, algo) -> algo
-
-data SimplificationAlgorithm = NoAlgorithm
-  | Visvalingam
-  | DouglasPeucker
-  deriving (Eq, Show)
-
-instance ToJSON SimplificationAlgorithm where
-  toJSON algo = String $ case algo of
-    NoAlgorithm    -> "none"
-    Visvalingam    -> "visvalingam"
-    DouglasPeucker -> "douglas-peucker"
-
-instance FromJSON SimplificationAlgorithm where
-  parseJSON = withText "SimplificationAlgorithm" $ \t -> case t of
-    "none"            -> pure NoAlgorithm
-    "visvalingam"     -> pure Visvalingam
-    "douglas-peucker" -> pure DouglasPeucker
-    _                 -> fail "Unknown algorithm"
 
 -- Config
 
@@ -128,7 +107,7 @@ data InputConfig = InputConfig
   , _inputConfigMapnikInputPlugins :: Maybe FilePath
   , _inputConfigPort               :: Maybe Int
   , _inputConfigLayers             :: M.Map Text Layer
-  , _inputConfigTileBuffer         :: Maybe DGT.Pixels
+  , _inputConfigTileBuffer         :: Maybe DGTT.Pixels
   } deriving (Show, Generic)
 
 makeLenses ''InputConfig
@@ -164,7 +143,7 @@ data Config = Config
   , _configMapnikInputPlugins :: FilePath
   , _configPort               :: Int
   , _configLayers             :: M.Map Text Layer
-  , _configTileBuffer         :: DGT.Pixels
+  , _configTileBuffer         :: DGTT.Pixels
   } deriving (Show, Generic)
 
 makeLenses ''Config
@@ -228,7 +207,7 @@ data ServerState = ServerState
 
 makeLenses ''ServerState
 
-ssBuffer :: Lens' ServerState DGT.Pixels
+ssBuffer :: Lens' ServerState DGTT.Pixels
 ssBuffer = ssOriginalConfig . configTileBuffer
 
 newtype ActionHandler a = ActionHandler
