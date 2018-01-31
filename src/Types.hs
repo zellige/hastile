@@ -94,7 +94,7 @@ getAlgorithm :: DGTT.ZoomLevel -> Layer -> DGTS.SimplificationAlgorithm
 getAlgorithm z layer = getAlgorithm' z (_layerAlgorithms layer)
 
 getAlgorithm' :: DGTT.ZoomLevel -> Algorithms -> DGTS.SimplificationAlgorithm
-getAlgorithm' z algos = case M.lookupLE z algos of
+getAlgorithm' z algos = case M.lookupGE z algos of
   Nothing        -> DGTS.NoAlgorithm
   Just (_, algo) -> algo
 
