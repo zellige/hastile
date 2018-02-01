@@ -39,12 +39,17 @@ import qualified Data.Geometry.Types.Types    as DGTT
 defaultTileSize :: DGTT.Pixels
 defaultTileSize = 2048
 
+-- Layer types
+
 data LayerRequest = LayerRequest
   {  _newLayerRequestName     :: T.Text
   ,  _newLayerRequestSettings :: LayerSettings
   } deriving (Show, Eq)
 
--- Layer types
+newtype LayerRequestList = LayerRequestList [LayerRequest]
+
+instance FromJSON LayerRequestList where
+    parseJSON v = fmap (LayerRequestList . fmap (\(name, settings) -> LayerRequest name settings) . M.toList) $ parseJSON v
 
 data LayerSettings = LayerSettings
   { _lsQuery      :: Text

@@ -11,7 +11,6 @@ import qualified Data.Text                 as T
 import           Servant
 
 import qualified Data.Geometry.Types.Types as DGTT
-
 import qualified Types                     as T
 
 type LayerName = Capture "layer" T.Text
@@ -22,6 +21,7 @@ type YI = Capture "y" DGTT.Pixels
 
 type HastileApi =
   Get '[JSON] T.InputConfig
+  :<|> ReqBody '[JSON] T.LayerRequestList :> Post '[JSON] NoContent
   :<|> LayerApi
 
 type LayerApi =

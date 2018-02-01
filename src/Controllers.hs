@@ -38,7 +38,7 @@ import qualified Tile                       as T
 import qualified Types                      as T
 
 hastileServer :: ServerT R.HastileApi T.ActionHandler
-hastileServer = returnConfiguration :<|> layerServer
+hastileServer = returnConfiguration :<|> createNewLayer :<|> layerServer
 
 layerServer :: ServerT R.LayerApi T.ActionHandler
 layerServer l = provisionLayer l :<|> coordsServer l
@@ -48,6 +48,17 @@ coordsServer l z x = getQuery l z x :<|> getContent l z x
 
 stmMapToList :: STM.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
+
+createNewLayer :: T.LayerRequestList -> T.ActionHandler NoContent
+createNewLayer (T.LayerRequestList layerRequests) = do
+  r <- RC.ask
+  let (ls, cfgFile, originalCfg) = (,,) <$> T._ssStateLayers <*> T._ssConfigFile <*> T._ssOriginalConfig $ r
+  lastModifiedTime <- liftIO getCurrentTime
+  newLayers <- liftIO . atomically $ do
+    mapM_ (\lr -> STM.insert (T.requestToLayer (T._newLayerRequestSettings lr) lastModifiedTime) (T._newLayerRequestName lr) ls) layerRequests
+    stmMapToList ls
+  liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {T._configLayers = fromList newLayers}))
+  pure NoContent
 
 provisionLayer :: T.Text -> T.LayerSettings -> T.ActionHandler NoContent
 provisionLayer l settings = do
