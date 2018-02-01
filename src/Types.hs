@@ -24,8 +24,8 @@ import           Data.ByteString.Lazy         (ByteString, fromStrict)
 import qualified Data.Geospatial              as DG
 import           Data.Map.Strict              as M
 import           Data.Maybe                   (catMaybes)
-import           Data.Text                    as T
-import           Data.Time
+import qualified Data.Text                    as T
+import qualified Data.Time                    as DT
 import           Data.Typeable
 import           Hasql.Pool                   as P
 import qualified Network.HTTP.Media           as HM
@@ -39,33 +39,38 @@ import qualified Data.Geometry.Types.Types    as DGTT
 defaultTileSize :: DGTT.Pixels
 defaultTileSize = 2048
 
--- Layer types
-
 data LayerRequest = LayerRequest
-  { _lrQuery      :: Text
-  , _lrQuantize   :: DGTT.Pixels
-  , _lrAlgorithms :: Algorithms
+  {  _newLayerRequestName     :: T.Text
+  ,  _newLayerRequestSettings :: LayerSettings
   } deriving (Show, Eq)
 
-instance FromJSON LayerRequest where
-  parseJSON = withObject "LayerRequest" $ \o -> LayerRequest
+-- Layer types
+
+data LayerSettings = LayerSettings
+  { _lsQuery      :: Text
+  , _lsQuantize   :: DGTT.Pixels
+  , _lsAlgorithms :: Algorithms
+  } deriving (Show, Eq)
+
+instance FromJSON LayerSettings where
+  parseJSON = withObject "LayerSettings" $ \o -> LayerSettings
     <$> o .: "query"
     <*> o .: "quantize"
     <*> o .: "simplify"
 
-instance ToJSON LayerRequest where
-  toJSON lr = object
-    [ "query"    .= _lrQuery lr
-    , "quantize" .= _lrQuantize lr
-    , "simplify" .= _lrAlgorithms lr
+instance ToJSON LayerSettings where
+  toJSON ls = object
+    [ "query"    .= _lsQuery ls
+    , "quantize" .= _lsQuantize ls
+    , "simplify" .= _lsAlgorithms ls
     ]
 
-requestToLayer :: LayerRequest -> UTCTime -> Layer
-requestToLayer (LayerRequest que qua al) time = Layer que time qua al
+requestToLayer :: LayerSettings -> DT.UTCTime -> Layer
+requestToLayer (LayerSettings que qua al) time = Layer que time qua al
 
 data Layer = Layer
   { _layerQuery        :: Text
-  , _layerLastModified :: UTCTime
+  , _layerLastModified :: DT.UTCTime
   , _layerQuantize     :: DGTT.Pixels
   , _layerAlgorithms   :: Algorithms
   } deriving (Show, Eq, Generic)
@@ -103,7 +108,7 @@ getAlgorithm' z algos = case M.lookupGE z algos of
 data InputConfig = InputConfig
   { _inputConfigPgConnection       :: Text
   , _inputConfigPgPoolSize         :: Maybe Int
-  , _inputConfigPgTimeout          :: Maybe NominalDiffTime
+  , _inputConfigPgTimeout          :: Maybe DT.NominalDiffTime
   , _inputConfigMapnikInputPlugins :: Maybe FilePath
   , _inputConfigPort               :: Maybe Int
   , _inputConfigLayers             :: M.Map Text Layer
@@ -139,7 +144,7 @@ emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing (fromList []) 
 data Config = Config
   { _configPgConnection       :: Text
   , _configPgPoolSize         :: Int
-  , _configPgTimeout          :: NominalDiffTime
+  , _configPgTimeout          :: DT.NominalDiffTime
   , _configMapnikInputPlugins :: FilePath
   , _configPort               :: Int
   , _configLayers             :: M.Map Text Layer

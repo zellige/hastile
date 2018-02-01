@@ -21,12 +21,13 @@ type Y = Capture "y" T.Text
 type YI = Capture "y" DGTT.Pixels
 
 type HastileApi =
-  Get '[JSON] T.InputConfig :<|> LayerApi
+  Get '[JSON] T.InputConfig
+  :<|> LayerApi
 
 type LayerApi =
   LayerName :>
     (
-      ReqBody '[JSON] T.LayerRequest :> Post '[JSON] NoContent
+      ReqBody '[JSON] T.LayerSettings :> Post '[JSON] NoContent
       :<|> Z :> X :> HastileContentApi
     )
 

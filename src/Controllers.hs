@@ -49,13 +49,13 @@ coordsServer l z x = getQuery l z x :<|> getContent l z x
 stmMapToList :: STM.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
 
-provisionLayer :: T.Text -> T.LayerRequest -> T.ActionHandler NoContent
-provisionLayer l request = do
+provisionLayer :: T.Text -> T.LayerSettings -> T.ActionHandler NoContent
+provisionLayer l settings = do
   r <- RC.ask
   let (ls, cfgFile, originalCfg) = (,,) <$> T._ssStateLayers <*> T._ssConfigFile <*> T._ssOriginalConfig $ r
   lastModifiedTime <- liftIO getCurrentTime
   newLayers <- liftIO . atomically $ do
-    STM.insert (T.requestToLayer request lastModifiedTime) l ls
+    STM.insert (T.requestToLayer settings lastModifiedTime) l ls
     stmMapToList ls
   liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {T._configLayers = fromList newLayers}))
   pure NoContent
