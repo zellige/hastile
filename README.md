@@ -16,6 +16,18 @@ GET  /layername/Z/X/Y.mvt      (application/vnd.mapbox-vector-tile) - Return Map
 GET  /layername/Z/X/Y.json     (application/json) - Return GeoJSON for given layername, Zoom, (X,Y).
 ```
 
+Layer API
+---------
+
+The POST / with a layer configuration or POST /layername with a layer settings allows you to change the layers that Hastile serves up 
+and will save the configuration file to disk.
+
+To create a new layer:
+- ```curl -d '{ "layer_name": { "query": "...", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
+
+To modify an existing layer:
+- ```curl -d '{ "query": "...", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
+
 Building
 --------
 
