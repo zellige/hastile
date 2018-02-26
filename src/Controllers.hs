@@ -32,41 +32,38 @@ import           STMContainers.Map          as STM
 
 import qualified Data.Geometry.Types.Types  as DGTT
 
-import qualified DB                         as DB
-import qualified Routes                     as R
+import qualified DB
+import qualified Routes
 import qualified Tile                       as T
 import qualified Types                      as T
 
-hastileServer :: ServerT R.HastileApi T.ActionHandler
+hastileServer :: ServerT Routes.HastileApi T.ActionHandler
 hastileServer = returnConfiguration :<|> createNewLayer :<|> layerServer
 
-layerServer :: ServerT R.LayerApi T.ActionHandler
+layerServer :: ServerT Routes.LayerApi T.ActionHandler
 layerServer l = provisionLayer l :<|> coordsServer l
 
-coordsServer :: T.Text -> Natural -> Natural -> ServerT R.HastileContentApi T.ActionHandler
+coordsServer :: T.Text -> Natural -> Natural -> ServerT Routes.HastileContentApi T.ActionHandler
 coordsServer l z x = getQuery l z x :<|> getContent l z x
 
 stmMapToList :: STM.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
 
 createNewLayer :: T.LayerRequestList -> T.ActionHandler NoContent
-createNewLayer (T.LayerRequestList layerRequests) = do
-  r <- RC.ask
-  let (ls, cfgFile, originalCfg) = (,,) <$> T._ssStateLayers <*> T._ssConfigFile <*> T._ssOriginalConfig $ r
-  lastModifiedTime <- liftIO getCurrentTime
-  newLayers <- liftIO . atomically $ do
-    mapM_ (\lr -> STM.insert (T.requestToLayer (T._newLayerRequestSettings lr) lastModifiedTime) (T._newLayerRequestName lr) ls) layerRequests
-    stmMapToList ls
-  liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {T._configLayers = fromList newLayers}))
-  pure NoContent
+createNewLayer (T.LayerRequestList layerRequests) =
+  newLayer (\lastModifiedTime ls -> mapM_ (\lr -> STM.insert (T.requestToLayer (T._newLayerRequestSettings lr) lastModifiedTime) (T._newLayerRequestName lr) ls) layerRequests)
 
 provisionLayer :: T.Text -> T.LayerSettings -> T.ActionHandler NoContent
-provisionLayer l settings = do
+provisionLayer l settings =
+  newLayer (\lastModifiedTime -> STM.insert (T.requestToLayer settings lastModifiedTime) l)
+
+newLayer :: (MonadIO m, MonadReader T.ServerState m) => (UTCTime -> STM.Map T.Text T.Layer -> STM a) -> m NoContent
+newLayer b = do
   r <- RC.ask
-  let (ls, cfgFile, originalCfg) = (,,) <$> T._ssStateLayers <*> T._ssConfigFile <*> T._ssOriginalConfig $ r
   lastModifiedTime <- liftIO getCurrentTime
+  let (ls, cfgFile, originalCfg) = (,,) <$> T._ssStateLayers <*> T._ssConfigFile <*> T._ssOriginalConfig $ r
   newLayers <- liftIO . atomically $ do
-    STM.insert (T.requestToLayer settings lastModifiedTime) l ls
+    _ <- b lastModifiedTime ls
     stmMapToList ls
   liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {T._configLayers = fromList newLayers}))
   pure NoContent

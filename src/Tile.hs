@@ -63,7 +63,7 @@ googleToBBoxM tileSize z xy =
 
 googleToBBoxPx :: DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> BBox DGTT.Pixels
 googleToBBoxPx tileSize (x, y) =
-  ((* tileSize) . fromIntegral) <$> BBox x (y + 1) (x + 1) y
+  (* tileSize) . fromIntegral <$> BBox x (y + 1) (x + 1) y
 
 pixelMaxExtent :: DGTT.Pixels -> DGTT.ZoomLevel -> DGTT.Pixels
 pixelMaxExtent tile z = (2 ^ z) * tile

@@ -22,4 +22,4 @@ createServer s = SS.hoistServer hastileApi (toHandler s) hastileServer
 
 -- Natural Transformation of Types.ActionHandler.ActionHandler to Servant.Handler
 toHandler :: ServerState -> ActionHandler a -> Handler a
-toHandler s = (flip TR.runReaderT s . runActionHandler)
+toHandler s = flip TR.runReaderT s . runActionHandler

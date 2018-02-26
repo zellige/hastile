@@ -14,6 +14,7 @@
 
 module Types where
 
+import           Control.Applicative
 import           Control.Lens                 (Lens', makeLenses)
 import           Control.Monad.Except         (MonadError)
 import           Control.Monad.Reader         (MonadIO, MonadReader, ReaderT)
@@ -49,7 +50,7 @@ data LayerRequest = LayerRequest
 newtype LayerRequestList = LayerRequestList [LayerRequest]
 
 instance FromJSON LayerRequestList where
-    parseJSON v = fmap (LayerRequestList . fmap (\(name, settings) -> LayerRequest name settings) . M.toList) $ parseJSON v
+    parseJSON v = (LayerRequestList . fmap (uncurry LayerRequest) . M.toList) Control.Applicative.<$> parseJSON v
 
 data LayerSettings = LayerSettings
   { _lsQuery      :: Text

@@ -43,7 +43,7 @@ testBufferedBoundingBox =
     it "Adding a buffer does what it should" $
       let bbox@(BBox llX llY urX urY) = googleToBBoxM 256 2 (1, 1)
           (BBox llX' llY' urX' urY') = addBufferToBBox 256 128 2 bbox
-       in all id [llX' < llX , llY' < llY , urX' > urX , urY' > urY] `shouldBe` True
+       in and [llX' < llX , llY' < llY , urX' > urX , urY' > urY] `shouldBe` True
 
 testReadMvtFile :: Spec
 testReadMvtFile =
