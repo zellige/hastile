@@ -31,7 +31,7 @@ import qualified Types                      as T
 data LayerError = LayerNotFound
 
 findFeatures :: (MonadIO m, MonadReader T.ServerState m)
-             => T.Layer -> DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> m (Either P.UsageError [Value])
+             => T.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m (Either P.UsageError [Value])
 findFeatures layer z xy = do
   sql <- mkQuery layer z xy
   let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
@@ -39,7 +39,7 @@ findFeatures layer z xy = do
   errOrResult <- liftIO $ P.use p sessTfs
   pure errOrResult
 
-mkQuery :: (MonadReader T.ServerState m) => T.Layer -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m T.Text
+mkQuery :: (MonadReader T.ServerState m) => T.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m T.Text
 mkQuery layer z xy =
   do buffer <- asks (^. T.ssBuffer)
      let bboxM = googleToBBoxM T.defaultTileSize z xy

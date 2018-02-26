@@ -9,11 +9,24 @@ RESTful API
 -----------
 ```
 GET  /                         (application/json)         - Returns the current configuration.
-POST /layername                (application/json)         - Add/overwrite the query setting for layername (e.g. {"query": "..."}).
+POST /                         (application/json)         - Add/overwite layername (e.g. {"layer": { "name" : "...", "query": "..." } ... }).
+POST /layername                (application/json)         - Add/overwrite the query setting for layername (e.g. {"query": "...", ... }).
 GET  /layername/Z/X/Y/query    (text/plain)               - Query for a given layername, Zoom, and (X,Y).
 GET  /layername/Z/X/Y.mvt      (application/vnd.mapbox-vector-tile) - Return Mapnick Vector Tile for given layername, Zoom, (X,Y).
 GET  /layername/Z/X/Y.json     (application/json) - Return GeoJSON for given layername, Zoom, (X,Y).
 ```
+
+Layer API
+---------
+
+The ```POST /``` with a layer configuration or ```POST /layername``` with a layer settings allows you to change the layers that Hastile serves up 
+and will save the configuration file to disk.
+
+To create a new layer:
+- ```curl -d '{ "layer_name": { "query": "...", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
+
+To modify an existing layer:
+- ```curl -d '{ "query": "...", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
 
 Building
 --------

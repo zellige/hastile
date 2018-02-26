@@ -38,18 +38,35 @@ import qualified Tile                       as T
 import qualified Types                      as T
 
 hastileServer :: ServerT R.HastileApi T.ActionHandler
-hastileServer = returnConfiguration :<|> provisionLayer :<|> getQuery :<|> getContent
+hastileServer = returnConfiguration :<|> createNewLayer :<|> layerServer
+
+layerServer :: ServerT R.LayerApi T.ActionHandler
+layerServer l = provisionLayer l :<|> coordsServer l
+
+coordsServer :: T.Text -> Natural -> Natural -> ServerT R.HastileContentApi T.ActionHandler
+coordsServer l z x = getQuery l z x :<|> getContent l z x
 
 stmMapToList :: STM.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STM.stream
 
-provisionLayer :: T.Text -> T.LayerRequest -> T.ActionHandler NoContent
-provisionLayer l request = do
+createNewLayer :: T.LayerRequestList -> T.ActionHandler NoContent
+createNewLayer (T.LayerRequestList layerRequests) = do
   r <- RC.ask
   let (ls, cfgFile, originalCfg) = (,,) <$> T._ssStateLayers <*> T._ssConfigFile <*> T._ssOriginalConfig $ r
   lastModifiedTime <- liftIO getCurrentTime
   newLayers <- liftIO . atomically $ do
-    STM.insert (T.requestToLayer request lastModifiedTime) l ls
+    mapM_ (\lr -> STM.insert (T.requestToLayer (T._newLayerRequestSettings lr) lastModifiedTime) (T._newLayerRequestName lr) ls) layerRequests
+    stmMapToList ls
+  liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {T._configLayers = fromList newLayers}))
+  pure NoContent
+
+provisionLayer :: T.Text -> T.LayerSettings -> T.ActionHandler NoContent
+provisionLayer l settings = do
+  r <- RC.ask
+  let (ls, cfgFile, originalCfg) = (,,) <$> T._ssStateLayers <*> T._ssConfigFile <*> T._ssOriginalConfig $ r
+  lastModifiedTime <- liftIO getCurrentTime
+  newLayers <- liftIO . atomically $ do
+    STM.insert (T.requestToLayer settings lastModifiedTime) l ls
     stmMapToList ls
   liftIO $ LBS.writeFile cfgFile (encodePretty (originalCfg {T._configLayers = fromList newLayers}))
   pure NoContent
@@ -74,7 +91,7 @@ getContent l z x stringY
   | ".json" `T.isSuffixOf` stringY = getAnything getJson l z x stringY
   | otherwise = throwError $ err400 { errBody = "Unknown request: " <> fromStrict (TE.encodeUtf8 stringY) }
 
-getAnything :: (t -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler a) -> t -> T.ZoomLevel -> DGTT.Pixels -> T.Text -> T.ActionHandler a
+getAnything :: (t -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler a) -> t -> DGTT.ZoomLevel -> DGTT.Pixels -> T.Text -> T.ActionHandler a
 getAnything f l z x stringY =
   case getY stringY of
     Left e       -> fail $ show e
@@ -82,7 +99,7 @@ getAnything f l z x stringY =
   where
     getY s = decimal $ T.takeWhile isNumber s
 
-getTile :: T.Text -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
+getTile :: T.Text -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 getTile l z xy = do
   layer   <- getLayerOrThrow l
   geoJson <- getJson' layer z xy
@@ -96,13 +113,13 @@ checkEmpty tile layer
   | BS.null tile = throwError $ T.err204 { errHeaders = [(hLastModified, BS8.pack $ DB.lastModified layer)] }
   | otherwise = pure $ addHeader (DB.lastModified layer) tile
 
-getJson :: T.Text -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
+getJson :: T.Text -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
 getJson l z xy = do
   layer <- getLayerOrThrow l
   geoJson <- getJson' layer z xy
   pure $ addHeader (DB.lastModified layer) (toStrict $ A.encode geoJson)
 
-getJson' :: T.Layer -> T.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (DG.GeoFeatureCollection A.Value)
+getJson' :: T.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> T.ActionHandler (DG.GeoFeatureCollection A.Value)
 getJson' layer z xy = do
   errorOrTfs <- DB.findFeatures layer z xy
   case errorOrTfs of

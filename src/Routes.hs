@@ -11,20 +11,29 @@ import qualified Data.Text                 as T
 import           Servant
 
 import qualified Data.Geometry.Types.Types as DGTT
-
 import qualified Types                     as T
 
 type LayerName = Capture "layer" T.Text
-type Z = Capture "z" T.ZoomLevel
+type Z = Capture "z" DGTT.ZoomLevel
 type X = Capture "x" DGTT.Pixels
 type Y = Capture "y" T.Text
 type YI = Capture "y" DGTT.Pixels
 
 type HastileApi =
   Get '[JSON] T.InputConfig
-    :<|> LayerName :> ReqBody '[JSON] T.LayerRequest :> Post '[JSON] NoContent
-    :<|> LayerName :> Z :> X :> YI :> "query"        :> Get '[PlainText] T.Text
-    :<|> LayerName :> Z :> X :> Y                    :> Get '[T.MapboxVectorTile, T.AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
+  :<|> ReqBody '[JSON] T.LayerRequestList :> Post '[JSON] NoContent
+  :<|> LayerApi
+
+type LayerApi =
+  LayerName :>
+    (
+      ReqBody '[JSON] T.LayerSettings :> Post '[JSON] NoContent
+      :<|> Z :> X :> HastileContentApi
+    )
+
+type HastileContentApi =
+       YI :> "query" :> Get '[PlainText] T.Text
+  :<|> Y             :> Get '[T.MapboxVectorTile, T.AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
 
 hastileApi :: P.Proxy HastileApi
 hastileApi = P.Proxy

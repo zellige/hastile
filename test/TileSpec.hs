@@ -16,9 +16,9 @@ import           System.IO.Temp                 (withSystemTempFile)
 import           Test.Hspec                     (Spec, describe, it, shouldBe)
 
 
+import           Data.Geometry.Types.Simplify
 import           Tile                           (BBox (..), addBufferToBBox,
                                                  extent, googleToBBoxM, mkTile)
-import           Types
 
 spec :: Spec
 spec = do
@@ -75,7 +75,7 @@ generateMvtAdelaide filename = do
   _ <- LBS.writeFile filename lbs
   pure ()
 
-generateMvtFile :: FilePath -> T.Text -> ZoomLevel -> (DGT.Pixels, DGT.Pixels) -> IO LBS.ByteString
+generateMvtFile :: FilePath -> T.Text -> DGT.ZoomLevel -> (DGT.Pixels, DGT.Pixels) -> IO LBS.ByteString
 generateMvtFile geoJsonFile layerName z xy = do
   mvt <- MVT.readGeoJson geoJsonFile
   x <- mkTile layerName z xy 128 1 NoAlgorithm mvt
