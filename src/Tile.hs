@@ -79,8 +79,6 @@ mPerPxToM (Ratio r) p = Metres $ r * fromIntegral p
 
 -- mkConfig :: Text -> Pixels -> (Pixels, Pixels) -> Pixels -> Pixels -> Pixels -> Config
 mkTile :: T.Text -> DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> DGTT.Pixels -> DGTT.Pixels -> DGTS.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
-mkTile l z xy buffer quantizePixels algo geoJson = do
-  mvt <- DGM.createMvt config geoJson
-  pure $ DGM.encodeMvt mvt
+mkTile l z xy buffer quantizePixels algo geoJson = DGM.encodeMvt <$> DGM.createMvt config geoJson
   where
     config = DGTT.mkConfig l z xy buffer T.defaultTileSize quantizePixels algo

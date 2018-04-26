@@ -36,8 +36,7 @@ findFeatures layer z xy = do
   sql <- mkQuery layer z xy
   let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
   p <- asks T._ssPool
-  errOrResult <- liftIO $ P.use p sessTfs
-  pure errOrResult
+  liftIO $ P.use p sessTfs
 
 mkQuery :: (MonadReader T.ServerState m) => T.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m T.Text
 mkQuery layer z xy =

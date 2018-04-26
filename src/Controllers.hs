@@ -79,11 +79,10 @@ returnConfiguration = do
 getQuery :: T.Text -> Natural -> Natural -> Natural -> T.ActionHandler T.Text
 getQuery l z x y = do
   layer <- getLayerOrThrow l
-  query <- DB.mkQuery layer z (x, y)
-  pure query
+  DB.mkQuery layer z (x, y)
 
-getContent :: T.Text -> Natural -> Natural -> T.Text -> T.ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
-getContent l z x stringY
+getContent :: T.Text -> Natural -> Natural -> T.Text -> Maybe T.Text -> T.ActionHandler (Headers '[Header "Last-Modified" String] BS.ByteString)
+getContent l z x stringY _
   | ".mvt" `T.isSuffixOf` stringY = getAnything getTile l z x stringY
   | ".json" `T.isSuffixOf` stringY = getAnything getJson l z x stringY
   | otherwise = throwError $ err400 { errBody = "Unknown request: " <> fromStrict (TE.encodeUtf8 stringY) }
