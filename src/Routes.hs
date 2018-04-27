@@ -31,11 +31,9 @@ type LayerApi =
       :<|> Z :> X :> HastileContentApi
     )
 
--- Data.ByteString for Headers.
--- https://github.com/haskell-servant/servant-quickcheck/blob/master/src/Servant/QuickCheck/Internal/Predicates.hs#L452
 type HastileContentApi =
        YI :> "query" :> Get '[PlainText] T.Text
-  :<|> Y             :> Servant.Header "If-Modified-Since" T.Text :> Get '[T.MapboxVectorTile, T.AlreadyJSON] (Headers '[Header "Last-Modified" String] BS.ByteString)
+  :<|> Y             :> Servant.Header "If-Modified-Since" T.Text :> Get '[T.MapboxVectorTile, T.AlreadyJSON] (Headers '[Header "Last-Modified" T.Text] BS.ByteString)
 
 hastileApi :: P.Proxy HastileApi
 hastileApi = P.Proxy

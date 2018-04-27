@@ -31,7 +31,7 @@ doIt cmdLine = do
 doItWithConfig :: FilePath -> HT.Config -> IO ()
 doItWithConfig cfgFile config@HT.Config{..} = do
   layers <- atomically STM.new :: IO (STM.Map OG.Text HT.Layer)
-  F.forM_ (M.toList _configLayers) $ \(k, v) -> atomically $ STM.insert v k layers
+  F.forM_ (M.toList _configLayers) $ \(k, v) -> atomically $ STM.insert (HT.layerDetailsToLayer k v) k layers
   CE.bracket
     (P.acquire (_configPgPoolSize, _configPgTimeout, DTE.encodeUtf8 _configPgConnection))
     P.release

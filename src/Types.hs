@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NoMonomorphismRestriction  #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -71,30 +72,44 @@ instance ToJSON LayerSettings where
     , "simplify" .= _lsAlgorithms ls
     ]
 
-requestToLayer :: LayerSettings -> DT.UTCTime -> Layer
-requestToLayer (LayerSettings que qua al) time = Layer que time qua al
+requestToLayer :: Text -> LayerSettings -> DT.UTCTime -> Layer
+requestToLayer layerName (LayerSettings query quantize simplify) time = Layer layerName query time quantize simplify
 
 data Layer = Layer
-  { _layerQuery        :: Text
+  { _layerName         :: Text
+  , _layerQuery        :: Text
   , _layerLastModified :: DT.UTCTime
   , _layerQuantize     :: DGTT.Pixels
   , _layerAlgorithms   :: Algorithms
   } deriving (Show, Eq, Generic)
 
-instance FromJSON Layer where
-  parseJSON = withObject "Layer" $ \o -> Layer
+data LayerDetails = LayerDetails
+  { _layerDetailsQuery        :: Text
+  , _layerDetailsLastModified :: DT.UTCTime
+  , _layerDetailsQuantize     :: DGTT.Pixels
+  , _layerDetailsAlgorithms   :: Algorithms
+  } deriving (Show, Eq, Generic)
+
+instance FromJSON LayerDetails where
+  parseJSON = withObject "Layer" $ \o -> LayerDetails
     <$> o .: "query"
     <*> o .: "last-modified"
     <*> o .: "quantize"
     <*> o .: "simplify"
 
-instance ToJSON Layer where
+instance ToJSON LayerDetails where
   toJSON l = object
-    [ "query"         .= _layerQuery l
-    , "last-modified" .= _layerLastModified l
-    , "quantize"      .= _layerQuantize l
-    , "simplify"      .= _layerAlgorithms l
+    [ "query"         .= _layerDetailsQuery l
+    , "last-modified" .= _layerDetailsLastModified l
+    , "quantize"      .= _layerDetailsQuantize l
+    , "simplify"      .= _layerDetailsAlgorithms l
     ]
+
+layerDetailsToLayer :: Text -> LayerDetails -> Layer
+layerDetailsToLayer name LayerDetails{..} = Layer name _layerDetailsQuery _layerDetailsLastModified _layerDetailsQuantize _layerDetailsAlgorithms
+
+layerToLayerDetails :: Layer -> LayerDetails
+layerToLayerDetails Layer{..} = LayerDetails _layerQuery _layerLastModified _layerQuantize _layerAlgorithms
 
 -- Zoom dependant simplification algorithms
 
@@ -117,7 +132,7 @@ data InputConfig = InputConfig
   , _inputConfigPgTimeout          :: Maybe DT.NominalDiffTime
   , _inputConfigMapnikInputPlugins :: Maybe FilePath
   , _inputConfigPort               :: Maybe Int
-  , _inputConfigLayers             :: M.Map Text Layer
+  , _inputConfigLayers             :: M.Map Text LayerDetails
   , _inputConfigTileBuffer         :: Maybe DGTT.Pixels
   } deriving (Show, Generic)
 
@@ -153,7 +168,7 @@ data Config = Config
   , _configPgTimeout          :: DT.NominalDiffTime
   , _configMapnikInputPlugins :: FilePath
   , _configPort               :: Int
-  , _configLayers             :: M.Map Text Layer
+  , _configLayers             :: M.Map Text LayerDetails
   , _configTileBuffer         :: DGTT.Pixels
   } deriving (Show, Generic)
 

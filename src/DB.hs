@@ -9,12 +9,12 @@ module DB where
 import           Control.Lens               ((^.))
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
-import           Data.Aeson
-import           Data.ByteString            as BS
+import qualified Data.Aeson                 as A
+import qualified Data.ByteString            as BS
 import           Data.Monoid
 import qualified Data.Text                  as T
-import           Data.Text.Encoding         as TE
-import           Data.Time
+import qualified Data.Text.Encoding         as TE
+import qualified Data.Time                  as DT
 import           GHC.Conc
 import qualified Hasql.Decoders             as HD
 import qualified Hasql.Encoders             as HE
@@ -31,7 +31,7 @@ import qualified Types                      as T
 data LayerError = LayerNotFound
 
 findFeatures :: (MonadIO m, MonadReader T.ServerState m)
-             => T.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m (Either P.UsageError [Value])
+             => T.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m (Either P.UsageError [A.Value])
 findFeatures layer z xy = do
   sql <- mkQuery layer z xy
   let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
@@ -57,7 +57,7 @@ getLayer l = do
     Nothing    -> Left LayerNotFound
     Just layer -> Right layer
 
-mkStatement :: BS.ByteString -> HQ.Query () [Value]
+mkStatement :: BS.ByteString -> HQ.Query () [A.Value]
 mkStatement sql = HQ.statement sql
     HE.unit (HD.rowsList (HD.value HD.json)) False
 
@@ -68,6 +68,22 @@ escape bbox = T.concat . fmap replace' . T.split (== '!')
     replace' "bbox_4326" = bbox
     replace' t           = t
 
-lastModified :: T.Layer -> String
-lastModified layer = T.unpack $ T.dropEnd 3 (T.pack rfc822Str) <> "GMT"
-       where rfc822Str = formatTime defaultTimeLocale rfc822DateFormat $ T._layerLastModified layer
+lastModified :: T.Layer -> T.Text
+lastModified layer = T.dropEnd 3 (T.pack rfc822Str) <> "GMT"
+       where rfc822Str = DT.formatTime DT.defaultTimeLocale DT.rfc822DateFormat $ T._layerLastModified layer
+
+parseIfModifiedSince :: T.Text -> Maybe DT.UTCTime
+parseIfModifiedSince t = DT.parseTimeM True DT.defaultTimeLocale "%a, %e %b %Y %T GMT" $ T.unpack t
+
+isModifiedTime :: T.Layer -> Maybe DT.UTCTime -> Bool
+isModifiedTime layer mTime =
+  case mTime of
+    Nothing   -> True
+    Just time -> T._layerLastModified layer > time
+
+isModified :: T.Layer -> Maybe T.Text -> Bool
+isModified layer mText =
+  case mText of
+    Nothing   -> True
+    Just text -> isModifiedTime layer $ parseIfModifiedSince text
+
