@@ -87,7 +87,7 @@ getContent l z x stringY maybeIfModified =
     layer <- getLayerOrThrow l
     if DB.isModified layer maybeIfModified
       then getContent' layer z x stringY
-      else throwError S.err302
+      else throwError S.err304
 
 getContent' :: T.Layer -> Natural -> Natural -> T.Text -> T.ActionHandler (S.Headers '[S.Header "Last-Modified" T.Text] BS.ByteString)
 getContent' l z x stringY
