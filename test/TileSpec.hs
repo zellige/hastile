@@ -3,22 +3,22 @@
 module TileSpec where
 
 import           Control.Lens
-import qualified Data.ByteString                 as BS (ByteString, readFile)
-import qualified Data.ByteString.Lazy            as LBS (ByteString, fromStrict,
-                                                         writeFile)
-import qualified Data.Geometry.MapnikVectorTile  as MVT
-import           Data.Map                        (lookup)
-import qualified Data.Text                       as T
-import qualified Geography.VectorTile            as VT
-import qualified Geography.VectorTile.VectorTile as VVT
-import           System.IO                       (hClose)
-import           System.IO.Temp                  (withSystemTempFile)
-import           Test.Hspec                      (Spec, describe, it, shouldBe)
+import qualified Data.ByteString                as BS (ByteString, readFile)
+import qualified Data.ByteString.Lazy           as LBS (ByteString, fromStrict,
+                                                        writeFile)
+import qualified Data.Geometry.MapnikVectorTile as MVT
+import qualified Data.Geometry.Types.Types      as DGT
+import qualified Data.HashMap.Strict            as HM
+import qualified Data.Text                      as T
+import qualified Geography.VectorTile           as VT
+import           System.IO                      (hClose)
+import           System.IO.Temp                 (withSystemTempFile)
+import           Test.Hspec                     (Spec, describe, it, shouldBe)
 
 
-import           Tile                            (BBox (..), addBufferToBBox,
-                                                  extent, googleToBBoxM, mkTile)
-import           Types
+import           Data.Geometry.Types.Simplify
+import           Tile                           (BBox (..), addBufferToBBox,
+                                                 extent, googleToBBoxM, mkTile)
 
 spec :: Spec
 spec = do
@@ -30,20 +30,20 @@ testGoogleToBBoxM :: Spec
 testGoogleToBBoxM =
   describe "googleToBBoxM" $
     it "Returns the 3857 extent for zoom level 0" $
-      googleToBBoxM 256 0 (GoogleTileCoords 0 0) `shouldBe` extent
+      googleToBBoxM 256 0 (0, 0) `shouldBe` extent
 
 -- TODO: Let's stop writing crappy tests and write properties
 testBufferedBoundingBox :: Spec
 testBufferedBoundingBox =
   describe "addBufferToBBox" $ do
     it "Hard limits to 3857 extent" $
-      let bbox = googleToBBoxM 256 0 (GoogleTileCoords 0 0)
+      let bbox = googleToBBoxM 256 0 (0, 0)
           buffered = addBufferToBBox 256 128 0 bbox
        in buffered `shouldBe` extent
     it "Adding a buffer does what it should" $
-      let bbox@(BBox llX llY urX urY) = googleToBBoxM 256 2 (GoogleTileCoords 1 1)
+      let bbox@(BBox llX llY urX urY) = googleToBBoxM 256 2 (1, 1)
           (BBox llX' llY' urX' urY') = addBufferToBBox 256 128 2 bbox
-       in all id [llX' < llX , llY' < llY , urX' > urX , urY' > urY] `shouldBe` True
+       in and [llX' < llX , llY' < llY , urX' > urX , urY' > urY] `shouldBe` True
 
 testReadMvtFile :: Spec
 testReadMvtFile =
@@ -58,27 +58,26 @@ testReadMvtFile =
 -- TODO - Test for empty queries.
 -- TODO - Implement fold for comparison when fails
 
-readMvtFile :: FilePath -> IO VVT.Layer
+readMvtFile :: FilePath -> IO VT.Layer
 readMvtFile filename = do
   bs <- BS.readFile filename
   pure $ bsToLayer bs "open_traffic_adl"
 
-bsToLayer :: BS.ByteString -> T.Text -> VVT.Layer
+bsToLayer :: BS.ByteString -> LBS.ByteString -> VT.Layer
 bsToLayer bs layerName = maybeLayer ^?! _Just
   where
-    decodedMvt = VT.decode bs ^?! _Right
-    layers = VVT._layers $ VT.tile decodedMvt ^?! _Right
-    maybeLayer = Data.Map.lookup layerName layers
+    layers = VT._layers $ VT.tile bs ^?! _Right
+    maybeLayer = HM.lookup layerName layers
 
 generateMvtAdelaide :: FilePath -> IO ()
 generateMvtAdelaide filename = do
-  lbs <- generateMvtFile "test/integration/19781.json" "open_traffic_adl" (Coordinates 15 $ GoogleTileCoords 28999 19781)
+  lbs <- generateMvtFile "test/integration/19781.json" "open_traffic_adl" 15 (28999, 19781)
   _ <- LBS.writeFile filename lbs
   pure ()
 
-generateMvtFile :: FilePath -> T.Text -> Coordinates -> IO LBS.ByteString
-generateMvtFile geoJsonFile layerName coords = do
+generateMvtFile :: FilePath -> T.Text -> DGT.ZoomLevel -> (DGT.Pixels, DGT.Pixels) -> IO LBS.ByteString
+generateMvtFile geoJsonFile layerName z xy = do
   mvt <- MVT.readGeoJson geoJsonFile
-  x <- mkTile layerName coords (Pixels 128) mvt
+  x <- mkTile layerName z xy 128 1 NoAlgorithm mvt
   pure $ LBS.fromStrict x
 
