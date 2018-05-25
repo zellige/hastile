@@ -3,42 +3,49 @@
 
 module Main where
 
-import qualified Control.Exception.Base      as CE
-import qualified Data.Foldable               as F
-import qualified Data.Map                    as M
-import qualified Data.Text.Encoding          as DTE
+import qualified Control.Exception.Base            as ControlException
+import qualified Data.Foldable                     as Foldable
+import qualified Data.Map                          as Map
+import qualified Data.Text.Encoding                as TextEncoding
 import           GHC.Conc
-import qualified Hasql.Pool                  as P
-import qualified Network.Wai                 as W
-import qualified Network.Wai.Handler.Warp    as W
-import qualified Network.Wai.Middleware.Cors as W
-import qualified Options.Generic             as OG
-import           STMContainers.Map           as STM
+import qualified Hasql.Pool                        as HasqlPool
+import qualified Network.Wai                       as Wai
+import qualified Network.Wai.Handler.Warp          as WaiWarp
+import qualified Network.Wai.Middleware.Cors       as WaiCors
+import qualified Network.Wai.Middleware.Prometheus as WaiPrometheus
+import qualified Options.Generic                   as OptionsGeneric
+import qualified Prometheus                        as Prometheus
+import qualified Prometheus.Metric.GHC             as PrometheusGhc
+import qualified STMContainers.Map                 as StmMap
 
-import qualified Config                      as HC
-import qualified Server                      as HS
-import qualified Types                       as HT
+import qualified Config                            as Config
+import qualified Server                            as Server
+import qualified Types                             as Types
 
 main :: IO ()
-main = OG.getRecord "hastile" >>= doIt
+main = OptionsGeneric.getRecord "hastile" >>= doIt
 
-doIt :: HT.CmdLine -> IO ()
+doIt :: Types.CmdLine -> IO ()
 doIt cmdLine = do
-  let cfgFile = HT.configFile cmdLine
-  config <- HC.getConfig cfgFile
+  let cfgFile = Types.configFile cmdLine
+  config <- Config.getConfig cfgFile
   doItWithConfig cfgFile config
 
-doItWithConfig :: FilePath -> HT.Config -> IO ()
-doItWithConfig cfgFile config@HT.Config{..} = do
-  layers <- atomically STM.new :: IO (STM.Map OG.Text HT.Layer)
-  F.forM_ (M.toList _configLayers) $ \(k, v) -> atomically $ STM.insert (HT.layerDetailsToLayer k v) k layers
-  CE.bracket
-    (P.acquire (_configPgPoolSize, _configPgTimeout, DTE.encodeUtf8 _configPgConnection))
-    P.release
-    (\p -> getWarp _configPort (HS.runServer (HT.ServerState p _configMapnikInputPlugins cfgFile config layers)))
+doItWithConfig :: FilePath -> Types.Config -> IO ()
+doItWithConfig cfgFile config@Types.Config{..} = do
+  layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Types.Layer)
+  Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Types.layerDetailsToLayer k v) k layers
+  ControlException.bracket
+    (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
+    HasqlPool.release
+    (\p -> getWarp _configPort (Server.runServer (Types.ServerState p _configMapnikInputPlugins cfgFile config layers)))
   pure ()
 
-getWarp :: W.Port -> W.Application -> IO ()
-getWarp port' = W.run port' . W.cors (const $ Just policy)
+getWarp :: WaiWarp.Port -> Wai.Application -> IO ()
+getWarp port' app = do
+  _ <- Prometheus.register PrometheusGhc.ghcMetrics
+  let application = WaiCors.cors (const $ Just policy) app
+      promMiddleware = WaiPrometheus.prometheus $ WaiPrometheus.PrometheusSettings ["metrics"] True True
+  WaiWarp.run port' $ promMiddleware $ application
   where
-    policy = W.simpleCorsResourcePolicy { W.corsRequestHeaders = ["Content-Type"] }
+    policy = WaiCors.simpleCorsResourcePolicy { WaiCors.corsRequestHeaders = ["Content-Type"] }

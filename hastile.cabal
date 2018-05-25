@@ -36,6 +36,8 @@ library
                      , list-t
                      , mtl
                      , optparse-generic
+                     , prometheus-client
+                     , prometheus-metrics-ghc
                      , scientific
                      , servant
                      , servant-server
@@ -44,6 +46,7 @@ library
                      , time
                      , transformers
                      , wai
+                     , wai-middleware-prometheus
                      , word8
                      , zellige
   ghc-options:       -Wall -Werror -O2
