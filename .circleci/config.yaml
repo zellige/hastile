@@ -42,10 +42,10 @@ jobs:
             aws s3 cp $ZIP_FILE s3://sitewisely-codedeploy/hastile/$ZIP_FILE
   workflows:
     version: 2
-      all:
-        jobs:
-          - install
-          - pre
-          - compile
-          - test
-          - deployment         
+    all:
+      jobs:
+        - install
+        - pre
+        - compile
+        - test
+        - deployment         
