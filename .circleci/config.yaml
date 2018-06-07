@@ -8,7 +8,12 @@ jobs:
       ZIP_FILE: hastile_linux_${CIRCLE_BUILD_NUM}.zip
     steps:
       - checkout
-
+      - restore-cache:
+        keys:
+          - stack-{{ checksum “stack.yaml” }}
+      - restore-cache:
+        keys:
+          - stack-{{checksum “stack.yaml”}}-{{checksum “project.cabal”}}
       - run:
           name: install
           command: |
@@ -17,27 +22,22 @@ jobs:
             mkdir /tmp/stack/
             tar -xvzf /tmp/stack.tar.gz -C /tmp/stack/
             sudo mv /tmp/stack/stack-1.6.5-linux-x86_64/stack /usr/local/bin/stack
-
       - run:
           name: pre
           command: |
             stack setup --stack-yaml stack-ci.yaml --no-terminal
             stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal
-
       - run:
           name: compile
           command: |
             stack build  --stack-yaml stack-ci.yaml --no-terminal
-
       - run:
           name: test
           command: |
             stack test  --stack-yaml stack-ci.yaml --no-terminal
-
       - run:
           name: deployment
           command: |
             stack install --stack-yaml stack-ci.yaml --local-bin-path .
             zip -r $ZIP_FILE ./hastile
             aws s3 cp $ZIP_FILE s3://sitewisely-codedeploy/hastile/$ZIP_FILE
-            
