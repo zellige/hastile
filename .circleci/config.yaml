@@ -1,0 +1,42 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/hastile
+    docker:
+      - image: circleci/ruby:2.4.4-stretch-node
+    environment:
+      ZIP_FILE: hastile_linux_${CIRCLE_BUILD_NUM}.zip
+    steps:
+      - checkout
+
+      - run:
+          name: Install deps
+          command: |
+            rm -rf ~/hastile/.stack-work/downloaded
+            wget https://github.com/commercialhaskell/stack/releases/download/v1.6.5/stack-1.6.5-linux-x86_64.tar.gz -O /tmp/stack.tar.gz
+            mkdir /tmp/stack/
+            tar -xvzf /tmp/stack.tar.gz -C /tmp/stack/
+            sudo mv /tmp/stack/stack-1.6.5-linux-x86_64/stack /usr/local/bin/stack
+
+      - run:
+          name: Pre
+          command: |
+            stack setup --stack-yaml stack-ci.yaml --no-terminal
+            stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal
+
+      - run:
+          name: Compile
+          command: |
+            stack build  --stack-yaml stack-ci.yaml --no-terminal
+
+      - run:
+          name: Test
+          command: |
+            stack test  --stack-yaml stack-ci.yaml --no-terminal
+
+      - run:
+          name: Deployment
+          command: |
+            stack install --stack-yaml stack-ci.yaml --local-bin-path .
+            zip -r $ZIP_FILE ./hastile
+            aws s3 cp $ZIP_FILE s3://sitewisely-codedeploy/hastile/$ZIP_FILE
