@@ -10,7 +10,7 @@ jobs:
       - checkout
 
       - run:
-          name: Install deps
+          name: install
           command: |
             rm -rf ~/hastile/.stack-work/downloaded
             wget https://github.com/commercialhaskell/stack/releases/download/v1.6.5/stack-1.6.5-linux-x86_64.tar.gz -O /tmp/stack.tar.gz
@@ -19,24 +19,33 @@ jobs:
             sudo mv /tmp/stack/stack-1.6.5-linux-x86_64/stack /usr/local/bin/stack
 
       - run:
-          name: Pre
+          name: pre
           command: |
             stack setup --stack-yaml stack-ci.yaml --no-terminal
             stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal
 
       - run:
-          name: Compile
+          name: compile
           command: |
             stack build  --stack-yaml stack-ci.yaml --no-terminal
 
       - run:
-          name: Test
+          name: test
           command: |
             stack test  --stack-yaml stack-ci.yaml --no-terminal
 
       - run:
-          name: Deployment
+          name: deployment
           command: |
             stack install --stack-yaml stack-ci.yaml --local-bin-path .
             zip -r $ZIP_FILE ./hastile
             aws s3 cp $ZIP_FILE s3://sitewisely-codedeploy/hastile/$ZIP_FILE
+  workflows:
+    version: 2
+      all:
+        jobs:
+          - install
+          - pre
+          - compile
+          - test
+          - deployment         
