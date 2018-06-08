@@ -29,18 +29,18 @@ jobs:
       - run:
           name: pre
           command: |
-            stack setup --stack-yaml stack-ci.yaml --no-terminal
-            stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal
+            stack setup --stack-yaml stack-ci.yaml --no-terminal -j2 --fast
+            stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2 --fast
             no_output_timeout: 60m
       - run:
           name: compile
           command: |
-            stack build  --stack-yaml stack-ci.yaml --no-terminal
+            stack build  --stack-yaml stack-ci.yaml --no-terminal -j2 --fast
             no_output_timeout: 60m
       - run:
           name: test
           command: |
-            stack test  --stack-yaml stack-ci.yaml --no-terminal
+            stack test  --stack-yaml stack-ci.yaml --no-terminal -j2 --fast
             no_output_timeout: 60m
       - run:
           name: deployment
