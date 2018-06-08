@@ -30,18 +30,18 @@ jobs:
           name: pre
           no_output_timeout: 60m
           command: |
-            stack setup --stack-yaml stack-ci.yaml --no-terminal -j2 --fast
-            stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2 --fast
+            stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
+            stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
       - run:
           name: compile
           no_output_timeout: 60m
           command: |
-            stack build  --stack-yaml stack-ci.yaml --no-terminal -j2 --fast
+            stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
       - run:
           name: test
           no_output_timeout: 60m
           command: |
-            stack test  --stack-yaml stack-ci.yaml --no-terminal -j2 --fast
+            stack test  --stack-yaml stack-ci.yaml --no-terminal -j2
       - save-cache:
           key: stack-{{ checksum "stack.yaml" }}
           paths:
