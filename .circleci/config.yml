@@ -31,14 +31,17 @@ jobs:
           command: |
             stack setup --stack-yaml stack-ci.yaml --no-terminal
             stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal
+            no_output_timeout: 60m
       - run:
           name: compile
           command: |
             stack build  --stack-yaml stack-ci.yaml --no-terminal
+            no_output_timeout: 60m
       - run:
           name: test
           command: |
             stack test  --stack-yaml stack-ci.yaml --no-terminal
+            no_output_timeout: 60m
       - run:
           name: deployment
           command: |
