@@ -8,6 +8,10 @@ jobs:
       ZIP_FILE: hastile_linux_${CIRCLE_BUILD_NUM}.zip
     steps:
       - checkout
+      - restore-cache:
+          keys:
+            - stack-{{ checksum “stack.yaml” }}
+            - stack-{{checksum “stack.yaml”}}-{{checksum “project.cabal”}}
       - run:
           name: install
           command: |
