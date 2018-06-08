@@ -21,11 +21,11 @@ jobs:
       - run:
           name: install
           command: |
-            rm -rf ~/hastile/.stack-work/downloaded
-            wget https://github.com/commercialhaskell/stack/releases/download/v1.6.5/stack-1.6.5-linux-x86_64.tar.gz -O /tmp/stack.tar.gz
+            rm -rf ~/trestle/.stack-work/downloaded
+            wget https://github.com/commercialhaskell/stack/releases/download/v1.7.1/stack-1.7.1-linux-x86_64.tar.gz -O /tmp/stack.tar.gz
             mkdir /tmp/stack/
             tar -xvzf /tmp/stack.tar.gz -C /tmp/stack/
-            sudo mv /tmp/stack/stack-1.6.5-linux-x86_64/stack /usr/local/bin/stack
+            sudo mv /tmp/stack/stack-1.7.1-linux-x86_64/stack /usr/local/bin/stack
       - run:
           name: pre
           command: |
@@ -42,6 +42,14 @@ jobs:
           command: |
             stack test  --stack-yaml stack-ci.yaml --no-terminal -j2 --fast
             no_output_timeout: 60m
+      - save-cache:
+          key: stack-{{ checksum "stack.yaml" }}
+          paths:
+            - “~/.stack”
+      - restore-cache:
+          keys: stack-{{checksum "stack.yaml"}}-{{checksum "project.cabal"}}
+          paths:
+            - "~/trestle/.stack-work"
       - run:
           name: deployment
           command: |
