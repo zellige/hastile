@@ -11,7 +11,7 @@ jobs:
       - restore-cache:
           keys:
             - stack-{{ checksum "stack.yaml" }}
-            - stack-{{checksum "stack.yaml"}}-{{checksum "project.cabal"}}
+            - stack-{{checksum "stack.yaml"}}-{{checksum "hastile.cabal"}}
       - run:
           name: Install deps
           command: |
