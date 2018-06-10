@@ -10,7 +10,9 @@ jobs:
       - checkout
       - restore-cache:
           keys:
-            - stack-{{ checksum "stack.yaml" }}
+            - stack-{{ checksum "stack-ci.yaml" }}
+      - restore-cache:
+          keys:
             - stack-{{checksum "stack.yaml"}}-{{checksum "hastile.cabal"}}
       - run:
           name: Install deps
@@ -43,11 +45,11 @@ jobs:
           command: |
             stack test  --stack-yaml stack-ci.yaml --no-terminal -j2
       - save-cache:
-          key: stack-{{ checksum "stack.yaml" }}
+          key: stack-{{ checksum "stack-ci.yaml" }}
           paths:
             - “~/.stack”
-      - restore-cache:
-          keys: stack-{{checksum "stack.yaml"}}-{{checksum "project.cabal"}}
+      - save-cache:
+          key: stack-{{checksum "stack.yaml"}}-{{checksum "hastile.cabal"}}
           paths:
             - "~/trestle/.stack-work"
       - run:
