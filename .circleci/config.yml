@@ -8,10 +8,10 @@ jobs:
       - checkout
       - restore-cache:
           keys:
-            - stack{{checksum "stack-ci.yaml" }}
+            - v1-stack{{checksum "stack-ci.yaml" }}
       - restore-cache:
           keys:
-            - stack{{checksum "hastile.cabal"}}{{checksum "stack-ci.yaml"}}
+            - v1-stack{{checksum "hastile.cabal"}}{{checksum "stack-ci.yaml"}}
       - run:
           name: Install deps
           command: |
@@ -43,11 +43,11 @@ jobs:
           command: |
             stack test  --stack-yaml stack-ci.yaml --no-terminal -j2
       - save-cache:
-          key: stack{{checksum "stack-ci.yaml"}}
+          key: v1-stack{{checksum "stack-ci.yaml"}}
           paths:
             - "~/.stack"
       - save-cache:
-          key: stack{{checksum "hastile.cabal"}}{{checksum "stack-ci.yaml"}}
+          key: v1-stack{{checksum "hastile.cabal"}}{{checksum "stack-ci.yaml"}}
           paths:
             - "~/hastile/.stack-work"
       - run:
