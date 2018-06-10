@@ -4,8 +4,6 @@ jobs:
     working_directory: ~/hastile
     docker:
       - image: circleci/ruby:2.4.4
-    environment:
-      ZIP_FILE: hastile_linux_${CIRCLE_BUILD_NUM}.zip
     steps:
       - checkout
       - restore-cache:
@@ -55,6 +53,7 @@ jobs:
       - run:
           name: deployment
           command: |
+            export ZIP_FILE=hastile_linux_$CIRCLE_BUILD_NUM.zip
             stack install --stack-yaml stack-ci.yaml --local-bin-path .
             zip -r $ZIP_FILE ./hastile
             aws s3 cp $ZIP_FILE s3://sitewisely-codedeploy/hastile/$ZIP_FILE
