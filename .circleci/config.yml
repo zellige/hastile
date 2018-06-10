@@ -47,7 +47,7 @@ jobs:
       - save-cache:
           key: stack-{{ checksum "stack-ci.yaml" }}
           paths:
-            - “~/.stack”
+            - "~/.stack"
       - save-cache:
           key: stack-{{checksum "stack-ci.yaml"}}-{{checksum "hastile.cabal"}}
           paths:
