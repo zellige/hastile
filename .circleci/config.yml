@@ -51,7 +51,7 @@ jobs:
       - save-cache:
           key: stack-{{checksum "stack-ci.yaml"}}-{{checksum "hastile.cabal"}}
           paths:
-            - "~/trestle/.stack-work"
+            - "~/hastile/.stack-work"
       - run:
           name: deployment
           command: |
