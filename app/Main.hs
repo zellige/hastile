@@ -44,8 +44,7 @@ doItWithConfig cfgFile config@Types.Config{..} = do
 getWarp :: WaiWarp.Port -> Wai.Application -> IO ()
 getWarp port' app = do
   _ <- Prometheus.register PrometheusGhc.ghcMetrics
-  let application = WaiCors.cors (const $ Just policy) app
+  let policy = WaiCors.simpleCorsResourcePolicy { WaiCors.corsRequestHeaders = ["Content-Type"] }
+      application = WaiCors.cors (const $ Just policy) app
       promMiddleware = WaiPrometheus.prometheus $ WaiPrometheus.PrometheusSettings ["metrics"] True True
   WaiWarp.run port' $ promMiddleware $ application
-  where
-    policy = WaiCors.simpleCorsResourcePolicy { WaiCors.corsRequestHeaders = ["Content-Type"] }
