@@ -64,6 +64,7 @@ executable hastile
                      , optparse-generic
                      , text
                      , hasql-pool
+                     , postgresql-simple-migration
                      , prometheus-client
                      , prometheus-metrics-ghc
                      , servant-server
