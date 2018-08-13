@@ -1,0 +1,59 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/hastile
+    docker:
+      - image: circleci/ruby:2.4.4
+    steps:
+      - checkout
+      - restore-cache:
+          keys:
+            - v1-stack{{checksum "stack-ci.yaml" }}
+      - restore-cache:
+          keys:
+            - v1-stack{{checksum "hastile.cabal"}}{{checksum "stack-ci.yaml"}}
+      - run:
+          name: Install deps
+          command: |
+            sudo apt-get install -y libgmp-dev
+            sudo apt-get install -y python python-pip
+            sudo pip install awscli
+      - run:
+          name: install
+          command: |
+            rm -rf ~/trestle/.stack-work/downloaded
+            wget https://github.com/commercialhaskell/stack/releases/download/v1.7.1/stack-1.7.1-linux-x86_64.tar.gz -O /tmp/stack.tar.gz
+            mkdir /tmp/stack/
+            tar -xvzf /tmp/stack.tar.gz -C /tmp/stack/
+            sudo mv /tmp/stack/stack-1.7.1-linux-x86_64/stack /usr/local/bin/stack
+      - run:
+          name: pre
+          no_output_timeout: 60m
+          command: |
+            stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
+            stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
+      - run:
+          name: compile
+          no_output_timeout: 60m
+          command: |
+            stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
+      - run:
+          name: test
+          no_output_timeout: 60m
+          command: |
+            stack test  --stack-yaml stack-ci.yaml --no-terminal -j2
+      - save-cache:
+          key: v1-stack{{checksum "stack-ci.yaml"}}
+          paths:
+            - "~/.stack"
+      - save-cache:
+          key: v1-stack{{checksum "hastile.cabal"}}{{checksum "stack-ci.yaml"}}
+          paths:
+            - "~/hastile/.stack-work"
+      - run:
+          name: deployment
+          command: |
+            export ZIP_FILE=hastile_linux_$CIRCLE_BUILD_NUM.zip
+            stack install --stack-yaml stack-ci.yaml --local-bin-path .
+            zip -r $ZIP_FILE ./hastile
+            aws s3 cp $ZIP_FILE s3://sitewisely-codedeploy/hastile/$ZIP_FILE
