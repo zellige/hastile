@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module DB where
+module Hastile.DB where
 
 import           Control.Lens               ((^.))
 import           Control.Monad.IO.Class
@@ -25,8 +25,8 @@ import           STMContainers.Map          as STM
 
 import qualified Data.Geometry.Types.Types  as DGTT
 
-import           Tile
-import qualified Types                      as T
+import           Hastile.Tile
+import qualified Hastile.Types              as T
 
 data LayerError = LayerNotFound
 

@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Controllers where
+module Hastile.Controllers where
 
 import           Control.Lens               ((^.))
 import           Control.Monad.Error.Class
@@ -31,10 +31,10 @@ import qualified STMContainers.Map          as STM
 
 import qualified Data.Geometry.Types.Types  as DGTT
 
-import qualified DB
-import qualified Routes
-import qualified Tile                       as T
-import qualified Types                      as T
+import qualified Hastile.DB                 as DB
+import qualified Hastile.Routes             as Routes
+import qualified Hastile.Tile               as T
+import qualified Hastile.Types              as T
 
 hastileServer :: S.ServerT Routes.HastileApi T.ActionHandler
 hastileServer = returnConfiguration S.:<|> createNewLayer S.:<|> layerServer

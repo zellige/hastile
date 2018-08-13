@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Tile ( addBufferToBBox
+module Hastile.Tile ( addBufferToBBox
             , extent
             , googleToBBoxM
             , mkTile
@@ -17,7 +17,7 @@ import qualified Data.Geometry.Types.Types      as DGTT
 import qualified Data.Geospatial                as DG
 import qualified Data.Text                      as T
 
-import qualified Types                          as T
+import qualified Hastile.Types                  as T
 
 newtype TileCoord  = TileCoord Integer deriving (Show, Eq, Num)
 newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional, Ord)

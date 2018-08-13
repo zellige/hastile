@@ -18,9 +18,9 @@ import qualified Prometheus                        as Prometheus
 import qualified Prometheus.Metric.GHC             as PrometheusGhc
 import qualified STMContainers.Map                 as StmMap
 
-import qualified Config                            as Config
-import qualified Server                            as Server
-import qualified Types                             as Types
+import qualified Hastile.Config                    as Config
+import qualified Hastile.Server                    as Server
+import qualified Hastile.Types                     as Types
 
 main :: IO ()
 main = OptionsGeneric.getRecord "hastile" >>= doIt

@@ -13,7 +13,7 @@
 {-# LANGUAGE TypeOperators              #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Types where
+module Hastile.Types where
 
 import           Control.Applicative
 import           Control.Lens                 (Lens', makeLenses)
@@ -23,6 +23,8 @@ import           Data.Aeson                   as A
 import           Data.Aeson.Types             as AT
 import qualified Data.ByteString              as BS
 import           Data.ByteString.Lazy         (ByteString, fromStrict)
+import qualified Data.Geometry.Types.Simplify as DGTS
+import qualified Data.Geometry.Types.Types    as DGTT
 import qualified Data.Geospatial              as DG
 import           Data.Map.Strict              as M
 import           Data.Maybe                   (catMaybes)
@@ -34,9 +36,6 @@ import qualified Network.HTTP.Media           as HM
 import           Options.Generic
 import           Servant
 import           STMContainers.Map            as STM
-
-import qualified Data.Geometry.Types.Simplify as DGTS
-import qualified Data.Geometry.Types.Types    as DGTT
 
 defaultTileSize :: DGTT.Pixels
 defaultTileSize = 2048

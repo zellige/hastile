@@ -3,15 +3,15 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Routes where
+module Hastile.Routes where
 
 import qualified Data.ByteString           as BS
+import qualified Data.Geometry.Types.Types as DGTT
 import qualified Data.Proxy                as P
 import qualified Data.Text                 as T
 import           Servant
 
-import qualified Data.Geometry.Types.Types as DGTT
-import qualified Types                     as T
+import qualified Hastile.Types             as T
 
 type LayerName = Capture "layer" T.Text
 type Z = Capture "z" DGTT.ZoomLevel

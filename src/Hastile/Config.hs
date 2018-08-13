@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Config where
+module Hastile.Config where
 
 import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -14,7 +14,7 @@ import qualified Data.Maybe                 as M
 import           Data.Monoid
 import           System.Exit
 
-import qualified Types                      as HT
+import qualified Hastile.Types              as HT
 
 getConfig :: FilePath -> IO HT.Config
 getConfig cfgFile = do

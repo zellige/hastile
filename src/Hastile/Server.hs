@@ -3,16 +3,16 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Server where
+module Hastile.Server where
 
 import qualified Control.Monad.Trans.Reader as TR
 import qualified Network.Wai                as W
 import           Servant
 import qualified Servant.Server             as SS
 
-import           Controllers
-import           Routes
-import           Types
+import           Hastile.Controllers
+import           Hastile.Routes
+import           Hastile.Types
 
 runServer :: ServerState -> W.Application
 runServer s = serve hastileApi (createServer s)
