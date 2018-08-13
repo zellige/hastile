@@ -12,14 +12,14 @@ import qualified Servant.Server             as SS
 
 import           Hastile.Controllers
 import           Hastile.Routes
-import           Hastile.Types
+import           Hastile.Types.App          as App
 
-runServer :: ServerState -> W.Application
+runServer :: App.ServerState -> W.Application
 runServer s = serve hastileApi (createServer s)
 
-createServer :: ServerState -> Server HastileApi
+createServer :: App.ServerState -> Server HastileApi
 createServer s = SS.hoistServer hastileApi (toHandler s) hastileServer
 
 -- Natural Transformation of Types.ActionHandler.ActionHandler to Servant.Handler
-toHandler :: ServerState -> ActionHandler a -> Handler a
+toHandler :: ServerState -> App.ActionHandler a -> Handler a
 toHandler s = flip TR.runReaderT s . runActionHandler

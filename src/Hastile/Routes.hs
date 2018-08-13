@@ -11,7 +11,9 @@ import qualified Data.Proxy                as P
 import qualified Data.Text                 as T
 import           Servant
 
-import qualified Hastile.Types             as T
+import qualified Hastile.Types.Config      as Config
+import qualified Hastile.Types.Layer       as Layer
+import qualified Hastile.Types.Mime        as Mime
 
 type LayerName = Capture "layer" T.Text
 type Z = Capture "z" DGTT.ZoomLevel
@@ -20,20 +22,20 @@ type Y = Capture "y" T.Text
 type YI = Capture "y" DGTT.Pixels
 
 type HastileApi =
-  Get '[JSON] T.InputConfig
-  :<|> ReqBody '[JSON] T.LayerRequestList :> Post '[JSON] NoContent
+  Get '[JSON] Config.InputConfig
+  :<|> ReqBody '[JSON] Layer.LayerRequestList :> Post '[JSON] NoContent
   :<|> LayerApi
 
 type LayerApi =
   LayerName :>
     (
-      ReqBody '[JSON] T.LayerSettings :> Post '[JSON] NoContent
+      ReqBody '[JSON] Layer.LayerSettings :> Post '[JSON] NoContent
       :<|> Z :> X :> HastileContentApi
     )
 
 type HastileContentApi =
        YI :> "query" :> Get '[PlainText] T.Text
-  :<|> Y             :> Servant.Header "If-Modified-Since" T.Text :> Get '[T.MapboxVectorTile, T.AlreadyJSON] (Headers '[Header "Last-Modified" T.Text] BS.ByteString)
+  :<|> Y             :> Servant.Header "If-Modified-Since" T.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" T.Text] BS.ByteString)
 
 hastileApi :: P.Proxy HastileApi
 hastileApi = P.Proxy

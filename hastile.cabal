@@ -20,7 +20,10 @@ library
                      , Hastile.Routes
                      , Hastile.Server
                      , Hastile.Tile
-                     , Hastile.Types
+                     , Hastile.Types.App
+                     , Hastile.Types.Config
+                     , Hastile.Types.Layer
+                     , Hastile.Types.Mime
   build-depends:       base >= 4.8 && < 5
                      , aeson
                      , aeson-pretty
