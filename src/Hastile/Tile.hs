@@ -17,7 +17,7 @@ import qualified Data.Geometry.Types.Types      as DGTT
 import qualified Data.Geospatial                as DG
 import qualified Data.Text                      as T
 
-import qualified Hastile.Types                  as T
+import qualified Hastile.Types.Config           as Config
 
 newtype TileCoord  = TileCoord Integer deriving (Show, Eq, Num)
 newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional, Ord)
@@ -81,4 +81,4 @@ mPerPxToM (Ratio r) p = Metres $ r * fromIntegral p
 mkTile :: T.Text -> DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> DGTT.Pixels -> DGTT.Pixels -> DGTS.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
 mkTile l z xy buffer quantizePixels algo geoJson = DGM.encodeMvt <$> DGM.createMvt config geoJson
   where
-    config = DGTT.mkConfig l z xy buffer T.defaultTileSize quantizePixels algo
+    config = DGTT.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo

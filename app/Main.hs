@@ -20,25 +20,27 @@ import qualified STMContainers.Map                 as StmMap
 
 import qualified Hastile.Config                    as Config
 import qualified Hastile.Server                    as Server
-import qualified Hastile.Types                     as Types
+import qualified Hastile.Types.App                 as App
+import qualified Hastile.Types.Config              as Config
+import qualified Hastile.Types.Layer               as Layer
 
 main :: IO ()
 main = OptionsGeneric.getRecord "hastile" >>= doIt
 
-doIt :: Types.CmdLine -> IO ()
+doIt :: Config.CmdLine -> IO ()
 doIt cmdLine = do
-  let cfgFile = Types.configFile cmdLine
+  let cfgFile = Config.configFile cmdLine
   config <- Config.getConfig cfgFile
   doItWithConfig cfgFile config
 
-doItWithConfig :: FilePath -> Types.Config -> IO ()
-doItWithConfig cfgFile config@Types.Config{..} = do
-  layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Types.Layer)
-  Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Types.layerDetailsToLayer k v) k layers
+doItWithConfig :: FilePath -> Config.Config -> IO ()
+doItWithConfig cfgFile config@Config.Config{..} = do
+  layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
+  Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.layerDetailsToLayer k v) k layers
   ControlException.bracket
     (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
     HasqlPool.release
-    (\p -> getWarp _configPort (Server.runServer (Types.ServerState p _configMapnikInputPlugins cfgFile config layers)))
+    (\p -> getWarp _configPort (Server.runServer (App.ServerState p _configMapnikInputPlugins cfgFile config layers)))
   pure ()
 
 getWarp :: WaiWarp.Port -> Wai.Application -> IO ()
