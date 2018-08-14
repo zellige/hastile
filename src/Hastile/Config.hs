@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Config where
+module Hastile.Config where
 
 import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -14,9 +14,9 @@ import qualified Data.Maybe                 as M
 import           Data.Monoid
 import           System.Exit
 
-import qualified Types                      as HT
+import qualified Hastile.Types.Config       as Config
 
-getConfig :: FilePath -> IO HT.Config
+getConfig :: FilePath -> IO Config.Config
 getConfig cfgFile = do
   configBs <- LBS.readFile cfgFile
   case A.eitherDecode configBs of
@@ -25,9 +25,9 @@ getConfig cfgFile = do
       exitWith (ExitFailure 2)
     Right config -> pure (addDefaults config)
 
-addDefaults :: HT.InputConfig -> HT.Config
-addDefaults HT.InputConfig{..} =
-  HT.Config
+addDefaults :: Config.InputConfig -> Config.Config
+addDefaults Config.InputConfig{..} =
+  Config.Config
     _inputConfigPgConnection
     (M.fromMaybe 10 _inputConfigPgPoolSize)
     (M.fromMaybe 1 _inputConfigPgTimeout)

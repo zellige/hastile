@@ -14,13 +14,16 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Controllers
-                     , Config
-                     , DB
-                     , Routes
-                     , Server
-                     , Tile
-                     , Types
+  exposed-modules:     Hastile.Controllers
+                     , Hastile.Config
+                     , Hastile.DB
+                     , Hastile.Routes
+                     , Hastile.Server
+                     , Hastile.Tile
+                     , Hastile.Types.App
+                     , Hastile.Types.Config
+                     , Hastile.Types.Layer
+                     , Hastile.Types.Mime
   build-depends:       base >= 4.8 && < 5
                      , aeson
                      , aeson-pretty
@@ -64,6 +67,7 @@ executable hastile
                      , optparse-generic
                      , text
                      , hasql-pool
+                     , postgresql-simple-migration
                      , prometheus-client
                      , prometheus-metrics-ghc
                      , servant-server

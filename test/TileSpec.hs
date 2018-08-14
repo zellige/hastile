@@ -17,7 +17,7 @@ import           Test.Hspec                     (Spec, describe, it, shouldBe)
 
 
 import           Data.Geometry.Types.Simplify
-import           Tile                           (BBox (..), addBufferToBBox,
+import           Hastile.Tile                   (BBox (..), addBufferToBBox,
                                                  extent, googleToBBoxM, mkTile)
 
 spec :: Spec
