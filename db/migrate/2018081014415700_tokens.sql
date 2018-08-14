@@ -1,6 +1,10 @@
 CREATE SCHEMA IF NOT EXISTS public;
 SET search_path TO public;
 
+CREATE EXTENSION IF NOT EXISTS "plpgsql";
+CREATE EXTENSION IF NOT EXISTS "postgis";
+CREATE EXTENSION IF NOT EXISTS "hstore";
+
 CREATE TABLE tokens
 ( token varchar PRIMARY KEY
 , layers text[] default '{}'::text[]
