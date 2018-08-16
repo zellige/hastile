@@ -30,6 +30,7 @@ type HastileApi =
 
 type TokenApi =
   "token" :> Get '[JSON] [Token.Token]
+  :<|> "token" :> ReqBody '[JSON] Token.Token :> Post '[JSON] Token.Token
 
 type LayerApi =
   LayerName :>
