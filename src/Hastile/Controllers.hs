@@ -59,7 +59,7 @@ insertToken token = do
   er <- DB.insertToken "public" pool token
   case er of
     Left e         -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
-    Right maybeToken -> do
+    Right maybeToken ->
       case maybeToken of
         Just t  -> return t
         Nothing -> throwError $ S.err500 { S.errBody = "" }
