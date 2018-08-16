@@ -14,11 +14,11 @@ module Hastile.Types.Token where
 import qualified Control.Monad
 import           Data.Aeson                 as Aeson
 import qualified Data.Foldable              as Foldable
-import qualified Data.Functor.Contravariant as FC
+import qualified Data.Functor.Contravariant as Contravariant
 import           Data.Monoid                ((<>))
 import qualified Data.Text                  as Text
-import qualified Hasql.Decoders             as HD
-import qualified Hasql.Encoders             as HE
+import qualified Hasql.Decoders
+import qualified Hasql.Encoders
 
 data Token = Token
   { _tokenToken  :: Text.Text
@@ -36,14 +36,14 @@ instance Aeson.ToJSON Token where
     , "layers" .= _tokenLayers ls
     ]
 
-tokenDecoder :: HD.Row Token
+tokenDecoder :: Hasql.Decoders.Row Token
 tokenDecoder = Token
-  <$> HD.value HD.text
-  <*> HD.value
-      (HD.array $
-         HD.arrayDimension Control.Monad.replicateM $ HD.arrayValue HD.text)
+  <$> Hasql.Decoders.value Hasql.Decoders.text
+  <*> Hasql.Decoders.value
+      (Hasql.Decoders.array $
+         Hasql.Decoders.arrayDimension Control.Monad.replicateM $ Hasql.Decoders.arrayValue Hasql.Decoders.text)
 
-tokenEncoder :: HE.Params Token
+tokenEncoder :: Hasql.Encoders.Params Token
 tokenEncoder =
-  FC.contramap _tokenToken (HE.value HE.text) <>
-  FC.contramap _tokenLayers (HE.value $ HE.array (HE.arrayDimension Foldable.foldl' (HE.arrayValue HE.text)))
+  Contravariant.contramap _tokenToken (Hasql.Encoders.value Hasql.Encoders.text) <>
+  Contravariant.contramap _tokenLayers (Hasql.Encoders.value $ Hasql.Encoders.array (Hasql.Encoders.arrayDimension Foldable.foldl' (Hasql.Encoders.arrayValue Hasql.Encoders.text)))
