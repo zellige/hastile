@@ -80,7 +80,7 @@ executable hastile
   default-language:  Haskell2010
 
 executable migrate
-    hs-source-dirs:         migrate
+    hs-source-dirs:         app/migrate
     main-is:                Main.hs
     ghc-options:            -Wall -fwarn-tabs -fwarn-incomplete-uni-patterns
     default-extensions:     OverloadedStrings, CPP, LambdaCase

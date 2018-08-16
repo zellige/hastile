@@ -28,18 +28,18 @@ jobs:
             sudo mv /tmp/stack/stack-1.7.1-linux-x86_64/stack /usr/local/bin/stack
       - run:
           name: pre
-          no_output_timeout: 60m
+          no_output_timeout: 90m
           command: |
             stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
             stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
       - run:
           name: compile
-          no_output_timeout: 60m
+          no_output_timeout: 90m
           command: |
             stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
       - run:
           name: test
-          no_output_timeout: 60m
+          no_output_timeout: 90m
           command: |
             stack test  --stack-yaml stack-ci.yaml --no-terminal -j2
       - save-cache:
@@ -55,5 +55,5 @@ jobs:
           command: |
             export ZIP_FILE=hastile_linux_$CIRCLE_BUILD_NUM.zip
             stack install --stack-yaml stack-ci.yaml --local-bin-path .
-            zip -r $ZIP_FILE ./hastile
+            zip -r $ZIP_FILE ./hastile ./migrate
             aws s3 cp $ZIP_FILE s3://sitewisely-codedeploy/hastile/$ZIP_FILE
