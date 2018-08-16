@@ -68,7 +68,10 @@ deleteToken token = do
   er <- DB.deleteToken "public" pool token
   case er of
     Left e  -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
-    Right _ -> return "OK"
+    Right numberOfRowsDeleted ->
+      case numberOfRowsDeleted of
+        1 -> return "OK"
+        _ -> throwError $ S.err500 { S.errBody = "Delete failed" }
 
 layerServer :: S.ServerT Routes.LayerApi App.ActionHandler
 layerServer l = provisionLayer l S.:<|> coordsServer l
