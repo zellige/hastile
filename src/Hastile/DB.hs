@@ -90,13 +90,13 @@ isModified layer mText =
     Nothing   -> True
     Just text -> isModifiedTime layer $ parseIfModifiedSince text
 
-insertTokenQuery :: HQ.Query Token.Token (Maybe Token.Token)
+insertTokenQuery :: HQ.Query Token.Token ()
 insertTokenQuery =
-    HQ.statement sql Token.tokenEncoder (HD.maybeRow Token.tokenDecoder) False
+    HQ.statement sql Token.tokenEncoder HD.unit False
   where
-    sql = "INSERT INTO tokens (token, layers) VALUES ($1, $2) RETURNING (token, layers);"
+    sql = "INSERT INTO tokens (token, layers) VALUES ($1, $2);"
 
-insertToken :: MonadIO m => String -> P.Pool -> Token.Token -> m (Either Text.Text (Maybe Token.Token))
+insertToken :: MonadIO m => String -> P.Pool -> Token.Token -> m (Either Text.Text ())
 insertToken schemaName pool token =
   runDBeither pool action
   where

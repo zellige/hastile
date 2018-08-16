@@ -53,16 +53,13 @@ getTokens = do
     Left e         -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
     Right tokens -> return tokens
 
-insertToken :: Token.Token -> App.ActionHandler Token.Token
+insertToken :: Token.Token -> App.ActionHandler T.Text
 insertToken token = do
   pool <- RC.asks App._ssPool
   er <- DB.insertToken "public" pool token
   case er of
-    Left e         -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
-    Right maybeToken ->
-      case maybeToken of
-        Just t  -> return t
-        Nothing -> throwError $ S.err500 { S.errBody = "" }
+    Left e   -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
+    Right () -> return "OK"
 
 layerServer :: S.ServerT Routes.LayerApi App.ActionHandler
 layerServer l = provisionLayer l S.:<|> coordsServer l
