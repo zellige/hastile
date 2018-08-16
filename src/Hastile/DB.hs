@@ -109,7 +109,7 @@ deleteTokenQuery :: HQ.Query Text.Text Int.Int64
 deleteTokenQuery =
     HQ.statement sql (HE.value HE.text) HD.rowsAffected False
   where
-    sql = "DELETE FROM tokens WHERE token == $1;"
+    sql = "DELETE FROM tokens WHERE token LIKE $1;"
 
 deleteToken :: MonadIO m => String -> P.Pool -> Text.Text -> m (Either Text.Text Int.Int64)
 deleteToken schemaName pool token =
