@@ -30,6 +30,7 @@ library
                      , aeson-pretty
                      , bytestring
                      , containers
+                     , contravariant
                      , geojson
                      , hasql
                      , hasql-pool
