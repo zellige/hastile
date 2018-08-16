@@ -11,6 +11,8 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import qualified Data.Aeson                 as A
 import qualified Data.ByteString            as BS
+import qualified Data.ByteString.Char8      as BSChar8
+import qualified Data.Geometry.Types.Types  as DGTT
 import           Data.Monoid
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as TE
@@ -23,12 +25,11 @@ import qualified Hasql.Query                as HQ
 import qualified Hasql.Session              as HS
 import           STMContainers.Map          as STM
 
-import qualified Data.Geometry.Types.Types  as DGTT
-
 import           Hastile.Tile
 import qualified Hastile.Types.App          as App
 import qualified Hastile.Types.Config       as Config
 import qualified Hastile.Types.Layer        as Layer
+import qualified Hastile.Types.Token        as Token
 
 data LayerError = LayerNotFound
 
@@ -89,3 +90,35 @@ isModified layer mText =
     Nothing   -> True
     Just text -> isModifiedTime layer $ parseIfModifiedSince text
 
+getTokensQuery :: HQ.Query () [Token.Token]
+getTokensQuery =
+    HQ.statement sql HE.unit (HD.rowsList Token.tokenDecoder) False
+  where
+    sql = "SELECT token, layers FROM tokens;"
+
+getTokens :: MonadIO m => String -> P.Pool -> m (Either T.Text [Token.Token])
+getTokens schemaName pool =
+    runDBeither pool action
+  where
+    action =
+      schemaSession schemaName >>
+      HS.query () getTokensQuery
+
+runDBeither :: (MonadIO m) => P.Pool -> HS.Session b -> m (Either T.Text b)
+runDBeither hpool action = do
+  p <- liftIO $ P.use hpool action
+  case p of
+    Left e  -> pure . Left  $ T.pack (show e)
+    Right r -> pure . Right $ r
+
+mkSession :: a -> HQ.Query a b -> HS.Session b
+mkSession = HS.query
+
+emptySession :: BSChar8.ByteString -> HS.Session ()
+emptySession sql = mkSession () $ HQ.statement sql HE.unit HD.unit False
+
+withSchema :: String -> BSChar8.ByteString
+withSchema schemaName = "SET search_path TO " <> BSChar8.pack schemaName <> ";"
+
+schemaSession :: String -> HS.Session ()
+schemaSession schemaName = emptySession (withSchema schemaName)

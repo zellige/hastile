@@ -14,6 +14,7 @@ import           Servant
 import qualified Hastile.Types.Config      as Config
 import qualified Hastile.Types.Layer       as Layer
 import qualified Hastile.Types.Mime        as Mime
+import qualified Hastile.Types.Token       as Token
 
 type LayerName = Capture "layer" T.Text
 type Z = Capture "z" DGTT.ZoomLevel
@@ -24,7 +25,11 @@ type YI = Capture "y" DGTT.Pixels
 type HastileApi =
   Get '[JSON] Config.InputConfig
   :<|> ReqBody '[JSON] Layer.LayerRequestList :> Post '[JSON] NoContent
+  :<|> TokenApi
   :<|> LayerApi
+
+type TokenApi =
+  "token" :> Get '[JSON] [Token.Token]
 
 type LayerApi =
   LayerName :>
