@@ -1,11 +1,9 @@
 {-# LANGUAGE DataKinds                 #-}
-{-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FlexibleInstances         #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
-{-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TypeOperators             #-}
@@ -37,4 +35,6 @@ instance Aeson.ToJSON Token where
 tokenDecoder :: HD.Row Token
 tokenDecoder = Token
   <$> HD.value HD.text
-  <*> (HD.value $ HD.array $ HD.arrayDimension Control.Monad.replicateM $ HD.arrayValue HD.text)
+  <*> HD.value
+      (HD.array $
+         HD.arrayDimension Control.Monad.replicateM $ HD.arrayValue HD.text)
