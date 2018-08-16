@@ -57,3 +57,4 @@ jobs:
             stack install --stack-yaml stack-ci.yaml --local-bin-path .
             zip -r $ZIP_FILE ./hastile ./migrate
             aws s3 cp $ZIP_FILE s3://sitewisely-codedeploy/hastile/$ZIP_FILE
+            aws s3 cp $ZIP_FILE s3://sitewisely-codedeploy/hastile/hastile_linux_latest.zip
