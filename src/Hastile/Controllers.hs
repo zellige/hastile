@@ -10,11 +10,14 @@ import           Control.Lens               ((^.))
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
 import qualified Control.Monad.Reader.Class as RC
+import qualified Control.Monad.Reader.Class as MonadReader
 import qualified Data.Aeson                 as A
 import qualified Data.Aeson.Encode.Pretty   as AE
 import qualified Data.ByteString            as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS8
+import qualified Data.ByteString.Lazy.Char8 as LazyByteString8
 import qualified Data.Char                  as C
+import qualified Data.Geometry.Types.Types  as DGTT
 import qualified Data.Geospatial            as DG
 import           Data.Map                   as M
 import           Data.Monoid
@@ -29,18 +32,24 @@ import           Numeric.Natural            (Natural)
 import qualified Servant                    as S
 import qualified STMContainers.Map          as STM
 
-import qualified Data.Geometry.Types.Types  as DGTT
-
 import qualified Hastile.DB                 as DB
 import qualified Hastile.Routes             as Routes
 import qualified Hastile.Tile               as Tile
 import qualified Hastile.Types.App          as App
 import qualified Hastile.Types.Config       as Config
 import qualified Hastile.Types.Layer        as Layer
-
+import qualified Hastile.Types.Token        as Token
 
 hastileServer :: S.ServerT Routes.HastileApi App.ActionHandler
-hastileServer = returnConfiguration S.:<|> createNewLayer S.:<|> layerServer
+hastileServer = returnConfiguration S.:<|> createNewLayer S.:<|> tokenServer S.:<|> layerServer
+
+tokenServer :: App.ActionHandler [Token.Token]
+tokenServer = do
+  pool <- MonadReader.asks App._ssPool
+  er <- DB.getTokens "public" pool
+  case er of
+    Left e         -> throwError $ S.err500 { S.errBody = LazyByteString8.pack $ T.unpack e }
+    Right tokens -> return tokens
 
 layerServer :: S.ServerT Routes.LayerApi App.ActionHandler
 layerServer l = provisionLayer l S.:<|> coordsServer l
