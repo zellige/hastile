@@ -90,7 +90,7 @@ isModified layer mText =
     Nothing   -> True
     Just text -> isModifiedTime layer $ parseIfModifiedSince text
 
-insertTokenQuery :: HQ.Query (Token.Token) (Maybe (Token.Token))
+insertTokenQuery :: HQ.Query Token.Token (Maybe Token.Token)
 insertTokenQuery =
     HQ.statement sql Token.tokenEncoder (HD.maybeRow Token.tokenDecoder) False
   where
