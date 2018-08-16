@@ -13,6 +13,7 @@ import qualified Data.Aeson                 as Aeson
 import qualified Data.ByteString            as BS
 import qualified Data.ByteString.Char8      as BSChar8
 import qualified Data.Geometry.Types.Types  as DGTT
+import qualified Data.Int                   as Int
 import           Data.Monoid
 import qualified Data.Text                  as Text
 import qualified Data.Text.Encoding         as TE
@@ -103,6 +104,20 @@ insertToken schemaName pool token =
     action =
       schemaSession schemaName >>
       HS.query token insertTokenQuery
+
+deleteTokenQuery :: HQ.Query Text.Text Int.Int64
+deleteTokenQuery =
+    HQ.statement sql (HE.value HE.text) HD.rowsAffected False
+  where
+    sql = "DELETE FROM tokens WHERE token == $1;"
+
+deleteToken :: MonadIO m => String -> P.Pool -> Text.Text -> m (Either Text.Text Int.Int64)
+deleteToken schemaName pool token =
+  runDBeither pool action
+  where
+    action =
+      schemaSession schemaName >>
+      HS.query token deleteTokenQuery
 
 getTokensQuery :: HQ.Query () [Token.Token]
 getTokensQuery =

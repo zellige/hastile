@@ -44,6 +44,7 @@ hastileServer = returnConfiguration S.:<|> createNewLayer S.:<|> tokenServer S.:
 tokenServer :: S.ServerT Routes.TokenApi App.ActionHandler
 tokenServer = getTokens
   S.:<|> insertToken
+  S.:<|> deleteToken
 
 getTokens :: App.ActionHandler [Token.Token]
 getTokens = do
@@ -60,6 +61,14 @@ insertToken token = do
   case er of
     Left e   -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
     Right () -> return "OK"
+
+deleteToken :: T.Text -> App.ActionHandler T.Text
+deleteToken token = do
+  pool <- RC.asks App._ssPool
+  er <- DB.deleteToken "public" pool token
+  case er of
+    Left e  -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
+    Right _ -> return "OK"
 
 layerServer :: S.ServerT Routes.LayerApi App.ActionHandler
 layerServer l = provisionLayer l S.:<|> coordsServer l
