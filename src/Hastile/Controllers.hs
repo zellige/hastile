@@ -44,11 +44,10 @@ hastileServer = returnConfiguration S.:<|> createNewLayer S.:<|> tokenServer S.:
 tokenServer :: S.ServerT Routes.TokenApi App.ActionHandler
 tokenServer = getTokens
   S.:<|> getToken
-  S.:<|> insertToken
-  S.:<|> updateToken
+  S.:<|> updateOrInsertToken
   S.:<|> deleteToken
 
-getTokens :: App.ActionHandler [Token.Token]
+getTokens :: App.ActionHandler [Token.TokenLayers]
 getTokens = do
   pool <- RC.asks App._ssPool
   er <- DB.getTokens "public" pool
@@ -56,7 +55,7 @@ getTokens = do
     Left e         -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
     Right tokens -> return tokens
 
-getToken :: T.Text -> App.ActionHandler Token.Token
+getToken :: T.Text -> App.ActionHandler Token.TokenLayers
 getToken token = do
   pool <- RC.asks App._ssPool
   er <- DB.getToken "public" pool token
@@ -64,24 +63,13 @@ getToken token = do
     Left e         -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
     Right tokens -> return tokens
 
-insertToken :: Token.Token -> App.ActionHandler T.Text
-insertToken token = do
+updateOrInsertToken :: Token.TokenLayers -> App.ActionHandler T.Text
+updateOrInsertToken tokenLayers = do
   pool <- RC.asks App._ssPool
-  er <- DB.insertToken "public" pool token
+  er <- DB.updateOrInsertToken "public" pool tokenLayers
   case er of
     Left e   -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
     Right () -> return "OK"
-
-updateToken :: T.Text -> Token.Token -> App.ActionHandler T.Text
-updateToken _ token = do
-  pool <- RC.asks App._ssPool
-  er <- DB.updateToken "public" pool token
-  case er of
-    Left e  -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
-    Right numberOfRowsDeleted ->
-      case numberOfRowsDeleted of
-        1 -> return "OK"
-        _ -> throwError $ S.err500 { S.errBody = "Update failed" }
 
 deleteToken :: T.Text -> App.ActionHandler T.Text
 deleteToken token = do

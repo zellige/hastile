@@ -91,13 +91,13 @@ isModified layer mText =
     Nothing   -> True
     Just text -> isModifiedTime layer $ parseIfModifiedSince text
 
-getTokensQuery :: HQ.Query () [Token.Token]
+getTokensQuery :: HQ.Query () [Token.TokenLayers]
 getTokensQuery =
     HQ.statement sql HE.unit (HD.rowsList Token.tokenDecoder) False
   where
     sql = "SELECT token, layers FROM tokens;"
 
-getTokens :: MonadIO m => String -> P.Pool -> m (Either Text.Text [Token.Token])
+getTokens :: MonadIO m => String -> P.Pool -> m (Either Text.Text [Token.TokenLayers])
 getTokens schemaName pool =
     runDBeither pool action
   where
@@ -105,13 +105,13 @@ getTokens schemaName pool =
       schemaSession schemaName >>
       HS.query () getTokensQuery
 
-getTokenQuery :: HQ.Query Text.Text Token.Token
+getTokenQuery :: HQ.Query Text.Text Token.TokenLayers
 getTokenQuery =
     HQ.statement sql (HE.value HE.text) (HD.singleRow Token.tokenDecoder) False
   where
     sql = "SELECT token, layers FROM tokens WHERE token LIKE $1;"
 
-getToken :: MonadIO m => String -> P.Pool -> Text.Text -> m (Either Text.Text Token.Token)
+getToken :: MonadIO m => String -> P.Pool -> Text.Text -> m (Either Text.Text Token.TokenLayers)
 getToken schemaName pool token =
   runDBeither pool action
   where
@@ -119,33 +119,19 @@ getToken schemaName pool token =
       schemaSession schemaName >>
       HS.query token getTokenQuery
 
-insertTokenQuery :: HQ.Query Token.Token ()
-insertTokenQuery =
+updateOrInsertTokenQuery :: HQ.Query Token.TokenLayers ()
+updateOrInsertTokenQuery =
     HQ.statement sql Token.tokenEncoder HD.unit False
   where
-    sql = "INSERT INTO tokens (token, layers) VALUES ($1, $2);"
+    sql = "INSERT INTO tokens (token, layers) VALUES ($1, $2) ON CONFLICT (token) DO UPDATE SET layers = $2;"
 
-insertToken :: MonadIO m => String -> P.Pool -> Token.Token -> m (Either Text.Text ())
-insertToken schemaName pool token =
+updateOrInsertToken :: MonadIO m => String -> P.Pool -> Token.TokenLayers -> m (Either Text.Text ())
+updateOrInsertToken schemaName pool tokenLayers =
   runDBeither pool action
   where
     action =
       schemaSession schemaName >>
-      HS.query token insertTokenQuery
-
-updateTokenQuery :: HQ.Query Token.Token Int.Int64
-updateTokenQuery =
-    HQ.statement sql Token.tokenEncoder HD.rowsAffected False
-  where
-    sql = "UPDATE tokens SET layers = $2 WHERE token LIKE $1;"
-
-updateToken :: MonadIO m => String -> P.Pool -> Token.Token -> m (Either Text.Text Int.Int64)
-updateToken schemaName pool token =
-  runDBeither pool action
-  where
-    action =
-      schemaSession schemaName >>
-      HS.query token updateTokenQuery
+      HS.query tokenLayers updateOrInsertTokenQuery
 
 deleteTokenQuery :: HQ.Query Text.Text Int.Int64
 deleteTokenQuery =
