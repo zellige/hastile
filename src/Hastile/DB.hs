@@ -46,9 +46,9 @@ mkQuery layer z xy =
      let bboxM = googleToBBoxM Config.defaultTileSize z xy
          (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
            addBufferToBBox Config.defaultTileSize buffer z bboxM
-         bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(\
-                             \ST_MakePoint(" ++ show llX ++ ", " ++ show llY ++ "), \
-                             \ST_MakePoint(" ++ show urX ++ ", " ++ show urY ++ ")), 3857), 4326)"
+         bbox4326 = T.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint(" ++
+           show llX ++ ", " ++ show llY ++ "), ST_MakePoint(" ++ show urX ++ ", " ++
+           show urY ++ ")), 3857), 4326)"
      pure $ escape bbox4326 . Layer._layerQuery $ layer
 
 getLayer :: (MonadIO m, MonadReader App.ServerState m) => T.Text -> m (Either LayerError Layer.Layer)
