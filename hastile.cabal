@@ -15,8 +15,10 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Hastile.Controllers
+                     , Hastile.Controllers.Token
                      , Hastile.Config
                      , Hastile.DB
+                     , Hastile.DB.Token
                      , Hastile.Routes
                      , Hastile.Server
                      , Hastile.Tile

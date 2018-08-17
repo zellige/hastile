@@ -30,57 +30,16 @@ import           Numeric.Natural            (Natural)
 import qualified Servant                    as S
 import qualified STMContainers.Map          as STM
 
+import qualified Hastile.Controllers.Token  as Token
 import qualified Hastile.DB                 as DB
 import qualified Hastile.Routes             as Routes
 import qualified Hastile.Tile               as Tile
 import qualified Hastile.Types.App          as App
 import qualified Hastile.Types.Config       as Config
 import qualified Hastile.Types.Layer        as Layer
-import qualified Hastile.Types.Token        as Token
 
 hastileServer :: S.ServerT Routes.HastileApi App.ActionHandler
-hastileServer = returnConfiguration S.:<|> createNewLayer S.:<|> tokenServer S.:<|> layerServer
-
-tokenServer :: S.ServerT Routes.TokenApi App.ActionHandler
-tokenServer = getTokens
-  S.:<|> getToken
-  S.:<|> updateOrInsertToken
-  S.:<|> deleteToken
-
-getTokens :: App.ActionHandler [Token.TokenLayers]
-getTokens = do
-  pool <- RC.asks App._ssPool
-  er <- DB.getTokens "public" pool
-  case er of
-    Left e         -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
-    Right tokens -> return tokens
-
-getToken :: T.Text -> App.ActionHandler Token.TokenLayers
-getToken token = do
-  pool <- RC.asks App._ssPool
-  er <- DB.getToken "public" pool token
-  case er of
-    Left e         -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
-    Right tokens -> return tokens
-
-updateOrInsertToken :: Token.TokenLayers -> App.ActionHandler T.Text
-updateOrInsertToken tokenLayers = do
-  pool <- RC.asks App._ssPool
-  er <- DB.updateOrInsertToken "public" pool tokenLayers
-  case er of
-    Left e   -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
-    Right () -> return "OK"
-
-deleteToken :: T.Text -> App.ActionHandler T.Text
-deleteToken token = do
-  pool <- RC.asks App._ssPool
-  er <- DB.deleteToken "public" pool token
-  case er of
-    Left e  -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
-    Right numberOfRowsDeleted ->
-      case numberOfRowsDeleted of
-        1 -> return "OK"
-        _ -> throwError $ S.err500 { S.errBody = "Delete failed" }
+hastileServer = returnConfiguration S.:<|> createNewLayer S.:<|> Token.tokenServer S.:<|> layerServer
 
 layerServer :: S.ServerT Routes.LayerApi App.ActionHandler
 layerServer l = provisionLayer l S.:<|> coordsServer l
