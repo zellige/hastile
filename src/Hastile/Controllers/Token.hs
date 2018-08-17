@@ -28,7 +28,7 @@ getTokens = do
   pool <- RC.asks App._ssPool
   er <- DB.getTokens "public" pool
   case er of
-    Left e         -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
+    Left e       -> defaultErrorHandler e
     Right tokens -> return tokens
 
 getToken :: T.Text -> App.ActionHandler Token.TokenLayers
@@ -36,7 +36,7 @@ getToken token = do
   pool <- RC.asks App._ssPool
   er <- DB.getToken "public" pool token
   case er of
-    Left e         -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
+    Left e       -> defaultErrorHandler e
     Right tokens -> return tokens
 
 updateOrInsertToken :: Token.TokenLayers -> App.ActionHandler T.Text
@@ -44,7 +44,7 @@ updateOrInsertToken tokenLayers = do
   pool <- RC.asks App._ssPool
   er <- DB.updateOrInsertToken "public" pool tokenLayers
   case er of
-    Left e   -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
+    Left e   -> defaultErrorHandler e
     Right () -> return "OK"
 
 deleteToken :: T.Text -> App.ActionHandler T.Text
@@ -52,8 +52,11 @@ deleteToken token = do
   pool <- RC.asks App._ssPool
   er <- DB.deleteToken "public" pool token
   case er of
-    Left e  -> throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
+    Left e  -> defaultErrorHandler e
     Right numberOfRowsDeleted ->
       case numberOfRowsDeleted of
         1 -> return "OK"
-        _ -> throwError $ S.err500 { S.errBody = "Delete failed" }
+        _ -> defaultErrorHandler "Delete failed"
+
+defaultErrorHandler :: MonadError S.ServantErr m => T.Text -> m a
+defaultErrorHandler e =  throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
