@@ -45,5 +45,5 @@ tokenDecoder = Token
 
 tokenEncoder :: Hasql.Encoders.Params Token
 tokenEncoder =
-  Contravariant.contramap _tokenToken (Hasql.Encoders.value Hasql.Encoders.text) <>
-  Contravariant.contramap _tokenLayers (Hasql.Encoders.value $ Hasql.Encoders.array (Hasql.Encoders.arrayDimension Foldable.foldl' (Hasql.Encoders.arrayValue Hasql.Encoders.text)))
+  Contravariant.contramap _tokenToken (Hasql.Encoders.value Hasql.Encoders.text)
+  <> Contravariant.contramap _tokenLayers (Hasql.Encoders.value $ Hasql.Encoders.array (Hasql.Encoders.arrayDimension Foldable.foldl' (Hasql.Encoders.arrayValue Hasql.Encoders.text)))

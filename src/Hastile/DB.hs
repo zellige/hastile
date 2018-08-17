@@ -91,6 +91,34 @@ isModified layer mText =
     Nothing   -> True
     Just text -> isModifiedTime layer $ parseIfModifiedSince text
 
+getTokensQuery :: HQ.Query () [Token.Token]
+getTokensQuery =
+    HQ.statement sql HE.unit (HD.rowsList Token.tokenDecoder) False
+  where
+    sql = "SELECT token, layers FROM tokens;"
+
+getTokens :: MonadIO m => String -> P.Pool -> m (Either Text.Text [Token.Token])
+getTokens schemaName pool =
+    runDBeither pool action
+  where
+    action =
+      schemaSession schemaName >>
+      HS.query () getTokensQuery
+
+getTokenQuery :: HQ.Query Text.Text Token.Token
+getTokenQuery =
+    HQ.statement sql (HE.value HE.text) (HD.singleRow Token.tokenDecoder) False
+  where
+    sql = "SELECT token, layers FROM tokens WHERE token LIKE $1;"
+
+getToken :: MonadIO m => String -> P.Pool -> Text.Text -> m (Either Text.Text Token.Token)
+getToken schemaName pool token =
+  runDBeither pool action
+  where
+    action =
+      schemaSession schemaName >>
+      HS.query token getTokenQuery
+
 insertTokenQuery :: HQ.Query Token.Token ()
 insertTokenQuery =
     HQ.statement sql Token.tokenEncoder HD.unit False
@@ -105,6 +133,20 @@ insertToken schemaName pool token =
       schemaSession schemaName >>
       HS.query token insertTokenQuery
 
+updateTokenQuery :: HQ.Query Token.Token Int.Int64
+updateTokenQuery =
+    HQ.statement sql Token.tokenEncoder HD.rowsAffected False
+  where
+    sql = "UPDATE tokens SET layers = $2 WHERE token LIKE $1;"
+
+updateToken :: MonadIO m => String -> P.Pool -> Token.Token -> m (Either Text.Text Int.Int64)
+updateToken schemaName pool token =
+  runDBeither pool action
+  where
+    action =
+      schemaSession schemaName >>
+      HS.query token updateTokenQuery
+
 deleteTokenQuery :: HQ.Query Text.Text Int.Int64
 deleteTokenQuery =
     HQ.statement sql (HE.value HE.text) HD.rowsAffected False
@@ -118,20 +160,6 @@ deleteToken schemaName pool token =
     action =
       schemaSession schemaName >>
       HS.query token deleteTokenQuery
-
-getTokensQuery :: HQ.Query () [Token.Token]
-getTokensQuery =
-    HQ.statement sql HE.unit (HD.rowsList Token.tokenDecoder) False
-  where
-    sql = "SELECT token, layers FROM tokens;"
-
-getTokens :: MonadIO m => String -> P.Pool -> m (Either Text.Text [Token.Token])
-getTokens schemaName pool =
-    runDBeither pool action
-  where
-    action =
-      schemaSession schemaName >>
-      HS.query () getTokensQuery
 
 runDBeither :: (MonadIO m) => P.Pool -> HS.Session b -> m (Either Text.Text b)
 runDBeither hpool action = do
