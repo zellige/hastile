@@ -24,8 +24,8 @@ type YI = Capture "y" DGTT.Pixels
 
 type HastileApi =
   Get '[JSON] Config.InputConfig
-  :<|> ReqBody '[JSON] Layer.LayerRequestList :> Post '[JSON] NoContent
   :<|> TokenApi
+  :<|> ReqBody '[JSON] Layer.LayerRequestList :> Post '[JSON] NoContent
   :<|> LayerApi
 
 type TokenApi =

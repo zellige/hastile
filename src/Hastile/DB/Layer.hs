@@ -4,14 +4,13 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Hastile.DB where
+module Hastile.DB.Layer where
 
 import           Control.Lens               ((^.))
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import qualified Data.Aeson                 as Aeson
 import qualified Data.ByteString            as BS
-import qualified Data.ByteString.Char8      as BSChar8
 import qualified Data.Geometry.Types.Types  as DGTT
 import           Data.Monoid
 import qualified Data.Text                  as Text
@@ -88,22 +87,3 @@ isModified layer mText =
   case mText of
     Nothing   -> True
     Just text -> isModifiedTime layer $ parseIfModifiedSince text
-
-runDBeither :: (MonadIO m) => P.Pool -> HS.Session b -> m (Either Text.Text b)
-runDBeither hpool action = do
-  p <- liftIO $ P.use hpool action
-  case p of
-    Left e  -> pure . Left  $ Text.pack (show e)
-    Right r -> pure . Right $ r
-
-mkSession :: a -> HQ.Query a b -> HS.Session b
-mkSession = HS.query
-
-emptySession :: BSChar8.ByteString -> HS.Session ()
-emptySession sql = mkSession () $ HQ.statement sql HE.unit HD.unit False
-
-withSchema :: String -> BSChar8.ByteString
-withSchema schemaName = "SET search_path TO " <> BSChar8.pack schemaName <> ";"
-
-schemaSession :: String -> HS.Session ()
-schemaSession schemaName = emptySession (withSchema schemaName)

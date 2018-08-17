@@ -7,17 +7,17 @@
 module Hastile.DB.Token where
 
 import           Control.Monad.IO.Class
+import qualified Data.ByteString.Char8  as BSChar8
 import qualified Data.Int               as Int
+import           Data.Monoid
 import qualified Data.Text              as Text
 import qualified Hasql.Decoders         as HD
 import qualified Hasql.Encoders         as HE
 import qualified Hasql.Pool             as P
 import qualified Hasql.Query            as HQ
 import qualified Hasql.Session          as HS
-import qualified Hastile.DB             as DB
 
 import qualified Hastile.Types.Token    as Token
-
 
 getTokensQuery :: HQ.Query () [Token.TokenLayers]
 getTokensQuery =
@@ -27,10 +27,10 @@ getTokensQuery =
 
 getTokens :: MonadIO m => String -> P.Pool -> m (Either Text.Text [Token.TokenLayers])
 getTokens schemaName pool =
-    DB.runDBeither pool action
+    runDBeither pool action
   where
     action =
-      DB.schemaSession schemaName >>
+      schemaSession schemaName >>
       HS.query () getTokensQuery
 
 getTokenQuery :: HQ.Query Text.Text Token.TokenLayers
@@ -41,10 +41,10 @@ getTokenQuery =
 
 getToken :: MonadIO m => String -> P.Pool -> Text.Text -> m (Either Text.Text Token.TokenLayers)
 getToken schemaName pool token =
-  DB.runDBeither pool action
+  runDBeither pool action
   where
     action =
-      DB.schemaSession schemaName >>
+      schemaSession schemaName >>
       HS.query token getTokenQuery
 
 updateOrInsertTokenQuery :: HQ.Query Token.TokenLayers ()
@@ -55,10 +55,10 @@ updateOrInsertTokenQuery =
 
 updateOrInsertToken :: MonadIO m => String -> P.Pool -> Token.TokenLayers -> m (Either Text.Text ())
 updateOrInsertToken schemaName pool tokenLayers =
-  DB.runDBeither pool action
+  runDBeither pool action
   where
     action =
-      DB.schemaSession schemaName >>
+      schemaSession schemaName >>
       HS.query tokenLayers updateOrInsertTokenQuery
 
 deleteTokenQuery :: HQ.Query Text.Text Int.Int64
@@ -69,8 +69,28 @@ deleteTokenQuery =
 
 deleteToken :: MonadIO m => String -> P.Pool -> Text.Text -> m (Either Text.Text Int.Int64)
 deleteToken schemaName pool token =
-  DB.runDBeither pool action
+  runDBeither pool action
   where
     action =
-      DB.schemaSession schemaName >>
+      schemaSession schemaName >>
       HS.query token deleteTokenQuery
+
+
+runDBeither :: (MonadIO m) => P.Pool -> HS.Session b -> m (Either Text.Text b)
+runDBeither hpool action = do
+  p <- liftIO $ P.use hpool action
+  case p of
+    Left e  -> pure . Left  $ Text.pack (show e)
+    Right r -> pure . Right $ r
+
+mkSession :: a -> HQ.Query a b -> HS.Session b
+mkSession = HS.query
+
+emptySession :: BSChar8.ByteString -> HS.Session ()
+emptySession sql = mkSession () $ HQ.statement sql HE.unit HD.unit False
+
+withSchema :: String -> BSChar8.ByteString
+withSchema schemaName = "SET search_path TO " <> BSChar8.pack schemaName <> ";"
+
+schemaSession :: String -> HS.Session ()
+schemaSession schemaName = emptySession (withSchema schemaName)
