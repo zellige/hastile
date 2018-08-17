@@ -29,7 +29,7 @@ arg_check () {
 }
 
 migrate_cmd () {
-  if [ "$CIRCLECI" == "true" ]; then 
+  if [ -z "$CIRCLECI" ] && [ "$CIRCLECI" == "true" ]; then 
     migrate $1 $2 $3
   else
     stack exec -- migrate $1 $2 $3

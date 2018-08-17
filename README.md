@@ -43,7 +43,7 @@ Set up tokens database
 ----------------------
 
 * Create a postgres database to store the tokens table:
-  `sudo -u postgres createdb -O sa db_name`
+  `createdb -O sa db_name`
 If you don't have the `createdb` utility then use the `migration` tool :  
   `./db/migration createdb db_name sa`
 * Initialize the DB :  
