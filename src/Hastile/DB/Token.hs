@@ -75,7 +75,6 @@ deleteToken schemaName pool token =
       schemaSession schemaName >>
       HS.query token deleteTokenQuery
 
-
 runDBeither :: (MonadIO m) => P.Pool -> HS.Session b -> m (Either Text.Text b)
 runDBeither hpool action = do
   p <- liftIO $ P.use hpool action
