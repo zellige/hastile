@@ -30,10 +30,9 @@ type HastileApi =
 
 type TokenApi =
   "token" :>
-  (    Get '[JSON] [Token.Token]
-  :<|> Capture "token" Text.Text :> Get '[JSON] Token.Token
-  :<|> ReqBody '[JSON] Token.Token :> Post '[JSON] Text.Text
-  :<|> Capture "token" Text.Text :> ReqBody '[JSON] Token.Token :> Put '[JSON] Text.Text
+  (    Get '[JSON] [Token.TokenLayers]
+  :<|> Capture "token" Text.Text :> Get '[JSON] Token.TokenLayers
+  :<|> ReqBody '[JSON] Token.TokenLayers :> Post '[JSON] Text.Text
   :<|> Capture "token" Text.Text :> Delete '[JSON] Text.Text
   )
 

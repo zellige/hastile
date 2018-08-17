@@ -20,30 +20,36 @@ import qualified Data.Text                  as Text
 import qualified Hasql.Decoders
 import qualified Hasql.Encoders
 
-data Token = Token
-  { _tokenToken  :: Text.Text
-  , _tokenLayers :: [Text.Text]
+data TokenLayers = TokenLayers
+  { _token  :: Token
+  , _layers :: Layers
   } deriving (Show, Eq)
 
-instance Aeson.FromJSON Token where
-  parseJSON = withObject "Token" $ \o -> Token
+type Token = Text.Text
+
+type Layers = [Layer]
+
+type Layer = Text.Text
+
+instance Aeson.FromJSON TokenLayers where
+  parseJSON = withObject "TokenLayers" $ \o -> TokenLayers
     <$> o .: "token"
     <*> o .: "layers"
 
-instance Aeson.ToJSON Token where
+instance Aeson.ToJSON TokenLayers where
   toJSON ls = object
-    [ "token"  .= _tokenToken ls
-    , "layers" .= _tokenLayers ls
+    [ "token"  .= _token ls
+    , "layers" .= _layers ls
     ]
 
-tokenDecoder :: Hasql.Decoders.Row Token
-tokenDecoder = Token
+tokenDecoder :: Hasql.Decoders.Row TokenLayers
+tokenDecoder = TokenLayers
   <$> Hasql.Decoders.value Hasql.Decoders.text
   <*> Hasql.Decoders.value
       (Hasql.Decoders.array $
          Hasql.Decoders.arrayDimension Control.Monad.replicateM $ Hasql.Decoders.arrayValue Hasql.Decoders.text)
 
-tokenEncoder :: Hasql.Encoders.Params Token
+tokenEncoder :: Hasql.Encoders.Params TokenLayers
 tokenEncoder =
-  Contravariant.contramap _tokenToken (Hasql.Encoders.value Hasql.Encoders.text)
-  <> Contravariant.contramap _tokenLayers (Hasql.Encoders.value $ Hasql.Encoders.array (Hasql.Encoders.arrayDimension Foldable.foldl' (Hasql.Encoders.arrayValue Hasql.Encoders.text)))
+  Contravariant.contramap _token (Hasql.Encoders.value Hasql.Encoders.text)
+  <> Contravariant.contramap _layers (Hasql.Encoders.value $ Hasql.Encoders.array (Hasql.Encoders.arrayDimension Foldable.foldl' (Hasql.Encoders.arrayValue Hasql.Encoders.text)))
