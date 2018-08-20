@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE LambdaCase                #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
@@ -14,7 +15,7 @@
 module Hastile.Types.Layer where
 
 import           Control.Applicative
-import           Data.Aeson                   as A
+import qualified Data.Aeson                   as Aeson
 import           Data.Aeson.Types             as AT
 import qualified Data.Geometry.Types.Simplify as DGTS
 import qualified Data.Geometry.Types.Types    as DGTT
@@ -31,33 +32,55 @@ data NewLayerRequest = NewLayerRequest
 
 newtype LayerRequestList = LayerRequestList [NewLayerRequest]
 
-instance FromJSON LayerRequestList where
-    parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . M.toList) Control.Applicative.<$> parseJSON v
+instance Aeson.FromJSON LayerRequestList where
+  parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . M.toList) Control.Applicative.<$> parseJSON v
 
 data LayerSettings = LayerSettings
-  { _lsQuery      :: Text
+  { _lsSecurity   :: LayerSecurity
+  , _lsQuery      :: Text
   , _lsQuantize   :: DGTT.Pixels
   , _lsAlgorithms :: Algorithms
   } deriving (Show, Eq)
 
-instance FromJSON LayerSettings where
+data LayerSecurity = LayerSecurityPublic | LayerSecurityPrivate deriving (Eq)
+
+instance Show LayerSecurity where
+  show LayerSecurityPublic  = "public"
+  show LayerSecurityPrivate = "private"
+
+instance Aeson.FromJSON LayerSecurity where
+  parseJSON = withText "LayerSecurity" $ \case
+    "public"  -> pure LayerSecurityPublic
+    "private" -> pure LayerSecurityPrivate
+    _         -> fail "Unknown layer security"
+
+instance Aeson.ToJSON LayerSecurity where
+  toJSON algo =
+    Aeson.String $ case algo of
+      LayerSecurityPublic  -> "public"
+      LayerSecurityPrivate -> "private"
+
+instance Aeson.FromJSON LayerSettings where
   parseJSON = withObject "LayerSettings" $ \o -> LayerSettings
-    <$> o .: "query"
+    <$> o .:? "security" .!= LayerSecurityPrivate
+    <*> o .: "query"
     <*> o .: "quantize"
     <*> o .: "simplify"
 
-instance ToJSON LayerSettings where
+instance Aeson.ToJSON LayerSettings where
   toJSON ls = object
-    [ "query"    .= _lsQuery ls
+    [ "security" .= _lsSecurity ls
+    , "query"    .= _lsQuery ls
     , "quantize" .= _lsQuantize ls
     , "simplify" .= _lsAlgorithms ls
     ]
 
 requestToLayer :: Text -> LayerSettings -> DT.UTCTime -> Layer
-requestToLayer layerName (LayerSettings query quantize simplify) time = Layer layerName query time quantize simplify
+requestToLayer layerName (LayerSettings security query quantize simplify) time = Layer layerName security query time quantize simplify
 
 data Layer = Layer
   { _layerName         :: Text
+  , _layerSecurity     :: LayerSecurity
   , _layerQuery        :: Text
   , _layerLastModified :: DT.UTCTime
   , _layerQuantize     :: DGTT.Pixels
@@ -65,32 +88,35 @@ data Layer = Layer
   } deriving (Show, Eq, Generic)
 
 data LayerDetails = LayerDetails
-  { _layerDetailsQuery        :: Text
+  { _layerDetailsSecurity     :: LayerSecurity
+  , _layerDetailsQuery        :: Text
   , _layerDetailsLastModified :: DT.UTCTime
   , _layerDetailsQuantize     :: DGTT.Pixels
   , _layerDetailsAlgorithms   :: Algorithms
   } deriving (Show, Eq, Generic)
 
-instance FromJSON LayerDetails where
+instance Aeson.FromJSON LayerDetails where
   parseJSON = withObject "Layer" $ \o -> LayerDetails
-    <$> o .: "query"
+    <$> o .:? "security" .!= LayerSecurityPrivate
+    <*> o .: "query"
     <*> o .: "last-modified"
     <*> o .: "quantize"
     <*> o .: "simplify"
 
-instance ToJSON LayerDetails where
+instance Aeson.ToJSON LayerDetails where
   toJSON l = object
-    [ "query"         .= _layerDetailsQuery l
+    [ "security"      .= _layerDetailsSecurity l
+    , "query"         .= _layerDetailsQuery l
     , "last-modified" .= _layerDetailsLastModified l
     , "quantize"      .= _layerDetailsQuantize l
     , "simplify"      .= _layerDetailsAlgorithms l
     ]
 
 layerDetailsToLayer :: Text -> LayerDetails -> Layer
-layerDetailsToLayer name LayerDetails{..} = Layer name _layerDetailsQuery _layerDetailsLastModified _layerDetailsQuantize _layerDetailsAlgorithms
+layerDetailsToLayer name LayerDetails{..} = Layer name _layerDetailsSecurity _layerDetailsQuery _layerDetailsLastModified _layerDetailsQuantize _layerDetailsAlgorithms
 
 layerToLayerDetails :: Layer -> LayerDetails
-layerToLayerDetails Layer{..} = LayerDetails _layerQuery _layerLastModified _layerQuantize _layerAlgorithms
+layerToLayerDetails Layer{..} = LayerDetails _layerSecurity _layerQuery _layerLastModified _layerQuantize _layerAlgorithms
 
 -- Zoom dependant simplification algorithms
 
