@@ -5,16 +5,16 @@
 
 module Hastile.Routes where
 
-import qualified Data.ByteString           as BS
-import qualified Data.Geometry.Types.Types as DGTT
-import qualified Data.Proxy                as P
-import qualified Data.Text                 as Text
+import qualified Data.ByteString               as BS
+import qualified Data.Geometry.Types.Geography as DGTT
+import qualified Data.Proxy                    as P
+import qualified Data.Text                     as Text
 import           Servant
 
-import qualified Hastile.Types.Config      as Config
-import qualified Hastile.Types.Layer       as Layer
-import qualified Hastile.Types.Mime        as Mime
-import qualified Hastile.Types.Token       as Token
+import qualified Hastile.Types.Config          as Config
+import qualified Hastile.Types.Layer           as Layer
+import qualified Hastile.Types.Mime            as Mime
+import qualified Hastile.Types.Token           as Token
 
 type LayerName = Capture "layer" Text.Text
 type Z = Capture "z" DGTT.ZoomLevel

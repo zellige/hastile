@@ -15,15 +15,15 @@
 
 module Hastile.Types.Config where
 
-import           Control.Lens              (makeLenses)
-import           Data.Aeson                as A
-import qualified Data.Geometry.Types.Types as DGTT
-import           Data.Map.Strict           as M
-import           Data.Maybe                (catMaybes)
-import qualified Data.Time                 as DT
+import           Control.Lens                  (makeLenses)
+import           Data.Aeson                    as A
+import qualified Data.Geometry.Types.Geography as DGTT
+import           Data.Map.Strict               as M
+import           Data.Maybe                    (catMaybes)
+import qualified Data.Time                     as DT
 import           Options.Generic
 
-import qualified Hastile.Types.Layer       as Layer
+import qualified Hastile.Types.Layer           as Layer
 
 data InputConfig = InputConfig
   { _inputConfigPgConnection       :: Text
