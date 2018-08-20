@@ -6,36 +6,36 @@
 
 module Hastile.Controllers.Layer where
 
-import           Control.Lens               ((^.))
+import           Control.Lens                  ((^.))
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
-import qualified Control.Monad.Reader.Class as RC
-import qualified Data.Aeson                 as A
-import qualified Data.Aeson.Encode.Pretty   as AE
-import qualified Data.ByteString            as BS
-import qualified Data.ByteString.Lazy.Char8 as LBS8
-import qualified Data.Char                  as C
-import qualified Data.Geometry.Types.Types  as DGTT
-import qualified Data.Geospatial            as DG
-import           Data.Map                   as M
+import qualified Control.Monad.Reader.Class    as RC
+import qualified Data.Aeson                    as A
+import qualified Data.Aeson.Encode.Pretty      as AE
+import qualified Data.ByteString               as BS
+import qualified Data.ByteString.Lazy.Char8    as LBS8
+import qualified Data.Char                     as C
+import qualified Data.Geometry.Types.Geography as DGTT
+import qualified Data.Geospatial               as DG
+import           Data.Map                      as M
 import           Data.Monoid
-import qualified Data.Text                  as T
-import qualified Data.Text.Encoding         as TE
-import qualified Data.Text.Read             as DTR
+import qualified Data.Text                     as T
+import qualified Data.Text.Encoding            as TE
+import qualified Data.Text.Read                as DTR
 import           Data.Time
 import           GHC.Conc
 import           ListT
-import           Network.HTTP.Types.Header  (hLastModified)
-import           Numeric.Natural            (Natural)
+import           Network.HTTP.Types.Header     (hLastModified)
+import           Numeric.Natural               (Natural)
 import qualified Servant
-import qualified STMContainers.Map          as STMMap
+import qualified STMContainers.Map             as STMMap
 
-import qualified Hastile.DB.Layer           as DBLayer
-import qualified Hastile.Routes             as Routes
-import qualified Hastile.Tile               as Tile
-import qualified Hastile.Types.App          as App
-import qualified Hastile.Types.Config       as Config
-import qualified Hastile.Types.Layer        as Layer
+import qualified Hastile.DB.Layer              as DBLayer
+import qualified Hastile.Routes                as Routes
+import qualified Hastile.Tile                  as Tile
+import qualified Hastile.Types.App             as App
+import qualified Hastile.Types.Config          as Config
+import qualified Hastile.Types.Layer           as Layer
 
 
 layerServer :: Servant.ServerT Routes.LayerApi App.ActionHandler

@@ -12,8 +12,9 @@ module Hastile.Tile ( addBufferToBBox
 import qualified Data.Aeson                     as A
 import qualified Data.ByteString.Char8          as BS8
 import qualified Data.Geometry.MapnikVectorTile as DGM
+import qualified Data.Geometry.Types.Config     as DGTC
+import qualified Data.Geometry.Types.Geography  as DGTT
 import qualified Data.Geometry.Types.Simplify   as DGTS
-import qualified Data.Geometry.Types.Types      as DGTT
 import qualified Data.Geospatial                as DG
 import qualified Data.Text                      as T
 
@@ -81,4 +82,4 @@ mPerPxToM (Ratio r) p = Metres $ r * fromIntegral p
 mkTile :: T.Text -> DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> DGTT.Pixels -> DGTT.Pixels -> DGTS.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
 mkTile l z xy buffer quantizePixels algo geoJson = DGM.encodeMvt <$> DGM.createMvt config geoJson
   where
-    config = DGTT.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo
+    config = DGTC.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo

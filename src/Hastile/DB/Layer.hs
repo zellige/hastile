@@ -6,28 +6,28 @@
 
 module Hastile.DB.Layer where
 
-import           Control.Lens               ((^.))
+import           Control.Lens                  ((^.))
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
-import qualified Data.Aeson                 as Aeson
-import qualified Data.ByteString            as BS
-import qualified Data.Geometry.Types.Types  as DGTT
+import qualified Data.Aeson                    as Aeson
+import qualified Data.ByteString               as BS
+import qualified Data.Geometry.Types.Geography as DGTT
 import           Data.Monoid
-import qualified Data.Text                  as Text
-import qualified Data.Text.Encoding         as TE
-import qualified Data.Time                  as DT
+import qualified Data.Text                     as Text
+import qualified Data.Text.Encoding            as TE
+import qualified Data.Time                     as DT
 import           GHC.Conc
-import qualified Hasql.Decoders             as HD
-import qualified Hasql.Encoders             as HE
-import qualified Hasql.Pool                 as P
-import qualified Hasql.Query                as HQ
-import qualified Hasql.Session              as HS
-import           STMContainers.Map          as STM
+import qualified Hasql.Decoders                as HD
+import qualified Hasql.Encoders                as HE
+import qualified Hasql.Pool                    as P
+import qualified Hasql.Query                   as HQ
+import qualified Hasql.Session                 as HS
+import           STMContainers.Map             as STM
 
 import           Hastile.Tile
-import qualified Hastile.Types.App          as App
-import qualified Hastile.Types.Config       as Config
-import qualified Hastile.Types.Layer        as Layer
+import qualified Hastile.Types.App             as App
+import qualified Hastile.Types.Config          as Config
+import qualified Hastile.Types.Layer           as Layer
 
 data LayerError = LayerNotFound
 

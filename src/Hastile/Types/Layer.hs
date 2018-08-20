@@ -15,14 +15,14 @@
 module Hastile.Types.Layer where
 
 import           Control.Applicative
-import qualified Data.Aeson                   as Aeson
-import           Data.Aeson.Types             as AT
-import qualified Data.Geometry.Types.Simplify as DGTS
-import qualified Data.Geometry.Types.Types    as DGTT
-import qualified Data.Geospatial              as DG
-import           Data.Map.Strict              as M
-import qualified Data.Text                    as T
-import qualified Data.Time                    as DT
+import qualified Data.Aeson                    as Aeson
+import           Data.Aeson.Types              as AT
+import qualified Data.Geometry.Types.Geography as DGTT
+import qualified Data.Geometry.Types.Simplify  as DGTS
+import qualified Data.Geospatial               as DG
+import           Data.Map.Strict               as M
+import qualified Data.Text                     as T
+import qualified Data.Time                     as DT
 import           Options.Generic
 
 data NewLayerRequest = NewLayerRequest

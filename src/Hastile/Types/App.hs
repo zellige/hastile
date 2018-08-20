@@ -15,17 +15,17 @@
 
 module Hastile.Types.App where
 
-import           Control.Lens              (Lens', makeLenses)
-import           Control.Monad.Except      (MonadError)
-import           Control.Monad.Reader      (MonadIO, MonadReader, ReaderT)
-import qualified Data.Geometry.Types.Types as DGTT
-import           Hasql.Pool                as P
+import           Control.Lens                  (Lens', makeLenses)
+import           Control.Monad.Except          (MonadError)
+import           Control.Monad.Reader          (MonadIO, MonadReader, ReaderT)
+import qualified Data.Geometry.Types.Geography as DGTT
+import           Hasql.Pool                    as P
 import           Options.Generic
 import           Servant
-import           STMContainers.Map         as STM
+import           STMContainers.Map             as STM
 
-import qualified Hastile.Types.Config      as Config
-import qualified Hastile.Types.Layer       as Layer
+import qualified Hastile.Types.Config          as Config
+import qualified Hastile.Types.Layer           as Layer
 
 data ServerState = ServerState
   { _ssPool           :: P.Pool
