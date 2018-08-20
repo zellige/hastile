@@ -19,6 +19,7 @@ import           Control.Lens              (Lens', makeLenses)
 import           Control.Monad.Except      (MonadError)
 import           Control.Monad.Reader      (MonadIO, MonadReader, ReaderT)
 import qualified Data.Geometry.Types.Types as DGTT
+import qualified Data.LruCache.IO          as LRU
 import           Hasql.Pool                as P
 import           Options.Generic
 import           Servant
@@ -26,13 +27,15 @@ import           STMContainers.Map         as STM
 
 import qualified Hastile.Types.Config      as Config
 import qualified Hastile.Types.Layer       as Layer
+import qualified Hastile.Types.Token       as Token
 
 data ServerState = ServerState
-  { _ssPool           :: P.Pool
-  , _ssPluginDir      :: FilePath
-  , _ssConfigFile     :: FilePath
-  , _ssOriginalConfig :: Config.Config
-  , _ssStateLayers    :: STM.Map Text Layer.Layer
+  { _ssPool                    :: P.Pool
+  , _ssPluginDir               :: FilePath
+  , _ssConfigFile              :: FilePath
+  , _ssOriginalConfig          :: Config.Config
+  , _ssStateLayers             :: STM.Map Text Layer.Layer
+  , _ssTokenAuthorisationCache :: LRU.LruHandle Token.Token Token.Layers
   }
 
 makeLenses ''ServerState

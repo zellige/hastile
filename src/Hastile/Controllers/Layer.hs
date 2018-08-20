@@ -17,6 +17,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.Char                  as C
 import qualified Data.Geometry.Types.Types  as DGTT
 import qualified Data.Geospatial            as DG
+import qualified Data.LruCache.IO           as LRU
 import           Data.Map                   as M
 import           Data.Monoid
 import qualified Data.Text                  as T
@@ -24,6 +25,7 @@ import qualified Data.Text.Encoding         as TE
 import qualified Data.Text.Read             as DTR
 import           Data.Time
 import           GHC.Conc
+import qualified Hasql.Pool                 as HP
 import           ListT
 import           Network.HTTP.Types.Header  (hLastModified)
 import           Numeric.Natural            (Natural)
@@ -37,6 +39,7 @@ import qualified Hastile.Tile               as Tile
 import qualified Hastile.Types.App          as App
 import qualified Hastile.Types.Config       as Config
 import qualified Hastile.Types.Layer        as Layer
+import qualified Hastile.Types.Token        as Token
 
 layerServer :: Servant.ServerT Routes.LayerApi App.ActionHandler
 layerServer l = provisionLayer l Servant.:<|> coordsServer l
@@ -86,15 +89,20 @@ servePrivateLayer z x stringY maybeToken maybeIfModified layer =
   case maybeToken of
     Just token -> do
       pool <- RC.asks App._ssPool
-      er <- DBToken.getToken "public" pool token
-      case er of
-        Left _           -> throwError layerNotFoundError
-        Right foundLayers ->
-          if Layer._layerName layer `elem` foundLayers
-            then getContent z x stringY maybeIfModified layer
-            else throwError layerNotFoundError
+      cache <- RC.asks App._ssTokenAuthorisationCache
+      foundLayers <- liftIO $ LRU.cached cache token (fetchAuthorisedLayersForToken pool token)
+      if Layer._layerName layer `elem` foundLayers
+        then getContent z x stringY maybeIfModified layer
+        else throwError layerNotFoundError
     Nothing ->
       throwError layerNotFoundError
+
+fetchAuthorisedLayersForToken :: MonadIO m => HP.Pool -> T.Text -> m [Token.Layer]
+fetchAuthorisedLayersForToken pool token = do
+  er <- DBToken.getToken "public" pool token
+  case er of
+    Left _            -> pure []
+    Right foundLayers -> pure foundLayers
 
 getContent :: Natural -> Natural -> T.Text -> Maybe T.Text -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified"  T.Text] BS.ByteString)
 getContent z x stringY maybeIfModified layer =

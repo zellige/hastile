@@ -5,6 +5,7 @@ module Main where
 
 import qualified Control.Exception.Base            as ControlException
 import qualified Data.Foldable                     as Foldable
+import qualified Data.LruCache.IO                  as LRU
 import qualified Data.Map                          as Map
 import qualified Data.Text.Encoding                as TextEncoding
 import           GHC.Conc
@@ -35,12 +36,13 @@ doIt cmdLine = do
 
 doItWithConfig :: FilePath -> Config.Config -> IO ()
 doItWithConfig cfgFile config@Config.Config{..} = do
+  newTokenAuthorisationCache <- LRU.newLruHandle 1000
   layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
   Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.layerDetailsToLayer k v) k layers
   ControlException.bracket
     (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
     HasqlPool.release
-    (\p -> getWarp _configPort (Server.runServer (App.ServerState p _configMapnikInputPlugins cfgFile config layers)))
+    (\p -> getWarp _configPort (Server.runServer (App.ServerState p _configMapnikInputPlugins cfgFile config layers newTokenAuthorisationCache)))
   pure ()
 
 getWarp :: WaiWarp.Port -> Wai.Application -> IO ()

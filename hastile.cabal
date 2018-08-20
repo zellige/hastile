@@ -42,6 +42,7 @@ library
                      , http-media
                      , lens
                      , list-t
+                     , lrucaching
                      , mtl
                      , optparse-generic
                      , prometheus-client
@@ -72,6 +73,7 @@ executable hastile
                      , optparse-generic
                      , text
                      , hasql-pool
+                     , lrucaching
                      , prometheus-client
                      , prometheus-metrics-ghc
                      , servant-server
