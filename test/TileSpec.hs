@@ -7,7 +7,7 @@ import qualified Data.ByteString                as BS (ByteString, readFile)
 import qualified Data.ByteString.Lazy           as LBS (ByteString, fromStrict,
                                                         writeFile)
 import qualified Data.Geometry.MapnikVectorTile as MVT
-import qualified Data.Geometry.Types.Types      as DGT
+import qualified Data.Geometry.Types.Geography  as DGT
 import qualified Data.HashMap.Strict            as HM
 import qualified Data.Text                      as T
 import qualified Geography.VectorTile           as VT
