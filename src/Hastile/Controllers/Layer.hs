@@ -31,18 +31,19 @@ import qualified Servant
 import qualified STMContainers.Map          as STMMap
 
 import qualified Hastile.DB.Layer           as DBLayer
+import qualified Hastile.DB.Token           as DBToken
 import qualified Hastile.Routes             as Routes
 import qualified Hastile.Tile               as Tile
 import qualified Hastile.Types.App          as App
 import qualified Hastile.Types.Config       as Config
 import qualified Hastile.Types.Layer        as Layer
-
+import qualified Hastile.Types.Token        as Token
 
 layerServer :: Servant.ServerT Routes.LayerApi App.ActionHandler
 layerServer l = provisionLayer l Servant.:<|> coordsServer l
 
 coordsServer :: T.Text -> Natural -> Natural -> Servant.ServerT Routes.HastileContentApi App.ActionHandler
-coordsServer l z x = getQuery l z x Servant.:<|> getContent l z x
+coordsServer l z x = getQuery l z x Servant.:<|> serveLayer l z x
 
 stmMapToList :: STMMap.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STMMap.stream
@@ -72,11 +73,29 @@ getQuery l z x y = do
   layer <- getLayerOrThrow l
   DBLayer.mkQuery layer z (x, y)
 
-getContent :: T.Text -> Natural -> Natural -> T.Text -> Maybe T.Text -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" T.Text] BS.ByteString)
-getContent l z x stringY maybeIfModified =
-  do
-    layer <- getLayerOrThrow l
-    if DBLayer.isModified layer maybeIfModified
+serveLayer :: T.Text -> Natural -> Natural -> T.Text -> Maybe T.Text -> Maybe T.Text -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" T.Text] BS.ByteString)
+serveLayer l z x stringY maybeToken maybeIfModified = do
+  layer <- getLayerOrThrow l
+  case Layer._layerSecurity layer of
+    Layer.LayerSecurityPublic ->
+      getContent z x stringY maybeIfModified layer
+    Layer.LayerSecurityPrivate ->
+      case maybeToken of
+        Just token -> do
+          pool <- RC.asks App._ssPool
+          er <- DBToken.getToken "public" pool token
+          case er of
+            Left _           -> throwError layerNotFoundError
+            Right foundToken ->
+              if Layer._layerName layer `elem` Token._layers foundToken
+                then getContent z x stringY maybeIfModified layer
+                else throwError layerNotFoundError
+        Nothing ->
+          throwError layerNotFoundError
+
+getContent :: Natural -> Natural -> T.Text -> Maybe T.Text -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified"  T.Text] BS.ByteString)
+getContent z x stringY maybeIfModified layer =
+  if DBLayer.isModified layer maybeIfModified
       then getContent' layer z x stringY
       else throwError Servant.err304
 
@@ -121,5 +140,9 @@ getLayerOrThrow :: T.Text -> App.ActionHandler Layer.Layer
 getLayerOrThrow l = do
   errorOrLayer <- DBLayer.getLayer l
   case errorOrLayer of
-    Left DBLayer.LayerNotFound -> throwError $ Servant.err404 { Servant.errBody = "Layer not found :-(" }
-    Right layer -> pure layer
+    Left DBLayer.LayerNotFound -> throwError layerNotFoundError
+    Right layer                -> pure layer
+
+layerNotFoundError :: Servant.ServantErr
+layerNotFoundError =
+  Servant.err404 { Servant.errBody = "Layer not found :-(" }
