@@ -23,7 +23,7 @@ tokenServer = getTokens
   S.:<|> updateOrInsertToken
   S.:<|> deleteToken
 
-getTokens :: App.ActionHandler [Token.TokenLayers]
+getTokens :: App.ActionHandler [Token.TokenAuthorisation]
 getTokens = do
   pool <- RC.asks App._ssPool
   er <- DB.getTokens "public" pool
@@ -31,18 +31,18 @@ getTokens = do
     Left e       -> defaultErrorHandler e
     Right tokens -> return tokens
 
-getToken :: T.Text -> App.ActionHandler Token.TokenLayers
+getToken :: T.Text -> App.ActionHandler Token.Layers
 getToken token = do
   pool <- RC.asks App._ssPool
   er <- DB.getToken "public" pool token
   case er of
     Left e       -> defaultErrorHandler e
-    Right tokens -> return tokens
+    Right layers -> return layers
 
-updateOrInsertToken :: Token.TokenLayers -> App.ActionHandler T.Text
-updateOrInsertToken tokenLayers = do
+updateOrInsertToken :: Token.TokenAuthorisation -> App.ActionHandler T.Text
+updateOrInsertToken tokenAuthorisation = do
   pool <- RC.asks App._ssPool
-  er <- DB.updateOrInsertToken "public" pool tokenLayers
+  er <- DB.updateOrInsertToken "public" pool tokenAuthorisation
   case er of
     Left e   -> defaultErrorHandler e
     Right () -> return "OK"

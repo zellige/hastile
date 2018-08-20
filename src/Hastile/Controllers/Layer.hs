@@ -37,7 +37,6 @@ import qualified Hastile.Tile               as Tile
 import qualified Hastile.Types.App          as App
 import qualified Hastile.Types.Config       as Config
 import qualified Hastile.Types.Layer        as Layer
-import qualified Hastile.Types.Token        as Token
 
 layerServer :: Servant.ServerT Routes.LayerApi App.ActionHandler
 layerServer l = provisionLayer l Servant.:<|> coordsServer l
@@ -90,8 +89,8 @@ servePrivateLayer z x stringY maybeToken maybeIfModified layer =
       er <- DBToken.getToken "public" pool token
       case er of
         Left _           -> throwError layerNotFoundError
-        Right foundToken ->
-          if Layer._layerName layer `elem` Token._layers foundToken
+        Right foundLayers ->
+          if Layer._layerName layer `elem` foundLayers
             then getContent z x stringY maybeIfModified layer
             else throwError layerNotFoundError
     Nothing ->
