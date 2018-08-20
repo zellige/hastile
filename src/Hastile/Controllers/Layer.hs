@@ -80,18 +80,22 @@ serveLayer l z x stringY maybeToken maybeIfModified = do
     Layer.LayerSecurityPublic ->
       getContent z x stringY maybeIfModified layer
     Layer.LayerSecurityPrivate ->
-      case maybeToken of
-        Just token -> do
-          pool <- RC.asks App._ssPool
-          er <- DBToken.getToken "public" pool token
-          case er of
-            Left _           -> throwError layerNotFoundError
-            Right foundToken ->
-              if Layer._layerName layer `elem` Token._layers foundToken
-                then getContent z x stringY maybeIfModified layer
-                else throwError layerNotFoundError
-        Nothing ->
-          throwError layerNotFoundError
+      servePrivateLayer z x stringY maybeToken maybeIfModified layer
+
+servePrivateLayer :: Natural -> Natural -> T.Text -> Maybe T.Text -> Maybe T.Text -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" T.Text] BS.ByteString)
+servePrivateLayer z x stringY maybeToken maybeIfModified layer =
+  case maybeToken of
+    Just token -> do
+      pool <- RC.asks App._ssPool
+      er <- DBToken.getToken "public" pool token
+      case er of
+        Left _           -> throwError layerNotFoundError
+        Right foundToken ->
+          if Layer._layerName layer `elem` Token._layers foundToken
+            then getContent z x stringY maybeIfModified layer
+            else throwError layerNotFoundError
+    Nothing ->
+      throwError layerNotFoundError
 
 getContent :: Natural -> Natural -> T.Text -> Maybe T.Text -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified"  T.Text] BS.ByteString)
 getContent z x stringY maybeIfModified layer =
