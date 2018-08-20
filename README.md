@@ -13,7 +13,11 @@ POST /                         (application/json)         - Add/overwite layerna
 POST /layername                (application/json)         - Add/overwrite the query setting for layername (e.g. {"query": "...", ... }).
 GET  /layername/Z/X/Y/query    (text/plain)               - Query for a given layername, Zoom, and (X,Y).
 GET  /layername/Z/X/Y.mvt      (application/vnd.mapbox-vector-tile) - Return Mapnick Vector Tile for given layername, Zoom, (X,Y).
-GET  /layername/Z/X/Y.json     (application/json) - Return GeoJSON for given layername, Zoom, (X,Y).
+GET  /layername/Z/X/Y.json     (application/json)         - Return GeoJSON for given layername, Zoom, (X,Y).
+GET  /token                    (application/json)         - Returns tokens and authorised layers
+GET  /token/tokenid            (application/json)         - Returns the authorised layers for the given token
+POST /token                    (application/json)         - Post a token and its authorised layers to insert/update the token database
+DELETE /token/tokenid          (application/json)         - Delete the given token from the token database
 ```
 
 Layer API
@@ -27,6 +31,16 @@ To create a new layer:
 
 To modify an existing layer:
 - ```curl -d '{ "query": "...", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
+
+Token API
+---------
+
+To insert or update a token:
+- ```curl -d '{ "token": "abcd", "layers": ["layer1", "layer2"] }' -H "Content-Type: application/json" -X POST http://localhost:8080/token```
+
+To delete a token:
+- ```curl -H "Content-Type: application/json" -X DELETE http://localhost:8080/token/abcd```
+
 
 Building
 --------
