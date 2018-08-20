@@ -24,15 +24,15 @@ import qualified Data.Text                    as T
 import qualified Data.Time                    as DT
 import           Options.Generic
 
-data LayerRequest = LayerRequest
+data NewLayerRequest = NewLayerRequest
   {  _newLayerRequestName     :: T.Text
   ,  _newLayerRequestSettings :: LayerSettings
   } deriving (Show, Eq)
 
-newtype LayerRequestList = LayerRequestList [LayerRequest]
+newtype LayerRequestList = LayerRequestList [NewLayerRequest]
 
 instance FromJSON LayerRequestList where
-    parseJSON v = (LayerRequestList . fmap (uncurry LayerRequest) . M.toList) Control.Applicative.<$> parseJSON v
+    parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . M.toList) Control.Applicative.<$> parseJSON v
 
 data LayerSettings = LayerSettings
   { _lsQuery      :: Text
