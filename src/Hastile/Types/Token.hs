@@ -59,3 +59,6 @@ tokenEncoder :: Hasql.Encoders.Params TokenAuthorisation
 tokenEncoder =
   Contravariant.contramap _token (Hasql.Encoders.value Hasql.Encoders.text)
   <> Contravariant.contramap _layers (Hasql.Encoders.value $ Hasql.Encoders.array (Hasql.Encoders.arrayDimension Foldable.foldl' (Hasql.Encoders.arrayValue Hasql.Encoders.text)))
+
+unauthorisedToken :: Token -> TokenAuthorisation
+unauthorisedToken token = TokenAuthorisation token []
