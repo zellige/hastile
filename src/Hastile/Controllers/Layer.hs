@@ -27,7 +27,7 @@ import           GHC.Conc
 import           ListT
 import           Network.HTTP.Types.Header  (hLastModified)
 import           Numeric.Natural            (Natural)
-import qualified Servant                    as Servant
+import qualified Servant
 import qualified STMContainers.Map          as STMMap
 
 import qualified Hastile.DB.Layer           as DBLayer
