@@ -15,8 +15,11 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Hastile.Controllers
+                     , Hastile.Controllers.Layer
+                     , Hastile.Controllers.Token
                      , Hastile.Config
-                     , Hastile.DB
+                     , Hastile.DB.Layer
+                     , Hastile.DB.Token
                      , Hastile.Routes
                      , Hastile.Server
                      , Hastile.Tile
@@ -24,11 +27,13 @@ library
                      , Hastile.Types.Config
                      , Hastile.Types.Layer
                      , Hastile.Types.Mime
+                     , Hastile.Types.Token
   build-depends:       base >= 4.8 && < 5
                      , aeson
                      , aeson-pretty
                      , bytestring
                      , containers
+                     , contravariant
                      , geojson
                      , hasql
                      , hasql-pool
