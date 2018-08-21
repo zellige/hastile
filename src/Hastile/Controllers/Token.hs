@@ -10,7 +10,9 @@ import           Control.Monad.Error.Class
 import qualified Control.Monad.IO.Class     as IOClass
 import qualified Control.Monad.Reader.Class as RC
 import qualified Data.ByteString.Lazy.Char8 as LBS8
-import qualified Data.LruCache.IO           as LRU
+import qualified Data.IORef                 as IORef (atomicModifyIORef')
+import qualified Data.LruCache              as LRU
+import qualified Data.LruCache.IO           as LRUIO
 import qualified Data.Text                  as T
 import qualified Servant                    as S
 
@@ -69,6 +71,10 @@ deleteToken token = do
 defaultErrorHandler :: MonadError S.ServantErr m => T.Text -> m a
 defaultErrorHandler e =  throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
 
-updateCache :: LRU.LruHandle Token.Token Token.Layers -> Token.TokenAuthorisation -> IO Token.Layers
-updateCache cache tokenAuthorisation =
-  LRU.cached cache (Token._token tokenAuthorisation) (pure $ Token._layers tokenAuthorisation)
+updateCache :: LRUIO.LruHandle Token.Token Token.Layers -> Token.TokenAuthorisation -> IO ()
+updateCache (LRUIO.LruHandle ref) tokenAuthorisation = do
+  v <- io
+  IORef.atomicModifyIORef' ref $ \c -> (LRU.insert k v c, ())
+  return ()
+  where k = Token._token tokenAuthorisation
+        io = pure $ Token._layers tokenAuthorisation
