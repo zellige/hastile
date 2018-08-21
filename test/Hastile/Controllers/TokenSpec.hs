@@ -32,13 +32,13 @@ testCache =
 
 checkCache :: LRUIO.LruHandle Token.Token Token.Layers -> Token.Token -> Token.Layers -> IO ()
 checkCache cache token expectedLayers = do
-    let (LRUIO.LruHandle ref) = cache
-    unwrappedCache <- IORef.readIORef ref
-    case LRU.lookup token unwrappedCache of
-      Just (foundLayers, _) ->
-        foundLayers `shouldBe` expectedLayers
-      Nothing ->
-        fail "did not find token"
+  let (LRUIO.LruHandle ref) = cache
+  unwrappedCache <- IORef.readIORef ref
+  case LRU.lookup token unwrappedCache of
+    Just (foundLayers, _) ->
+      foundLayers `shouldBe` expectedLayers
+    Nothing ->
+      fail "did not find token"
 
 exampleToken :: Token.Token
 exampleToken = "abcd"
