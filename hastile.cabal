@@ -81,7 +81,7 @@ executable hastile
                      , wai-cors
                      , wai-middleware-prometheus
                      , warp
-  ghc-options:       -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-A512m -with-rtsopts=-n8m -Wall -Werror -O2
+  ghc-options:       -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-A256m -with-rtsopts=-n32m -Wall -Werror -O2
   default-language:  Haskell2010
 
 executable migrate
