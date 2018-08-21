@@ -36,7 +36,7 @@ doIt cmdLine = do
 
 doItWithConfig :: FilePath -> Config.Config -> IO ()
 doItWithConfig cfgFile config@Config.Config{..} = do
-  newTokenAuthorisationCache <- LRU.newLruHandle 1000
+  newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
   layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
   Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.layerDetailsToLayer k v) k layers
   ControlException.bracket

@@ -33,5 +33,6 @@ addDefaults Config.InputConfig{..} =
     (M.fromMaybe 1 _inputConfigPgTimeout)
     (M.fromMaybe "/usr/local/lib/mapnik/input" _inputConfigMapnikInputPlugins)
     (M.fromMaybe 8080 _inputConfigPort)
+    (M.fromMaybe 1000 _inputConfigTokenCacheSize)
     _inputConfigLayers
     (M.fromMaybe 128 _inputConfigTileBuffer)
