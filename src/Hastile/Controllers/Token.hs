@@ -51,7 +51,7 @@ updateOrInsertToken tokenAuthorisation = do
     Left e   -> defaultErrorHandler e
     Right () -> do
       cache <- RC.asks App._ssTokenAuthorisationCache
-      _ <- IOClass.liftIO $ updateCache cache tokenAuthorisation
+      IOClass.liftIO $ updateCache cache tokenAuthorisation
       return "OK"
 
 deleteToken :: T.Text -> App.ActionHandler T.Text
@@ -64,7 +64,7 @@ deleteToken token = do
       case numberOfRowsDeleted of
         1 -> do
           cache <- RC.asks App._ssTokenAuthorisationCache
-          _ <- IOClass.liftIO $ updateCache cache (Token.unauthorisedToken token)
+          IOClass.liftIO $ updateCache cache (Token.unauthorisedToken token)
           return "OK"
         _ -> defaultErrorHandler "Delete failed"
 
