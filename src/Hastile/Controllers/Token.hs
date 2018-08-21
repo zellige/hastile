@@ -73,8 +73,7 @@ defaultErrorHandler e =  throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpac
 
 updateCache :: LRUIO.LruHandle Token.Token Token.Layers -> Token.TokenAuthorisation -> IO ()
 updateCache (LRUIO.LruHandle ref) tokenAuthorisation = do
-  v <- io
   IORef.atomicModifyIORef' ref $ \c -> (LRU.insert k v c, ())
   return ()
   where k = Token._token tokenAuthorisation
-        io = pure $ Token._layers tokenAuthorisation
+        v = Token._layers tokenAuthorisation
