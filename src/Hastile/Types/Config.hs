@@ -31,6 +31,7 @@ data InputConfig = InputConfig
   , _inputConfigPgTimeout          :: Maybe DT.NominalDiffTime
   , _inputConfigMapnikInputPlugins :: Maybe FilePath
   , _inputConfigPort               :: Maybe Int
+  , _inputConfigTokenCacheSize     :: Maybe Int
   , _inputConfigLayers             :: M.Map Text Layer.LayerDetails
   , _inputConfigTileBuffer         :: Maybe DGTT.Pixels
   } deriving (Show, Generic)
@@ -44,6 +45,7 @@ instance ToJSON InputConfig where
     , ("db-timeout" .=)           <$> _inputConfigPgTimeout ic
     , ("mapnik-input-plugins" .=) <$> _inputConfigMapnikInputPlugins ic
     , ("port" .=)                 <$> _inputConfigPort ic
+    , ("token-cache-size" .=)     <$> _inputConfigTokenCacheSize ic
     , ("layers" .=)               <$> Just (_inputConfigLayers ic)
     , ("tile-buffer" .=)          <$> Just (_inputConfigTileBuffer ic)
     ]
@@ -55,11 +57,12 @@ instance FromJSON InputConfig where
     <*> o .:? "db-timeout"
     <*> o .:? "mapnik-input-plugins"
     <*> o .:? "port"
+    <*> o .:? "token-cache-size"
     <*> o .:  "layers"
     <*> o .:? "tile-buffer"
 
 emptyInputConfig :: InputConfig
-emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing (fromList []) Nothing
+emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing Nothing (fromList []) Nothing
 
 data Config = Config
   { _configPgConnection       :: Text
@@ -67,6 +70,7 @@ data Config = Config
   , _configPgTimeout          :: DT.NominalDiffTime
   , _configMapnikInputPlugins :: FilePath
   , _configPort               :: Int
+  , _configTokenCacheSize     :: Int
   , _configLayers             :: M.Map Text Layer.LayerDetails
   , _configTileBuffer         :: DGTT.Pixels
   } deriving (Show, Generic)
@@ -80,6 +84,7 @@ instance ToJSON Config where
     , "db-timeout"           .= _configPgTimeout c
     , "mapnik-input-plugins" .= _configMapnikInputPlugins c
     , "port"                 .= _configPort c
+    , "token-cache-size"     .= _configTokenCacheSize c
     , "layers"               .= _configLayers c
     , "tile-buffer"          .= _configTileBuffer c
     ]
