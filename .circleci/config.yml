@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: ~/hastile
     docker:
-      - image: circleci/node:8.11-jessie-browsers
+      - image: circleci/ruby:2.4.4
       - image: circleci/postgres:10.3-postgis
         environment:
           POSTGRES_USER: hastile
