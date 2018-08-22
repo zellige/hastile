@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Hastile.Controllers.TokenSpec where
+module Hastile.Lib.TokenSpec where
 
-import qualified Data.IORef                as IORef
-import qualified Data.LruCache             as LRU
-import qualified Data.LruCache.IO          as LRUIO
-import           Test.Hspec                (Spec, describe, it, runIO, shouldBe)
+import qualified Data.IORef          as IORef
+import qualified Data.LruCache       as LRU
+import qualified Data.LruCache.IO    as LRUIO
+import           Test.Hspec          (Spec, describe, it, runIO, shouldBe)
 
-import qualified Hastile.Controllers.Token as Token
-import qualified Hastile.Types.Token       as Token
+import qualified Hastile.Lib.Token   as TokenLib
+import qualified Hastile.Types.Token as Token
 
 spec :: Spec
 spec =
@@ -22,12 +22,11 @@ testCache =
     it "should insert a token into the cache" $
       checkCache cache exampleToken exampleLayers
     it "should update the authorised layers of a token in the cache" $ do
-      let updatedToken = Token.TokenAuthorisation exampleToken updatedExampleLayers
-      Token.updateCache cache updatedToken
+      TokenLib.updateCache cache updatedTokenAuthorisation
       checkCache cache exampleToken updatedExampleLayers
     it "should deauthorise a token in the cache" $ do
       let updatedToken = Token.unauthorisedToken exampleToken
-      Token.updateCache cache updatedToken
+      TokenLib.updateCache cache updatedToken
       checkCache cache exampleToken []
 
 checkCache :: LRUIO.LruHandle Token.Token Token.Layers -> Token.Token -> Token.Layers -> IO ()
@@ -39,6 +38,14 @@ checkCache cache token expectedLayers = do
       foundLayers `shouldBe` expectedLayers
     Nothing ->
       fail "did not find token"
+
+exampleTokenAuthorisation :: Token.TokenAuthorisation
+exampleTokenAuthorisation =
+  Token.TokenAuthorisation exampleToken exampleLayers
+
+updatedTokenAuthorisation :: Token.TokenAuthorisation
+updatedTokenAuthorisation =
+  Token.TokenAuthorisation exampleToken updatedExampleLayers
 
 exampleToken :: Token.Token
 exampleToken = "abcd"
