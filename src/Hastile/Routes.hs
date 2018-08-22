@@ -30,9 +30,9 @@ type HastileApi =
 
 type TokenApi =
   "token" :>
-  (    Get '[JSON] [Token.TokenLayers]
-  :<|> Capture "token" Text.Text :> Get '[JSON] Token.TokenLayers
-  :<|> ReqBody '[JSON] Token.TokenLayers :> Post '[JSON] Text.Text
+  (    Get '[JSON] [Token.TokenAuthorisation]
+  :<|> Capture "token" Text.Text :> Get '[JSON] Token.Layers
+  :<|> ReqBody '[JSON] Token.TokenAuthorisation :> Post '[JSON] Text.Text
   :<|> Capture "token" Text.Text :> Delete '[JSON] Text.Text
   )
 
@@ -45,7 +45,7 @@ type LayerApi =
 
 type HastileContentApi =
        YI :> "query" :> Get '[PlainText] Text.Text
-  :<|> Y             :> Servant.Header "If-Modified-Since" Text.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" Text.Text] BS.ByteString)
+  :<|> Y :> QueryParam "token" Text.Text :> Servant.Header "If-Modified-Since" Text.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" Text.Text] BS.ByteString)
 
 hastileApi :: P.Proxy HastileApi
 hastileApi = P.Proxy

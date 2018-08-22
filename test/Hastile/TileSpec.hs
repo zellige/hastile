@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module TileSpec where
+module Hastile.TileSpec where
 
 import           Control.Lens
 import qualified Data.ByteString                as BS (ByteString, readFile)
