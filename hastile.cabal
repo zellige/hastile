@@ -20,6 +20,7 @@ library
                      , Hastile.Config
                      , Hastile.DB.Layer
                      , Hastile.DB.Token
+                     , Hastile.Lib.Layer
                      , Hastile.Lib.Token
                      , Hastile.Routes
                      , Hastile.Server
