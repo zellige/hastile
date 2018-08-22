@@ -112,7 +112,8 @@ test-suite hastile-test
                      , bytestring
                      , containers
                      , directory
-                     , hastile                 
+                     , hastile
+                     , hasql-pool      
                      , hspec
                      , lens
                      , lrucaching
