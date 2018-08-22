@@ -8,7 +8,7 @@ jobs:
         environment:
           POSTGRES_USER: hastile
           POSTGRES_PASSWORD: "password"
-          POSTGRES_DB: postgres
+          POSTGRES_DB: hastile_test
     steps:
       - checkout
       - restore-cache:
