@@ -15,41 +15,42 @@
 
 module Hastile.Types.App where
 
-import           Control.Lens                  (Lens', makeLenses)
-import           Control.Monad.Except          (MonadError)
-import           Control.Monad.Reader          (MonadIO, MonadReader, ReaderT)
-import qualified Data.Geometry.Types.Geography as DGTT
+import qualified Control.Lens                  as ControlLens
+import qualified Control.Monad.Except          as ControlMonadExcept
+import qualified Control.Monad.Reader          as ControlMonadReader
+import qualified Data.Geometry.Types.Geography as DataGeometryTypesGeography
+import qualified Data.Text                     as DataText
+import qualified Hasql.Pool                    as HasqlPool
 import qualified Data.LruCache.IO              as LRU
-import           Hasql.Pool                    as P
-import           Options.Generic
-import           Servant
-import           STMContainers.Map             as STM
+import qualified Servant
+import qualified STMContainers.Map             as STMMap
 
 import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
 import qualified Hastile.Types.Token           as Token
 
 data ServerState = ServerState
-  { _ssPool                    :: P.Pool
-  , _ssPluginDir               :: FilePath
-  , _ssConfigFile              :: FilePath
-  , _ssOriginalConfig          :: Config.Config
-  , _ssStateLayers             :: STM.Map Text Layer.Layer
+  { _ssPool           :: HasqlPool.Pool
+  , _ssPluginDir      :: FilePath
+  , _ssConfigFile     :: FilePath
+  , _ssOriginalConfig :: Config.Config
+  , _ssStateLayers    :: STMMap.Map DataText.Text Layer.Layer
   , _ssTokenAuthorisationCache :: LRU.LruHandle Token.Token Token.Layers
   }
 
-makeLenses ''ServerState
+ControlLens.makeLenses ''ServerState
 
-ssBuffer :: Lens' ServerState DGTT.Pixels
+ssBuffer :: ControlLens.Lens' ServerState DataGeometryTypesGeography.Pixels
 ssBuffer = ssOriginalConfig . Config.configTileBuffer
 
 newtype ActionHandler a = ActionHandler
-  { runActionHandler :: ReaderT ServerState Handler a
-  } deriving (Functor, Applicative, Monad, MonadReader ServerState, MonadError ServantErr, MonadIO)
+  { runActionHandler :: ControlMonadReader.ReaderT ServerState Servant.Handler a
+  } deriving (Functor, Applicative, Monad, ControlMonadReader.MonadReader ServerState, ControlMonadExcept.MonadError Servant.ServantErr, ControlMonadReader.MonadIO)
 
-err204 :: ServantErr
-err204 = ServantErr { errHTTPCode = 204
-                    , errReasonPhrase = "No Content"
-                    , errBody = ""
-                    , errHeaders = []
-                    }
+err204 :: Servant.ServantErr
+err204 = Servant.ServantErr
+  { errHTTPCode = 204
+  , errReasonPhrase = "No Content"
+  , errBody = ""
+  , errHeaders = []
+  }
