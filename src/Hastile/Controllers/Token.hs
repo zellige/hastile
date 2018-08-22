@@ -7,16 +7,13 @@
 module Hastile.Controllers.Token where
 
 import           Control.Monad.Error.Class
-import qualified Control.Monad.IO.Class     as IOClass
 import qualified Control.Monad.Reader.Class as RC
 import qualified Data.ByteString.Lazy.Char8 as LBS8
-import qualified Data.IORef                 as IORef (atomicModifyIORef')
-import qualified Data.LruCache              as LRU
-import qualified Data.LruCache.IO           as LRUIO
 import qualified Data.Text                  as T
 import qualified Servant                    as S
 
 import qualified Hastile.DB.Token           as DB
+import qualified Hastile.Lib.Token          as TokenLib
 import qualified Hastile.Routes             as Routes
 import qualified Hastile.Types.App          as App
 import qualified Hastile.Types.Token        as Token
@@ -32,7 +29,7 @@ getTokens = do
   pool <- RC.asks App._ssPool
   er <- DB.getTokens "public" pool
   case er of
-    Left e       -> defaultErrorHandler e
+    Left err     -> defaultErrorHandler err
     Right tokens -> return tokens
 
 getToken :: T.Text -> App.ActionHandler Token.Layers
@@ -40,40 +37,26 @@ getToken token = do
   pool <- RC.asks App._ssPool
   er <- DB.getToken "public" pool token
   case er of
-    Left e       -> defaultErrorHandler e
+    Left err     -> defaultErrorHandler err
     Right layers -> return layers
 
 updateOrInsertToken :: Token.TokenAuthorisation -> App.ActionHandler T.Text
 updateOrInsertToken tokenAuthorisation = do
   pool <- RC.asks App._ssPool
-  er <- DB.updateOrInsertToken "public" pool tokenAuthorisation
+  cache <- RC.asks App._ssTokenAuthorisationCache
+  er <- TokenLib.updateOrInsertToken pool cache tokenAuthorisation
   case er of
-    Left e   -> defaultErrorHandler e
-    Right () -> do
-      cache <- RC.asks App._ssTokenAuthorisationCache
-      IOClass.liftIO $ updateCache cache tokenAuthorisation
-      return "OK"
+    Left err     -> defaultErrorHandler err
+    Right result -> return result
 
 deleteToken :: T.Text -> App.ActionHandler T.Text
 deleteToken token = do
   pool <- RC.asks App._ssPool
-  er <- DB.deleteToken "public" pool token
+  cache <- RC.asks App._ssTokenAuthorisationCache
+  er <- TokenLib.deleteToken pool cache token
   case er of
-    Left e                    -> defaultErrorHandler e
-    Right numberOfRowsDeleted ->
-      case numberOfRowsDeleted of
-        1 -> do
-          cache <- RC.asks App._ssTokenAuthorisationCache
-          IOClass.liftIO $ updateCache cache (Token.unauthorisedToken token)
-          return "OK"
-        _ -> defaultErrorHandler "Delete failed"
+    Left err     -> defaultErrorHandler err
+    Right result -> return result
 
 defaultErrorHandler :: MonadError S.ServantErr m => T.Text -> m a
 defaultErrorHandler e =  throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
-
-updateCache :: LRUIO.LruHandle Token.Token Token.Layers -> Token.TokenAuthorisation -> IO ()
-updateCache (LRUIO.LruHandle ref) tokenAuthorisation = do
-  IORef.atomicModifyIORef' ref $ \c -> (LRU.insert k v c, ())
-  return ()
-  where k = Token._token tokenAuthorisation
-        v = Token._layers tokenAuthorisation
