@@ -3,42 +3,52 @@
 
 module Main where
 
-import qualified Control.Exception.Base      as CE
-import qualified Data.Foldable               as F
-import qualified Data.Map                    as M
-import qualified Data.Text.Encoding          as DTE
+import qualified Control.Exception.Base            as ControlException
+import qualified Data.Foldable                     as Foldable
+import qualified Data.LruCache.IO                  as LRU
+import qualified Data.Map                          as Map
+import qualified Data.Text.Encoding                as TextEncoding
 import           GHC.Conc
-import qualified Hasql.Pool                  as P
-import qualified Network.Wai                 as W
-import qualified Network.Wai.Handler.Warp    as W
-import qualified Network.Wai.Middleware.Cors as W
-import qualified Options.Generic             as OG
-import           STMContainers.Map           as STM
+import qualified Hasql.Pool                        as HasqlPool
+import qualified Network.Wai                       as Wai
+import qualified Network.Wai.Handler.Warp          as WaiWarp
+import qualified Network.Wai.Middleware.Cors       as WaiCors
+import qualified Network.Wai.Middleware.Prometheus as WaiPrometheus
+import qualified Options.Generic                   as OptionsGeneric
+import qualified Prometheus                        as Prometheus
+import qualified Prometheus.Metric.GHC             as PrometheusGhc
+import qualified STMContainers.Map                 as StmMap
 
-import qualified Config                      as HC
-import qualified Server                      as HS
-import qualified Types                       as HT
+import qualified Hastile.Config                    as Config
+import qualified Hastile.Server                    as Server
+import qualified Hastile.Types.App                 as App
+import qualified Hastile.Types.Config              as Config
+import qualified Hastile.Types.Layer               as Layer
 
 main :: IO ()
-main = OG.getRecord "hastile" >>= doIt
+main = OptionsGeneric.getRecord "hastile" >>= doIt
 
-doIt :: HT.CmdLine -> IO ()
+doIt :: Config.CmdLine -> IO ()
 doIt cmdLine = do
-  let cfgFile = HT.configFile cmdLine
-  config <- HC.getConfig cfgFile
+  let cfgFile = Config.configFile cmdLine
+  config <- Config.getConfig cfgFile
   doItWithConfig cfgFile config
 
-doItWithConfig :: FilePath -> HT.Config -> IO ()
-doItWithConfig cfgFile config@HT.Config{..} = do
-  layers <- atomically STM.new :: IO (STM.Map OG.Text HT.Layer)
-  F.forM_ (M.toList _configLayers) $ \(k, v) -> atomically $ STM.insert (HT.layerDetailsToLayer k v) k layers
-  CE.bracket
-    (P.acquire (_configPgPoolSize, _configPgTimeout, DTE.encodeUtf8 _configPgConnection))
-    P.release
-    (\p -> getWarp _configPort (HS.runServer (HT.ServerState p _configMapnikInputPlugins cfgFile config layers)))
+doItWithConfig :: FilePath -> Config.Config -> IO ()
+doItWithConfig cfgFile config@Config.Config{..} = do
+  newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
+  layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
+  Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.layerDetailsToLayer k v) k layers
+  ControlException.bracket
+    (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
+    HasqlPool.release
+    (\p -> getWarp _configPort (Server.runServer (App.ServerState p _configMapnikInputPlugins cfgFile config layers newTokenAuthorisationCache)))
   pure ()
 
-getWarp :: W.Port -> W.Application -> IO ()
-getWarp port' = W.run port' . W.cors (const $ Just policy)
-  where
-    policy = W.simpleCorsResourcePolicy { W.corsRequestHeaders = ["Content-Type"] }
+getWarp :: WaiWarp.Port -> Wai.Application -> IO ()
+getWarp port' app = do
+  _ <- Prometheus.register PrometheusGhc.ghcMetrics
+  let policy = WaiCors.simpleCorsResourcePolicy { WaiCors.corsRequestHeaders = ["Content-Type"] }
+      application = WaiCors.cors (const $ Just policy) app
+      promMiddleware = WaiPrometheus.prometheus $ WaiPrometheus.PrometheusSettings ["metrics"] True True
+  WaiWarp.run port' $ promMiddleware $ application

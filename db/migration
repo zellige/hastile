@@ -1,0 +1,78 @@
+#!/bin/sh
+
+## Dir
+SCRIPT_DIR=`dirname $0`
+MIGRATION_DIR="$SCRIPT_DIR/migrate"
+
+## Functions
+usage () {
+  echo "Usage: $0 [options] command"
+  echo "Options:"
+  echo "  -h, --help                       Print this help"
+  echo "Commands:"
+  echo "  createdb <name> <user>           Create a database for user"
+  echo "  init <db-connection-string>      Init the postgresql-simple-migration table(s)"
+  echo "  generate <name>                  Create a new migration file"
+  echo "  migrate <db-connection-string>   Run all the migrations"
+  echo "                                     (ignore executed ones)"
+  echo "  validate <db-connection-string>  Test all the migrations"
+  echo "                                     (== migrate without changing the DB)"
+  echo "db-connection-string example:"
+  echo "  \"postgresql://db_user:password@db_server:db_port/db_name\""
+}
+
+arg_check () {
+  if [ $1 -lt $2 ]; then
+    usage
+    exit 1
+  fi
+}
+
+migrate_cmd () {
+  if [ -n "$CIRCLECI" ] && [ "$CIRCLECI" = "true" ]; then     
+    ../migrate $1 $2 $3
+  else
+    stack exec -- migrate $1 $2 $3
+  fi
+}
+
+## MAIN
+arg_check $# 1
+
+case "$1" in
+  -h | --help)
+    usage
+    ;;
+
+  createdb)
+    arg_check $# 3
+    sudo -u postgres sh -c "echo 'CREATE DATABASE $2 OWNER $3;' | psql"
+    ;;
+
+  init)
+    arg_check $# 2
+    migrate_cmd init $2
+    ;;
+
+  generate)
+    arg_check $# 2
+    touch $MIGRATION_DIR/`date +"%Y%m%d%H%M%S00"`_$2.sql
+    ;;
+
+  migrate)
+    arg_check $# 2
+    migrate_cmd migrate $2 $MIGRATION_DIR
+    ;;
+
+  validate)
+    arg_check $# 2
+    migrate_cmd validate $2 $MIGRATION_DIR
+    ;;
+
+  *)
+    usage
+    exit 1
+    ;;
+esac
+
+exit 0

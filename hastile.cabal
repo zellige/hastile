@@ -14,18 +14,26 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Controllers
-                     , Config
-                     , DB
-                     , Routes
-                     , Server
-                     , Tile
-                     , Types
+  exposed-modules:     Hastile.Controllers
+                     , Hastile.Controllers.Layer
+                     , Hastile.Controllers.Token
+                     , Hastile.Config
+                     , Hastile.DB.Layer
+                     , Hastile.DB.Token
+                     , Hastile.Routes
+                     , Hastile.Server
+                     , Hastile.Tile
+                     , Hastile.Types.App
+                     , Hastile.Types.Config
+                     , Hastile.Types.Layer
+                     , Hastile.Types.Mime
+                     , Hastile.Types.Token
   build-depends:       base >= 4.8 && < 5
                      , aeson
                      , aeson-pretty
                      , bytestring
                      , containers
+                     , contravariant
                      , geojson
                      , hasql
                      , hasql-pool
@@ -34,8 +42,11 @@ library
                      , http-media
                      , lens
                      , list-t
+                     , lrucaching
                      , mtl
                      , optparse-generic
+                     , prometheus-client
+                     , prometheus-metrics-ghc
                      , scientific
                      , servant
                      , servant-server
@@ -44,6 +55,7 @@ library
                      , time
                      , transformers
                      , wai
+                     , wai-middleware-prometheus
                      , word8
                      , zellige
   ghc-options:       -Wall -Werror -O2
@@ -61,14 +73,34 @@ executable hastile
                      , optparse-generic
                      , text
                      , hasql-pool
+                     , lrucaching
+                     , prometheus-client
+                     , prometheus-metrics-ghc
                      , servant-server
                      , stm-containers
                      , transformers
                      , wai
                      , wai-cors
+                     , wai-middleware-prometheus
                      , warp
-  ghc-options:       -threaded -rtsopts -with-rtsopts=-N -Wall -Werror -O2
+  ghc-options:       -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-A256m -with-rtsopts=-n32m -Wall -Werror -O2
   default-language:  Haskell2010
+
+executable migrate
+    hs-source-dirs:         app/migrate
+    main-is:                Main.hs
+    ghc-options:            -Wall -fwarn-tabs -fwarn-incomplete-uni-patterns
+    default-extensions:     OverloadedStrings, CPP, LambdaCase
+    default-language:       Haskell2010
+    build-depends:          base                        >= 4.6      && < 5.0,
+                            base64-bytestring           >= 1.0      && < 1.1,
+                            bytestring                  >= 0.10     && < 0.11,
+                            cryptohash                  >= 0.11     && < 0.12,
+                            directory                   >= 1.2      && < 1.4,
+                            postgresql-simple           >= 0.4      && < 0.6,
+                            postgresql-simple-migration,
+                            time                        >= 1.4      && < 1.9,
+                            text                        >= 1.2      && < 1.3  
 
 test-suite hastile-test
   type:                exitcode-stdio-1.0
@@ -79,17 +111,19 @@ test-suite hastile-test
                      , bytestring
                      , containers
                      , directory
-                     , hastile                     
+                     , hastile                 
                      , hspec
                      , lens
+                     , lrucaching
                      , QuickCheck
                      , temporary
                      , text     
                      , unordered-containers
-                     , vectortiles >=1.3.0                
+                     , vectortiles >=1.4.0                
                      , zellige
   ghc-options:       -threaded -rtsopts -with-rtsopts=-N -Wall -Werror -O2
-  other-modules:     TileSpec
+  other-modules:       Hastile.Controllers.TokenSpec
+                     , Hastile.TileSpec
   default-language:  Haskell2010
 
 test-suite              hastile-hlint
