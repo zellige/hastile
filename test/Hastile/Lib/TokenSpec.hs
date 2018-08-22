@@ -2,17 +2,55 @@
 
 module Hastile.Lib.TokenSpec where
 
-import qualified Data.IORef          as IORef
-import qualified Data.LruCache       as LRU
-import qualified Data.LruCache.IO    as LRUIO
-import           Test.Hspec          (Spec, describe, it, runIO, shouldBe)
+import qualified Data.ByteString.Char8 as ByteString
+import qualified Data.IORef            as IORef
+import qualified Data.LruCache         as LRU
+import qualified Data.LruCache.IO      as LRUIO
+import qualified Hasql.Pool            as Pool
+import           Test.Hspec            (Spec, describe, it, runIO, shouldBe)
 
-import qualified Hastile.Lib.Token   as TokenLib
-import qualified Hastile.Types.Token as Token
+import qualified Hastile.DB.Token      as TokenDB
+import qualified Hastile.Lib.Token     as TokenLib
+import qualified Hastile.Types.Token   as Token
 
 spec :: Spec
-spec =
+spec = do
+  settings <- runIO $ readFile "db/env/test"
+  pool <- runIO $ Pool.acquire (1, 10, ByteString.pack settings)
+  testUpdateOrInsert pool
+  testDelete pool
   testCache
+  runIO $ Pool.release pool
+
+testUpdateOrInsert :: Pool.Pool -> Spec
+testUpdateOrInsert pool =
+  describe "testUpdateOrInsert" $ do
+    cache <- runIO $ LRUIO.newLruHandle 1
+    it "should insert a token" $ do
+      _ <- TokenLib.updateOrInsertToken pool cache exampleTokenAuthorisation
+      foundLayers <- TokenDB.getToken "public" pool exampleToken
+      foundLayers `shouldBe` Right exampleLayers
+      checkCache cache exampleToken exampleLayers
+    it "should update a token" $ do
+      _ <- TokenLib.updateOrInsertToken pool cache updatedTokenAuthorisation
+      foundLayers <- TokenDB.getToken "public" pool exampleToken
+      foundLayers `shouldBe` Right updatedExampleLayers
+      checkCache cache exampleToken updatedExampleLayers
+
+testDelete :: Pool.Pool -> Spec
+testDelete pool =
+  describe "testDelete" $ do
+    cache <- runIO $ LRUIO.newLruHandle 1
+    it "should delete a token" $ do
+      _ <- TokenLib.updateOrInsertToken pool cache exampleTokenAuthorisation
+      result <- TokenLib.deleteToken pool cache exampleToken
+      result `shouldBe` Right "OK"
+      foundLayers <- TokenDB.getToken "public" pool exampleToken
+      foundLayers `shouldBe` Left "SessionError (ResultError (UnexpectedAmountOfRows 0))"
+      checkCache cache exampleToken []
+    it "should fail to delete a non-existent token" $ do
+      result <- TokenLib.deleteToken pool cache exampleToken
+      result `shouldBe` Left "Delete failed"
 
 testCache :: Spec
 testCache =

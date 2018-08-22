@@ -1,7 +1,7 @@
 #!/bin/sh
-
 ## Dir
 SCRIPT_DIR=`dirname $0`
+ENV_DIR="$SCRIPT_DIR/env"
 MIGRATION_DIR="$SCRIPT_DIR/migrate"
 
 ## Functions
@@ -10,15 +10,18 @@ usage () {
   echo "Options:"
   echo "  -h, --help                       Print this help"
   echo "Commands:"
-  echo "  createdb <name> <user>           Create a database for user"
-  echo "  init <db-connection-string>      Init the postgresql-simple-migration table(s)"
+  echo "  setup --stack|binary <env>                      Init and run migraptions"
+  echo "  createdb  <name> <user>           Create a database for user"
+  echo "  init --stack|binary <db-connection-string>      Init the postgresql-simple-migration table(s)"
   echo "  generate <name>                  Create a new migration file"
-  echo "  migrate <db-connection-string>   Run all the migrations"
+  echo "  migrate --stack|binary <db-connection-string>   Run all the migrations"
   echo "                                     (ignore executed ones)"
-  echo "  validate <db-connection-string>  Test all the migrations"
+  echo "  validate --stack|binary <db-connection-string>  Test all the migrations"
   echo "                                     (== migrate without changing the DB)"
   echo "db-connection-string example:"
   echo "  \"postgresql://db_user:password@db_server:db_port/db_name\""
+  echo "Envs:"
+  echo "  test      DB connection string for development (./env/test)"
 }
 
 arg_check () {
@@ -28,12 +31,29 @@ arg_check () {
   fi
 }
 
-migrate_cmd () {
-  if [ -n "$CIRCLECI" ] && [ "$CIRCLECI" = "true" ]; then     
-    ../migrate $1 $2 $3
-  else
-    stack exec -- migrate $1 $2 $3
+env_exists () {
+  if [ ! -f "$ENV_DIR/$1" ]; then
+    echo "No such file : $ENV_DIR/$1"
+    exit 1
   fi
+}
+
+migrate_cmd () {
+  case "$1" in
+    --stack)
+        stack exec -- migrate $2 $3 $4
+        ;;
+
+    --binary)
+        ../migrate $2 $3 $4
+        ;;
+
+    *)
+      echo $1
+      usage
+      exit 1
+      ;;
+  esac
 }
 
 ## MAIN
@@ -44,14 +64,21 @@ case "$1" in
     usage
     ;;
 
+  setup)
+    arg_check $# 3
+    env_exists $3
+    migrate_cmd $2 init "`cat $ENV_DIR/$3`"
+    migrate_cmd $2 migrate "`cat $ENV_DIR/$3`" $MIGRATION_DIR
+    ;;
+
   createdb)
     arg_check $# 3
     sudo -u postgres sh -c "echo 'CREATE DATABASE $2 OWNER $3;' | psql"
     ;;
 
   init)
-    arg_check $# 2
-    migrate_cmd init $2
+    arg_check $# 3
+    migrate_cmd $2 init $3
     ;;
 
   generate)
@@ -60,13 +87,13 @@ case "$1" in
     ;;
 
   migrate)
-    arg_check $# 2
-    migrate_cmd migrate $2 $MIGRATION_DIR
+    arg_check $# 3
+    migrate_cmd $2 migrate $3 $MIGRATION_DIR
     ;;
 
   validate)
-    arg_check $# 2
-    migrate_cmd validate $2 $MIGRATION_DIR
+    arg_check $# 3
+    migrate_cmd $2 validate $3 $MIGRATION_DIR
     ;;
 
   *)
