@@ -19,7 +19,6 @@ import qualified Control.Lens                  as ControlLens
 import qualified Control.Monad.Except          as ControlMonadExcept
 import qualified Control.Monad.Reader          as ControlMonadReader
 import qualified Data.Geometry.Types.Geography as DataGeometryTypesGeography
-import qualified Data.LruCache.IO              as LRU
 import qualified Data.Text                     as DataText
 import qualified Hasql.Pool                    as HasqlPool
 import qualified Servant
