@@ -2,16 +2,18 @@
 
 module Hastile.Lib.TokenSpec where
 
-import qualified Data.ByteString.Char8 as ByteString
-import qualified Data.IORef            as IORef
-import qualified Data.LruCache         as LRU
-import qualified Data.LruCache.IO      as LRUIO
-import qualified Hasql.Pool            as Pool
-import           Test.Hspec            (Spec, describe, it, runIO, shouldBe)
+import qualified Control.Monad.IO.Class as IOClass
+import qualified Data.ByteString.Char8  as ByteString
+import qualified Data.IORef             as IORef
+import qualified Data.LruCache          as LRU
+import qualified Data.LruCache.IO       as LRUIO
+import qualified Hasql.Pool             as Pool
+import           Test.Hspec             (Spec, before, describe, it, runIO,
+                                         shouldBe)
 
-import qualified Hastile.DB.Token      as TokenDB
-import qualified Hastile.Lib.Token     as TokenLib
-import qualified Hastile.Types.Token   as Token
+import qualified Hastile.DB.Token       as TokenDB
+import qualified Hastile.Lib.Token      as TokenLib
+import qualified Hastile.Types.Token    as Token
 
 spec :: Spec
 spec = do
@@ -19,55 +21,60 @@ spec = do
   pool <- runIO $ Pool.acquire (1, 10, ByteString.pack settings)
   testUpdateOrInsert pool
   testDelete pool
-  testCache
+  testCache pool
   runIO $ Pool.release pool
+
+beforeEach :: IOClass.MonadIO m => Pool.Pool -> m Token.Cache
+beforeEach pool = do
+  _ <- IOClass.liftIO $ TokenDB.clearTokens pool
+  IOClass.liftIO $ LRUIO.newLruHandle 1
 
 testUpdateOrInsert :: Pool.Pool -> Spec
 testUpdateOrInsert pool =
-  describe "testUpdateOrInsert" $ do
-    cache <- runIO $ LRUIO.newLruHandle 1
-    it "should insert a token" $ do
-      _ <- TokenLib.updateOrInsertToken pool cache exampleTokenAuthorisation
-      foundLayers <- TokenDB.getToken pool exampleToken
-      foundLayers `shouldBe` Right exampleLayers
-      checkCache cache exampleToken exampleLayers
-    it "should update a token" $ do
-      _ <- TokenLib.updateOrInsertToken pool cache updatedTokenAuthorisation
-      foundLayers <- TokenDB.getToken pool exampleToken
-      foundLayers `shouldBe` Right updatedExampleLayers
-      checkCache cache exampleToken updatedExampleLayers
+  before (beforeEach pool) $
+    describe "testUpdateOrInsert" $ do
+      it "should insert a token" $ \cache -> do
+        _ <- TokenLib.updateOrInsertToken pool cache exampleTokenAuthorisation
+        foundLayers <- TokenDB.getToken pool exampleToken
+        foundLayers `shouldBe` Right exampleLayers
+        checkCache cache exampleToken exampleLayers
+      it "should update a token" $ \cache -> do
+        _ <- TokenLib.updateOrInsertToken pool cache updatedTokenAuthorisation
+        foundLayers <- TokenDB.getToken pool exampleToken
+        foundLayers `shouldBe` Right updatedExampleLayers
+        checkCache cache exampleToken updatedExampleLayers
 
 testDelete :: Pool.Pool -> Spec
 testDelete pool =
-  describe "testDelete" $ do
-    cache <- runIO $ LRUIO.newLruHandle 1
-    it "should delete a token" $ do
-      _ <- TokenLib.updateOrInsertToken pool cache exampleTokenAuthorisation
-      result <- TokenLib.deleteToken pool cache exampleToken
-      result `shouldBe` Right "OK"
-      foundLayers <- TokenDB.getToken pool exampleToken
-      foundLayers `shouldBe` Left "SessionError (ResultError (UnexpectedAmountOfRows 0))"
-      checkCache cache exampleToken []
-    it "should fail to delete a non-existent token" $ do
-      result <- TokenLib.deleteToken pool cache exampleToken
-      result `shouldBe` Left "Delete failed"
+  before (beforeEach pool) $
+    describe "testDelete" $ do
+      it "should delete a token" $ \cache -> do
+        _ <- TokenLib.updateOrInsertToken pool cache exampleTokenAuthorisation
+        result <- TokenLib.deleteToken pool cache exampleToken
+        result `shouldBe` Right "OK"
+        foundLayers <- TokenDB.getToken pool exampleToken
+        foundLayers `shouldBe` Left "SessionError (ResultError (UnexpectedAmountOfRows 0))"
+        checkCache cache exampleToken []
+      it "should fail to delete a non-existent token" $ \cache -> do
+        result <- TokenLib.deleteToken pool cache exampleToken
+        result `shouldBe` Left "Delete failed"
 
-testCache :: Spec
-testCache =
-  describe "testCache" $ do
-    cache <- runIO $ LRUIO.newLruHandle 1
-    _ <- runIO $ LRUIO.cached cache exampleToken (pure exampleLayers)
-    it "should insert a token into the cache" $
-      checkCache cache exampleToken exampleLayers
-    it "should update the authorised layers of a token in the cache" $ do
-      TokenLib.updateCache cache updatedTokenAuthorisation
-      checkCache cache exampleToken updatedExampleLayers
-    it "should deauthorise a token in the cache" $ do
-      let updatedToken = Token.unauthorisedToken exampleToken
-      TokenLib.updateCache cache updatedToken
-      checkCache cache exampleToken []
+testCache :: Pool.Pool ->  Spec
+testCache pool =
+  before (beforeEach pool) $
+    describe "testCache" $ do
+      it "should insert a token into the cache" $ \cache -> do
+        _ <- IOClass.liftIO $ LRUIO.cached cache exampleToken (pure exampleLayers)
+        checkCache cache exampleToken exampleLayers
+      it "should update the authorised layers of a token in the cache" $ \cache -> do
+        TokenLib.updateCache cache updatedTokenAuthorisation
+        checkCache cache exampleToken updatedExampleLayers
+      it "should deauthorise a token in the cache" $ \cache -> do
+        let updatedToken = Token.unauthorisedToken exampleToken
+        TokenLib.updateCache cache updatedToken
+        checkCache cache exampleToken []
 
-checkCache :: LRUIO.LruHandle Token.Token Token.Layers -> Token.Token -> Token.Layers -> IO ()
+checkCache :: Token.Cache -> Token.Token -> Token.Layers -> IO ()
 checkCache cache token expectedLayers = do
   let (LRUIO.LruHandle ref) = cache
   unwrappedCache <- IORef.readIORef ref
@@ -86,7 +93,7 @@ updatedTokenAuthorisation =
   Token.TokenAuthorisation exampleToken updatedExampleLayers
 
 exampleToken :: Token.Token
-exampleToken = "abcd"
+exampleToken = "example"
 
 exampleLayers :: Token.Layers
 exampleLayers = ["layer1", "layer2"]

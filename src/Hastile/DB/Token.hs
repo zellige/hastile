@@ -66,6 +66,18 @@ deleteToken pool token =
   where
     action = Transaction.query token deleteTokenQuery
 
+clearTokensQuery :: Query.Query () Int.Int64
+clearTokensQuery =
+    Query.statement sql HE.unit HD.rowsAffected False
+  where
+    sql = "DELETE FROM tokens;"
+
+clearTokens :: MonadIO m => Pool.Pool -> m (Either Text.Text Int.Int64)
+clearTokens pool =
+  runWriteTransaction pool action
+  where
+    action = Transaction.query () clearTokensQuery
+
 runReadTransaction :: (MonadIO m) => Pool.Pool -> Transaction.Transaction b -> m (Either Text.Text b)
 runReadTransaction =
   runTransaction Transaction.Read
