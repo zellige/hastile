@@ -70,11 +70,13 @@ testCheckPrivateLayerAuthorisation pool =
 testFetchAuthorisedLayersForToken :: Pool.Pool -> Spec
 testFetchAuthorisedLayersForToken pool =
   describe "testFetchAuthorisedLayersForToken" $ do
+    cache <- runIO $ LRUIO.newLruHandle 1
+    _ <- runIO $ setupTokens pool cache
     it "should return authorised layers if token is in db" $ do
       layers <- LayerLib.fetchAuthorisedLayersForToken pool authorisedToken'
       layers `shouldBe` authorisedTokenLayers
     it "should return an empty list if token is not in db" $ do
-      layers <- LayerLib.fetchAuthorisedLayersForToken pool "no-existent-token"
+      layers <- LayerLib.fetchAuthorisedLayersForToken pool "non-existent-token"
       layers `shouldBe` []
 
 setupTokens :: Pool.Pool -> Token.Cache -> IO ()
