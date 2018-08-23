@@ -28,12 +28,12 @@ testUpdateOrInsert pool =
     cache <- runIO $ LRUIO.newLruHandle 1
     it "should insert a token" $ do
       _ <- TokenLib.updateOrInsertToken pool cache exampleTokenAuthorisation
-      foundLayers <- TokenDB.getToken "public" pool exampleToken
+      foundLayers <- TokenDB.getToken pool exampleToken
       foundLayers `shouldBe` Right exampleLayers
       checkCache cache exampleToken exampleLayers
     it "should update a token" $ do
       _ <- TokenLib.updateOrInsertToken pool cache updatedTokenAuthorisation
-      foundLayers <- TokenDB.getToken "public" pool exampleToken
+      foundLayers <- TokenDB.getToken pool exampleToken
       foundLayers `shouldBe` Right updatedExampleLayers
       checkCache cache exampleToken updatedExampleLayers
 
@@ -45,7 +45,7 @@ testDelete pool =
       _ <- TokenLib.updateOrInsertToken pool cache exampleTokenAuthorisation
       result <- TokenLib.deleteToken pool cache exampleToken
       result `shouldBe` Right "OK"
-      foundLayers <- TokenDB.getToken "public" pool exampleToken
+      foundLayers <- TokenDB.getToken pool exampleToken
       foundLayers `shouldBe` Left "SessionError (ResultError (UnexpectedAmountOfRows 0))"
       checkCache cache exampleToken []
     it "should fail to delete a non-existent token" $ do

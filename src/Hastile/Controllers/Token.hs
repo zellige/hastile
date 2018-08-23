@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Hastile.Controllers.Token where
@@ -27,7 +26,7 @@ tokenServer = getTokens
 getTokens :: App.ActionHandler [Token.TokenAuthorisation]
 getTokens = do
   pool <- RC.asks App._ssPool
-  er <- DB.getTokens "public" pool
+  er <- DB.getTokens pool
   case er of
     Left err     -> defaultErrorHandler err
     Right tokens -> return tokens
@@ -35,7 +34,7 @@ getTokens = do
 getToken :: T.Text -> App.ActionHandler Token.Layers
 getToken token = do
   pool <- RC.asks App._ssPool
-  er <- DB.getToken "public" pool token
+  er <- DB.getToken pool token
   case er of
     Left err     -> defaultErrorHandler err
     Right layers -> return layers

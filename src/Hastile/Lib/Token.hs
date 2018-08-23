@@ -18,7 +18,7 @@ import qualified Hastile.Types.Token    as Token
 
 updateOrInsertToken :: IOClass.MonadIO m => Pool.Pool -> Token.Cache -> Token.TokenAuthorisation -> m (Either Text.Text Text.Text)
 updateOrInsertToken pool cache tokenAuthorisation = do
-  er <- DB.updateOrInsertToken "public" pool tokenAuthorisation
+  er <- DB.updateOrInsertToken pool tokenAuthorisation
   case er of
     Left e   -> pure $ Left e
     Right () -> do
@@ -27,7 +27,7 @@ updateOrInsertToken pool cache tokenAuthorisation = do
 
 deleteToken :: IOClass.MonadIO m => Pool.Pool -> Token.Cache -> Text.Text -> m (Either Text.Text Text.Text)
 deleteToken pool cache token = do
-  er <- DB.deleteToken "public" pool token
+  er <- DB.deleteToken pool token
   case er of
     Left e                    -> pure $ Left e
     Right numberOfRowsDeleted ->

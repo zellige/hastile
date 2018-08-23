@@ -39,6 +39,7 @@ library
                      , geojson
                      , hasql
                      , hasql-pool
+                     , hasql-transaction
                      , here
                      , http-types
                      , http-media
@@ -114,7 +115,8 @@ test-suite hastile-test
                      , containers
                      , directory
                      , hastile
-                     , hasql-pool      
+                     , hasql-pool
+                     , hasql-transaction
                      , hspec
                      , lens
                      , lrucaching

@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Hastile.Lib.Layer where
@@ -36,7 +35,7 @@ checkPrivateLayerAuthorisation pool cache layer maybeToken =
 
 fetchAuthorisedLayersForToken :: IOClass.MonadIO m => Pool.Pool -> Text.Text -> m [Token.Layer]
 fetchAuthorisedLayersForToken pool token = do
-  er <- DBToken.getToken "public" pool token
+  er <- DBToken.getToken pool token
   case er of
     Left _            -> pure []
     Right foundLayers -> pure foundLayers
