@@ -27,8 +27,7 @@ testCheckLayerAuthorisation :: Pool.Pool -> Spec
 testCheckLayerAuthorisation pool =
   describe "testCheckLayerAuthorisation" $ do
     cache <- runIO $ LRUIO.newLruHandle 1
-    _ <- runIO $ TokenLib.updateOrInsertToken pool cache authorisedToken
-    _ <- runIO $ TokenLib.updateOrInsertToken pool cache unauthorisedToken
+    _ <- runIO $ setupTokens pool cache
     it "should authorise a public layer when no token is given" $ do
       let noToken = Nothing
       layerAuthorisation <- LayerLib.checkLayerAuthorisation pool cache publicLayer noToken
@@ -54,8 +53,7 @@ testCheckPrivateLayerAuthorisation :: Pool.Pool -> Spec
 testCheckPrivateLayerAuthorisation pool =
   describe "testCheckPrivateLayerAuthorisation" $ do
     cache <- runIO $ LRUIO.newLruHandle 1
-    _ <- runIO $ TokenLib.updateOrInsertToken pool cache authorisedToken
-    _ <- runIO $ TokenLib.updateOrInsertToken pool cache unauthorisedToken
+    _ <- runIO $ setupTokens pool cache
     it "should authorise a private layer if token has access" $ do
       let token = Just authorisedToken'
       layerAuthorisation <- LayerLib.checkPrivateLayerAuthorisation pool cache privateLayer token
@@ -78,6 +76,12 @@ testFetchAuthorisedLayersForToken pool =
     it "should return an empty list if token is not in db" $ do
       layers <- LayerLib.fetchAuthorisedLayersForToken pool "no-existent-token"
       layers `shouldBe` []
+
+setupTokens :: Pool.Pool -> Token.Cache -> IO ()
+setupTokens pool cache = do
+  _ <- TokenLib.updateOrInsertToken pool cache authorisedToken
+  _ <- TokenLib.updateOrInsertToken pool cache unauthorisedToken
+  pure ()
 
 unimplemented :: IO ()
 unimplemented =
