@@ -21,7 +21,6 @@ import qualified Control.Monad.Reader          as ControlMonadReader
 import qualified Data.Geometry.Types.Geography as DataGeometryTypesGeography
 import qualified Data.Text                     as DataText
 import qualified Hasql.Pool                    as HasqlPool
-import qualified Data.LruCache.IO              as LRU
 import qualified Servant
 import qualified STMContainers.Map             as STMMap
 
@@ -30,12 +29,12 @@ import qualified Hastile.Types.Layer           as Layer
 import qualified Hastile.Types.Token           as Token
 
 data ServerState = ServerState
-  { _ssPool           :: HasqlPool.Pool
-  , _ssPluginDir      :: FilePath
-  , _ssConfigFile     :: FilePath
-  , _ssOriginalConfig :: Config.Config
-  , _ssStateLayers    :: STMMap.Map DataText.Text Layer.Layer
-  , _ssTokenAuthorisationCache :: LRU.LruHandle Token.Token Token.Layers
+  { _ssPool                    :: HasqlPool.Pool
+  , _ssPluginDir               :: FilePath
+  , _ssConfigFile              :: FilePath
+  , _ssOriginalConfig          :: Config.Config
+  , _ssStateLayers             :: STMMap.Map DataText.Text Layer.Layer
+  , _ssTokenAuthorisationCache :: Token.Cache
   }
 
 ControlLens.makeLenses ''ServerState

@@ -15,6 +15,7 @@ import qualified Control.Monad
 import           Data.Aeson                 as Aeson
 import qualified Data.Foldable              as Foldable
 import qualified Data.Functor.Contravariant as Contravariant
+import qualified Data.LruCache.IO           as LRUIO
 import           Data.Monoid                ((<>))
 import qualified Data.Text                  as Text
 import qualified Hasql.Decoders
@@ -30,6 +31,8 @@ type Token = Text.Text
 type Layers = [Layer]
 
 type Layer = Text.Text
+
+type Cache = LRUIO.LruHandle Token Layers
 
 instance Aeson.FromJSON TokenAuthorisation where
   parseJSON = withObject "TokenAuthorisation" $ \o -> TokenAuthorisation
