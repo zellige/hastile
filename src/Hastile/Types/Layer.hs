@@ -44,6 +44,8 @@ data LayerSettings = LayerSettings
 
 data LayerSecurity = LayerSecurityPublic | LayerSecurityPrivate deriving (Eq)
 
+data LayerAuthorisation = Authorised | Unauthorised deriving (Show, Eq)
+
 instance Show LayerSecurity where
   show LayerSecurityPublic  = "public"
   show LayerSecurityPrivate = "private"
