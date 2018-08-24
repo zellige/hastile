@@ -4,6 +4,11 @@ jobs:
     working_directory: ~/hastile
     docker:
       - image: circleci/ruby:2.4.4
+      - image: circleci/postgres:10.3-postgis
+        environment:
+          POSTGRES_USER: hastile
+          POSTGRES_PASSWORD: "password"
+          POSTGRES_DB: hastile_test
     steps:
       - checkout
       - restore-cache:
@@ -12,6 +17,9 @@ jobs:
       - restore-cache:
           keys:
             - v1-stack{{checksum "hastile.cabal"}}{{checksum "stack-ci.yaml"}}
+      - run:
+          name: Wait for db
+          command: dockerize -wait tcp://localhost:5432 -timeout 1m
       - run:
           name: Install deps
           command: |
@@ -37,6 +45,12 @@ jobs:
           no_output_timeout: 90m
           command: |
             stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
+      - run:
+          name: setup test db
+          no_output_timeout: 90m
+          command: |
+            ./db/migration setup --stack test
+
       - run:
           name: test
           no_output_timeout: 90m
