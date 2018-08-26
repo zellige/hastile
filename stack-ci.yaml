@@ -38,7 +38,7 @@ resolver: lts-11.20
 packages:
 - '.'
 - location:
-    git: https://github.com/sitewisely/hs-geojson.git
+    git: https://github.com/domdere/hs-geojson.git
     commit: master
   extra-dep: true
 - location:
