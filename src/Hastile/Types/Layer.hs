@@ -24,6 +24,7 @@ import qualified Data.Text                     as T
 import qualified Data.Time                     as DT
 import           Options.Generic
 
+import qualified Hastile.Types.Layer.Format    as LayerFormat
 import qualified Hastile.Types.Layer.Security  as LayerSecurity
 
 data NewLayerRequest = NewLayerRequest
@@ -38,7 +39,8 @@ instance Aeson.FromJSON LayerRequestList where
 
 data LayerSettings = LayerSettings
   { _layerSecurity   :: LayerSecurity.LayerSecurity
-  , _layerQuery      :: Text
+  , _layerFormat     :: LayerFormat.LayerFormat
+  , _layerTableName  :: Text
   , _layerQuantize   :: DGTT.Pixels
   , _layerAlgorithms :: Algorithms
   } deriving (Show, Eq)
@@ -46,9 +48,10 @@ data LayerSettings = LayerSettings
 instance Aeson.FromJSON LayerSettings where
   parseJSON = withObject "LayerSettings" $ \o -> LayerSettings
     <$> o .:? "security" .!= LayerSecurity.Private
-    <*> o .: "query"
-    <*> o .: "quantize"
-    <*> o .: "simplify"
+    <*> o .:  "format"
+    <*> o .:  "table_name"
+    <*> o .:  "quantize"
+    <*> o .:  "simplify"
 
 instance Aeson.ToJSON LayerSettings where
   toJSON ls = object $
@@ -56,10 +59,11 @@ instance Aeson.ToJSON LayerSettings where
 
 layerSettingsToPairs :: LayerSettings -> [AT.Pair]
 layerSettingsToPairs ls =
-  [ "security" .= _layerSecurity ls
-  , "query"    .= _layerQuery ls
-  , "quantize" .= _layerQuantize ls
-  , "simplify" .= _layerAlgorithms ls
+  [ "security"   .= _layerSecurity ls
+  , "format"     .= _layerFormat ls
+  , "table_name" .= _layerTableName ls
+  , "quantize"   .= _layerQuantize ls
+  , "simplify"   .= _layerAlgorithms ls
   ]
 
 requestToLayer :: Text -> LayerSettings -> DT.UTCTime -> Layer
