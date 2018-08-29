@@ -48,7 +48,7 @@ mkQuery layer z xy =
          bbox4326 = Text.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint(" ++
            show llX ++ ", " ++ show llY ++ "), ST_MakePoint(" ++ show urX ++ ", " ++
            show urY ++ ")), 3857), 4326)"
-     pure $ escape bbox4326 . Layer._layerQuery $ layer
+     pure $ escape bbox4326 (Layer.getLayerSetting layer Layer._layerQuery)
 
 getLayer :: (MonadIO m, MonadReader App.ServerState m) => Text.Text -> m (Either LayerError Layer.Layer)
 getLayer l = do
@@ -71,7 +71,7 @@ escape bbox = Text.concat . fmap replace' . Text.split (== '!')
 
 lastModified :: Layer.Layer -> Text.Text
 lastModified layer = Text.dropEnd 3 (Text.pack rfc822Str) <> "GMT"
-       where rfc822Str = DT.formatTime DT.defaultTimeLocale DT.rfc822DateFormat $ Layer._layerLastModified layer
+       where rfc822Str = DT.formatTime DT.defaultTimeLocale DT.rfc822DateFormat $ Layer.getLayerDetail layer Layer._layerLastModified
 
 parseIfModifiedSince :: Text.Text -> Maybe DT.UTCTime
 parseIfModifiedSince t = DT.parseTimeM True DT.defaultTimeLocale "%a, %e %b %Y %T GMT" $ Text.unpack t
@@ -80,7 +80,7 @@ isModifiedTime :: Layer.Layer -> Maybe DT.UTCTime -> Bool
 isModifiedTime layer mTime =
   case mTime of
     Nothing   -> True
-    Just time -> Layer._layerLastModified layer > time
+    Just time -> Layer.getLayerDetail layer Layer._layerLastModified > time
 
 isModified :: Layer.Layer -> Maybe Text.Text -> Bool
 isModified layer mText =

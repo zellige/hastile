@@ -17,7 +17,7 @@ import qualified Hastile.Types.Token          as Token
 
 checkLayerAuthorisation :: IOClass.MonadIO m => Pool.Pool -> Token.Cache -> Layer.Layer -> Maybe Text.Text -> m LayerSecurity.LayerAuthorisation
 checkLayerAuthorisation pool cache layer maybeToken =
-  case Layer._layerSecurity layer of
+  case Layer.getLayerSetting layer Layer._layerSecurity of
     LayerSecurity.Public ->
       pure LayerSecurity.Authorised
     LayerSecurity.Private ->

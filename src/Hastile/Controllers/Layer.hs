@@ -110,7 +110,7 @@ getTile layer z xy = do
   geoJson <- getJson' layer z xy
   buffer  <- RC.asks (^. App.ssBuffer)
   let simplificationAlgorithm = Layer.getAlgorithm z layer
-  tile    <- liftIO $ Tile.mkTile (Layer._layerName layer) z xy buffer (Layer._layerQuantize layer) simplificationAlgorithm geoJson
+  tile    <- liftIO $ Tile.mkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoJson
   checkEmpty tile layer
 
 checkEmpty :: BS.ByteString -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" T.Text] BS.ByteString)

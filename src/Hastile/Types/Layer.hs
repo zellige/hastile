@@ -37,13 +37,11 @@ instance Aeson.FromJSON LayerRequestList where
   parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . M.toList) Control.Applicative.<$> parseJSON v
 
 data LayerSettings = LayerSettings
-  { _lsSecurity   :: LayerSecurity.LayerSecurity
-  , _lsQuery      :: Text
-  , _lsQuantize   :: DGTT.Pixels
-  , _lsAlgorithms :: Algorithms
+  { _layerSecurity   :: LayerSecurity.LayerSecurity
+  , _layerQuery      :: Text
+  , _layerQuantize   :: DGTT.Pixels
+  , _layerAlgorithms :: Algorithms
   } deriving (Show, Eq)
-
-
 
 instance Aeson.FromJSON LayerSettings where
   parseJSON = withObject "LayerSettings" $ \o -> LayerSettings
@@ -53,55 +51,50 @@ instance Aeson.FromJSON LayerSettings where
     <*> o .: "simplify"
 
 instance Aeson.ToJSON LayerSettings where
-  toJSON ls = object
-    [ "security" .= _lsSecurity ls
-    , "query"    .= _lsQuery ls
-    , "quantize" .= _lsQuantize ls
-    , "simplify" .= _lsAlgorithms ls
-    ]
+  toJSON ls = object $
+    layerSettingsToPairs ls
+
+layerSettingsToPairs :: LayerSettings -> [AT.Pair]
+layerSettingsToPairs ls =
+  [ "security" .= _layerSecurity ls
+  , "query"    .= _layerQuery ls
+  , "quantize" .= _layerQuantize ls
+  , "simplify" .= _layerAlgorithms ls
+  ]
 
 requestToLayer :: Text -> LayerSettings -> DT.UTCTime -> Layer
-requestToLayer layerName (LayerSettings security query quantize simplify) time = Layer layerName security query time quantize simplify
+requestToLayer layerName layerSettings time = Layer layerName $ LayerDetails time layerSettings
 
 data Layer = Layer
-  { _layerName         :: Text
-  , _layerSecurity     :: LayerSecurity.LayerSecurity
-  , _layerQuery        :: Text
-  , _layerLastModified :: DT.UTCTime
-  , _layerQuantize     :: DGTT.Pixels
-  , _layerAlgorithms   :: Algorithms
+  { _layerName    :: Text
+  , _layerDetails :: LayerDetails
   } deriving (Show, Eq, Generic)
 
 data LayerDetails = LayerDetails
-  { _layerDetailsSecurity     :: LayerSecurity.LayerSecurity
-  , _layerDetailsQuery        :: Text
-  , _layerDetailsLastModified :: DT.UTCTime
-  , _layerDetailsQuantize     :: DGTT.Pixels
-  , _layerDetailsAlgorithms   :: Algorithms
+  { _layerLastModified :: DT.UTCTime
+  , _layerSettings     :: LayerSettings
   } deriving (Show, Eq, Generic)
 
 instance Aeson.FromJSON LayerDetails where
-  parseJSON = withObject "Layer" $ \o -> LayerDetails
-    <$> o .:? "security" .!= LayerSecurity.Private
-    <*> o .: "query"
-    <*> o .: "last-modified"
-    <*> o .: "quantize"
-    <*> o .: "simplify"
+  parseJSON = withObject "LayerDetails" $ \o -> LayerDetails
+    <$> o .: "last-modified"
+    <*> parseJSON (Aeson.Object o)
 
 instance Aeson.ToJSON LayerDetails where
-  toJSON l = object
-    [ "security"      .= _layerDetailsSecurity l
-    , "query"         .= _layerDetailsQuery l
-    , "last-modified" .= _layerDetailsLastModified l
-    , "quantize"      .= _layerDetailsQuantize l
-    , "simplify"      .= _layerDetailsAlgorithms l
-    ]
-
-layerDetailsToLayer :: Text -> LayerDetails -> Layer
-layerDetailsToLayer name LayerDetails{..} = Layer name _layerDetailsSecurity _layerDetailsQuery _layerDetailsLastModified _layerDetailsQuantize _layerDetailsAlgorithms
+  toJSON l = object $
+    "last-modified" .= _layerLastModified l : layerSettingsToPairs (_layerSettings l)
 
 layerToLayerDetails :: Layer -> LayerDetails
-layerToLayerDetails Layer{..} = LayerDetails _layerSecurity _layerQuery _layerLastModified _layerQuantize _layerAlgorithms
+layerToLayerDetails Layer{..} = _layerDetails
+
+getLayerDetail :: Layer -> (LayerDetails -> a) -> a
+getLayerDetail layer getter =
+  getter $ _layerDetails layer
+
+getLayerSetting :: Layer -> (LayerSettings -> a) -> a
+getLayerSetting layer getter =
+  getter $ _layerSettings $ _layerDetails layer
+
 
 -- Zoom dependant simplification algorithms
 
@@ -110,7 +103,7 @@ layerToLayerDetails Layer{..} = LayerDetails _layerSecurity _layerQuery _layerLa
 type Algorithms = M.Map DGTT.ZoomLevel DGTS.SimplificationAlgorithm
 
 getAlgorithm :: DGTT.ZoomLevel -> Layer -> DGTS.SimplificationAlgorithm
-getAlgorithm z layer = getAlgorithm' z (_layerAlgorithms layer)
+getAlgorithm z layer = getAlgorithm' z $ getLayerSetting layer _layerAlgorithms
 
 getAlgorithm' :: DGTT.ZoomLevel -> Algorithms -> DGTS.SimplificationAlgorithm
 getAlgorithm' z algos = case M.lookupGE z algos of

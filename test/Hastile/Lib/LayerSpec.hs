@@ -112,20 +112,32 @@ publicLayer :: Layer.Layer
 publicLayer =
   Layer.Layer
     { Layer._layerName         = "public_layer"
-    , Layer._layerSecurity     = LayerSecurity.Public
-    , Layer._layerQuery        = "SELECT geojson FROM public_layer WHERE ST_Intersects(wkb_geometry, !bbox_4326!)"
-    , Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
-    , Layer._layerQuantize     = 4
-    , Layer._layerAlgorithms   = Map.empty
+    , Layer._layerDetails =
+        Layer.LayerDetails
+          { Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
+          , Layer._layerSettings =
+              Layer.LayerSettings
+                { Layer._layerSecurity     = LayerSecurity.Public
+                , Layer._layerQuery        = "SELECT geojson FROM public_layer WHERE ST_Intersects(wkb_geometry, !bbox_4326!)"
+                , Layer._layerQuantize     = 4
+                , Layer._layerAlgorithms   = Map.empty
+                }
+          }
     }
 
 privateLayer :: Layer.Layer
 privateLayer =
   Layer.Layer
     { Layer._layerName         = "private_layer"
-    , Layer._layerSecurity     = LayerSecurity.Private
-    , Layer._layerQuery        = "SELECT geojson FROM private_layer WHERE ST_Intersects(wkb_geometry, !bbox_4326!)"
-    , Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
-    , Layer._layerQuantize     = 4
-    , Layer._layerAlgorithms   = Map.empty
+    , Layer._layerDetails =
+        Layer.LayerDetails
+          { Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
+          , Layer._layerSettings =
+              Layer.LayerSettings
+                { Layer._layerSecurity     = LayerSecurity.Private
+                , Layer._layerQuery        = "SELECT geojson FROM private_layer WHERE ST_Intersects(wkb_geometry, !bbox_4326!)"
+                , Layer._layerQuantize     = 4
+                , Layer._layerAlgorithms   = Map.empty
+                }
+          }
     }
