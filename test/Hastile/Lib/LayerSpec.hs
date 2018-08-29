@@ -2,20 +2,21 @@
 
 module Hastile.Lib.LayerSpec where
 
-import qualified Control.Monad.IO.Class as IOClass
-import qualified Data.ByteString.Char8  as ByteString
-import qualified Data.LruCache.IO       as LRUIO
-import qualified Data.Map.Strict        as Map
-import qualified Data.Time              as Time
-import qualified Hasql.Pool             as Pool
-import           Test.Hspec             (Spec, before, describe, it, runIO,
-                                         shouldBe)
+import qualified Control.Monad.IO.Class       as IOClass
+import qualified Data.ByteString.Char8        as ByteString
+import qualified Data.LruCache.IO             as LRUIO
+import qualified Data.Map.Strict              as Map
+import qualified Data.Time                    as Time
+import qualified Hasql.Pool                   as Pool
+import           Test.Hspec                   (Spec, before, describe, it,
+                                               runIO, shouldBe)
 
-import qualified Hastile.DB.Token       as TokenDB
-import qualified Hastile.Lib.Layer      as LayerLib
-import qualified Hastile.Lib.Token      as TokenLib
-import qualified Hastile.Types.Layer    as Layer
-import qualified Hastile.Types.Token    as Token
+import qualified Hastile.DB.Token             as TokenDB
+import qualified Hastile.Lib.Layer            as LayerLib
+import qualified Hastile.Lib.Token            as TokenLib
+import qualified Hastile.Types.Layer          as Layer
+import qualified Hastile.Types.Layer.Security as LayerSecurity
+import qualified Hastile.Types.Token          as Token
 
 spec :: Spec
 spec = do
@@ -41,23 +42,23 @@ testCheckLayerAuthorisation pool =
       it "should authorise a public layer when no token is given" $ \cache -> do
         let noToken = Nothing
         layerAuthorisation <- LayerLib.checkLayerAuthorisation pool cache publicLayer noToken
-        layerAuthorisation `shouldBe` Layer.Authorised
+        layerAuthorisation `shouldBe` LayerSecurity.Authorised
       it "should authorise a public layer when a token is given" $ \cache -> do
         let token = Just authorisedToken'
         layerAuthorisation <- LayerLib.checkLayerAuthorisation pool cache publicLayer token
-        layerAuthorisation `shouldBe` Layer.Authorised
+        layerAuthorisation `shouldBe` LayerSecurity.Authorised
       it "should authorise a private layer if token has access" $ \cache -> do
         let token = Just authorisedToken'
         layerAuthorisation <- LayerLib.checkLayerAuthorisation pool cache privateLayer token
-        layerAuthorisation `shouldBe` Layer.Authorised
+        layerAuthorisation `shouldBe` LayerSecurity.Authorised
       it "should not authorise a private layer if token does not have access" $ \cache -> do
         let token = Just unauthorisedToken'
         layerAuthorisation <- LayerLib.checkLayerAuthorisation pool cache privateLayer token
-        layerAuthorisation `shouldBe` Layer.Unauthorised
+        layerAuthorisation `shouldBe` LayerSecurity.Unauthorised
       it "should not authorise a private layer if no token is given" $ \cache -> do
         let noToken = Nothing
         layerAuthorisation <- LayerLib.checkLayerAuthorisation pool cache privateLayer noToken
-        layerAuthorisation `shouldBe` Layer.Unauthorised
+        layerAuthorisation `shouldBe` LayerSecurity.Unauthorised
 
 testCheckPrivateLayerAuthorisation :: Pool.Pool -> Spec
 testCheckPrivateLayerAuthorisation pool =
@@ -66,15 +67,15 @@ testCheckPrivateLayerAuthorisation pool =
       it "should authorise a private layer if token has access" $ \cache -> do
         let token = Just authorisedToken'
         layerAuthorisation <- LayerLib.checkPrivateLayerAuthorisation pool cache privateLayer token
-        layerAuthorisation `shouldBe` Layer.Authorised
+        layerAuthorisation `shouldBe` LayerSecurity.Authorised
       it "should not authorise a private layer if token does not have access" $ \cache -> do
         let token = Just unauthorisedToken'
         layerAuthorisation <- LayerLib.checkPrivateLayerAuthorisation pool cache privateLayer token
-        layerAuthorisation `shouldBe` Layer.Unauthorised
+        layerAuthorisation `shouldBe` LayerSecurity.Unauthorised
       it "should not authorise a private layer if no token is given" $ \cache -> do
         let noToken = Nothing
         layerAuthorisation <- LayerLib.checkPrivateLayerAuthorisation pool cache privateLayer noToken
-        layerAuthorisation `shouldBe` Layer.Unauthorised
+        layerAuthorisation `shouldBe` LayerSecurity.Unauthorised
 
 testFetchAuthorisedLayersForToken :: Pool.Pool -> Spec
 testFetchAuthorisedLayersForToken pool =
@@ -111,7 +112,7 @@ publicLayer :: Layer.Layer
 publicLayer =
   Layer.Layer
     { Layer._layerName         = "public_layer"
-    , Layer._layerSecurity     = Layer.LayerSecurityPublic
+    , Layer._layerSecurity     = LayerSecurity.Public
     , Layer._layerQuery        = "SELECT geojson FROM public_layer WHERE ST_Intersects(wkb_geometry, !bbox_4326!)"
     , Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
     , Layer._layerQuantize     = 4
@@ -122,7 +123,7 @@ privateLayer :: Layer.Layer
 privateLayer =
   Layer.Layer
     { Layer._layerName         = "private_layer"
-    , Layer._layerSecurity     = Layer.LayerSecurityPrivate
+    , Layer._layerSecurity     = LayerSecurity.Private
     , Layer._layerQuery        = "SELECT geojson FROM private_layer WHERE ST_Intersects(wkb_geometry, !bbox_4326!)"
     , Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
     , Layer._layerQuantize     = 4

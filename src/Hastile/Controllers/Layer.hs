@@ -37,6 +37,7 @@ import qualified Hastile.Tile                  as Tile
 import qualified Hastile.Types.App             as App
 import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
+import qualified Hastile.Types.Layer.Security  as LayerSecurity
 
 layerServer :: Servant.ServerT Routes.LayerApi App.ActionHandler
 layerServer l = provisionLayer l Servant.:<|> coordsServer l
@@ -79,9 +80,9 @@ serveLayer l z x stringY maybeToken maybeIfModified = do
   cache <- RC.asks App._ssTokenAuthorisationCache
   layerAuthorisation <- liftIO $ LayerLib.checkLayerAuthorisation pool cache layer maybeToken
   case layerAuthorisation of
-    Layer.Authorised ->
+    LayerSecurity.Authorised ->
       getContent z x stringY maybeIfModified layer
-    Layer.Unauthorised ->
+    LayerSecurity.Unauthorised ->
       throwError layerNotFoundError
 
 getContent :: Natural -> Natural -> T.Text -> Maybe T.Text -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified"  T.Text] BS.ByteString)

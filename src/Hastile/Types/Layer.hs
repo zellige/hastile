@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE LambdaCase                #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
@@ -25,6 +24,8 @@ import qualified Data.Text                     as T
 import qualified Data.Time                     as DT
 import           Options.Generic
 
+import qualified Hastile.Types.Layer.Security  as LayerSecurity
+
 data NewLayerRequest = NewLayerRequest
   {  _newLayerRequestName     :: T.Text
   ,  _newLayerRequestSettings :: LayerSettings
@@ -36,35 +37,17 @@ instance Aeson.FromJSON LayerRequestList where
   parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . M.toList) Control.Applicative.<$> parseJSON v
 
 data LayerSettings = LayerSettings
-  { _lsSecurity   :: LayerSecurity
+  { _lsSecurity   :: LayerSecurity.LayerSecurity
   , _lsQuery      :: Text
   , _lsQuantize   :: DGTT.Pixels
   , _lsAlgorithms :: Algorithms
   } deriving (Show, Eq)
 
-data LayerSecurity = LayerSecurityPublic | LayerSecurityPrivate deriving (Eq)
 
-data LayerAuthorisation = Authorised | Unauthorised deriving (Show, Eq)
-
-instance Show LayerSecurity where
-  show LayerSecurityPublic  = "public"
-  show LayerSecurityPrivate = "private"
-
-instance Aeson.FromJSON LayerSecurity where
-  parseJSON = withText "LayerSecurity" $ \case
-    "public"  -> pure LayerSecurityPublic
-    "private" -> pure LayerSecurityPrivate
-    _         -> fail "Unknown layer security"
-
-instance Aeson.ToJSON LayerSecurity where
-  toJSON algo =
-    Aeson.String $ case algo of
-      LayerSecurityPublic  -> "public"
-      LayerSecurityPrivate -> "private"
 
 instance Aeson.FromJSON LayerSettings where
   parseJSON = withObject "LayerSettings" $ \o -> LayerSettings
-    <$> o .:? "security" .!= LayerSecurityPrivate
+    <$> o .:? "security" .!= LayerSecurity.Private
     <*> o .: "query"
     <*> o .: "quantize"
     <*> o .: "simplify"
@@ -82,7 +65,7 @@ requestToLayer layerName (LayerSettings security query quantize simplify) time =
 
 data Layer = Layer
   { _layerName         :: Text
-  , _layerSecurity     :: LayerSecurity
+  , _layerSecurity     :: LayerSecurity.LayerSecurity
   , _layerQuery        :: Text
   , _layerLastModified :: DT.UTCTime
   , _layerQuantize     :: DGTT.Pixels
@@ -90,7 +73,7 @@ data Layer = Layer
   } deriving (Show, Eq, Generic)
 
 data LayerDetails = LayerDetails
-  { _layerDetailsSecurity     :: LayerSecurity
+  { _layerDetailsSecurity     :: LayerSecurity.LayerSecurity
   , _layerDetailsQuery        :: Text
   , _layerDetailsLastModified :: DT.UTCTime
   , _layerDetailsQuantize     :: DGTT.Pixels
@@ -99,7 +82,7 @@ data LayerDetails = LayerDetails
 
 instance Aeson.FromJSON LayerDetails where
   parseJSON = withObject "Layer" $ \o -> LayerDetails
-    <$> o .:? "security" .!= LayerSecurityPrivate
+    <$> o .:? "security" .!= LayerSecurity.Private
     <*> o .: "query"
     <*> o .: "last-modified"
     <*> o .: "quantize"

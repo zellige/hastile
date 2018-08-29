@@ -28,6 +28,7 @@ library
                      , Hastile.Types.App
                      , Hastile.Types.Config
                      , Hastile.Types.Layer
+                     , Hastile.Types.Layer.Security
                      , Hastile.Types.Mime
                      , Hastile.Types.Token
   build-depends:       base >= 4.8 && < 5
