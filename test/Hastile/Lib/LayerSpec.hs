@@ -111,7 +111,7 @@ unauthorisedTokenLayers = ["other_layer"]
 publicLayer :: Layer.Layer
 publicLayer =
   Layer.Layer
-    { Layer._layerName         = "public_layer"
+    { Layer._layerName    = "public_layer"
     , Layer._layerDetails =
         Layer.LayerDetails
           { Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
@@ -128,7 +128,7 @@ publicLayer =
 privateLayer :: Layer.Layer
 privateLayer =
   Layer.Layer
-    { Layer._layerName         = "private_layer"
+    { Layer._layerName    = "private_layer"
     , Layer._layerDetails =
         Layer.LayerDetails
           { Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
