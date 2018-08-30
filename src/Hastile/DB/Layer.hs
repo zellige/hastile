@@ -17,68 +17,58 @@ import qualified Data.Geometry.Types.Geography as DGTT
 import qualified Data.Geospatial               as Geospatial
 import           Data.Monoid
 import qualified Data.Text                     as Text
-import qualified Data.Text.Encoding            as TE
-import qualified Data.Time                     as DT
+import qualified Data.Text.Encoding            as TextEncoding
 import qualified Data.Wkb                      as Wkb
-import           GHC.Conc
 import qualified Hasql.Decoders                as HD
 import qualified Hasql.Encoders                as HE
-import qualified Hasql.Pool                    as P
+import qualified Hasql.Pool                    as Pool
 import qualified Hasql.Query                   as HQ
 import qualified Hasql.Transaction             as Transaction
 import qualified Hasql.Transaction.Sessions    as Transaction
-import           STMContainers.Map             as STM
 
-import           Hastile.Tile
-import qualified Hastile.Tile                  as Tile
 import qualified Hastile.Types.App             as App
-import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
 import qualified Hastile.Types.Layer.Format    as LayerFormat
+import qualified Hastile.Types.Tile            as Tile
 
-data LayerError = LayerNotFound
-
-findFeatures :: (MonadIO m, MonadReader App.ServerState m)
-             => Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m (Either P.UsageError [Geospatial.GeoFeature AesonTypes.Value])
+findFeatures :: (MonadIO m, MonadReader App.ServerState m) => Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m (Either Pool.UsageError [Geospatial.GeoFeature AesonTypes.Value])
 findFeatures layer z xy = do
   buffer <- asks (^. App.ssBuffer)
-  let bboxM = googleToBBoxM Config.defaultTileSize z xy
-      bbox = addBufferToBBox Config.defaultTileSize buffer z bboxM
-      tableName = Layer.getLayerSetting layer Layer._layerTableName
-      query = case Layer.getLayerSetting layer Layer._layerFormat of
-                LayerFormat.GeoJSON ->
-                  layerQueryJSON tableName
-                LayerFormat.WkbProperties ->
-                  layerQueryWkbProperties tableName
-      action = Transaction.query bbox query
-      session = Transaction.transaction
-              Transaction.ReadCommitted Transaction.Read action
+  let
+    bbox = Tile.getBbox buffer z xy
+    query = getLayerQuery layer
+    action = Transaction.query bbox query
+    session = Transaction.transaction
+                Transaction.ReadCommitted Transaction.Read action
   hpool <- asks App._ssPool
-  liftIO $ P.use hpool session
+  liftIO $ Pool.use hpool session
 
-layerQueryEncoder :: HE.Params (BBox Metres)
-layerQueryEncoder =
-  Contravariant.contramap Tile._bboxLlx (HE.value metreValue)
-  <> Contravariant.contramap Tile._bboxLly (HE.value metreValue)
-  <> Contravariant.contramap Tile._bboxUrx (HE.value metreValue)
-  <> Contravariant.contramap Tile._bboxUry (HE.value metreValue)
+getLayerQuery :: Layer.Layer -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
+getLayerQuery layer =
+  case layerFormat of
+    LayerFormat.GeoJSON ->
+      layerQueryJSON tableName
+    LayerFormat.WkbProperties ->
+      layerQueryWkbProperties tableName
+  where
+    tableName = Layer.getLayerSetting layer Layer._layerTableName
+    layerFormat = Layer.getLayerSetting layer Layer._layerFormat
 
-metreValue :: HE.Value Tile.Metres
-metreValue =
-  Contravariant.contramap metreTodouble HE.float8
-  where metreTodouble (Tile.Metres double) = double
-
-layerQueryJSON :: Text.Text -> HQ.Query (BBox Metres) [Geospatial.GeoFeature AesonTypes.Value]
+layerQueryJSON :: Text.Text -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
 layerQueryJSON tableName =
-    HQ.statement sql layerQueryEncoder (HD.rowsList jsonDecoder) False
+    HQ.statement sql bboxEncoder (HD.rowsList jsonDecoder) False
   where
-    sql = TE.encodeUtf8 $ Text.pack $ "SELECT geojson FROM " ++ Text.unpack  tableName ++ layerQueryWhereClause
+    sql = TextEncoding.encodeUtf8 $ Text.pack $
+            "SELECT geojson FROM " ++
+            Text.unpack tableName ++ layerQueryWhereClause
 
-layerQueryWkbProperties :: Text.Text -> HQ.Query (BBox Metres) [Geospatial.GeoFeature AesonTypes.Value]
+layerQueryWkbProperties :: Text.Text -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
 layerQueryWkbProperties tableName =
-    HQ.statement sql layerQueryEncoder (HD.rowsList wkbPropertiesDecoder) False
+    HQ.statement sql bboxEncoder (HD.rowsList wkbPropertiesDecoder) False
   where
-    sql = TE.encodeUtf8 $ Text.pack $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " ++ Text.unpack tableName ++ layerQueryWhereClause
+    sql = TextEncoding.encodeUtf8 $ Text.pack $
+            "SELECT ST_AsBinary(wkb_geometry), properties FROM " ++
+            Text.unpack tableName ++ layerQueryWhereClause
 
 jsonDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
 jsonDecoder =
@@ -102,29 +92,14 @@ layerQueryWhereClause :: String
 layerQueryWhereClause =
   " WHERE ST_Intersects(wkb_geometry, ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint($1, $2), ST_MakePoint($3, $4)), 3857), 4326));"
 
-getLayer :: (MonadIO m, MonadReader App.ServerState m) => Text.Text -> m (Either LayerError Layer.Layer)
-getLayer l = do
-  ls <- asks App._ssStateLayers
-  result <- liftIO . atomically $ STM.lookup l ls
-  pure $ case result of
-    Nothing    -> Left LayerNotFound
-    Just layer -> Right layer
+bboxEncoder :: HE.Params (Tile.BBox Tile.Metres)
+bboxEncoder =
+  Contravariant.contramap Tile._bboxLlx (HE.value metreValue)
+  <> Contravariant.contramap Tile._bboxLly (HE.value metreValue)
+  <> Contravariant.contramap Tile._bboxUrx (HE.value metreValue)
+  <> Contravariant.contramap Tile._bboxUry (HE.value metreValue)
 
-lastModified :: Layer.Layer -> Text.Text
-lastModified layer = Text.dropEnd 3 (Text.pack rfc822Str) <> "GMT"
-       where rfc822Str = DT.formatTime DT.defaultTimeLocale DT.rfc822DateFormat $ Layer.getLayerDetail layer Layer._layerLastModified
-
-parseIfModifiedSince :: Text.Text -> Maybe DT.UTCTime
-parseIfModifiedSince t = DT.parseTimeM True DT.defaultTimeLocale "%a, %e %b %Y %T GMT" $ Text.unpack t
-
-isModifiedTime :: Layer.Layer -> Maybe DT.UTCTime -> Bool
-isModifiedTime layer mTime =
-  case mTime of
-    Nothing   -> True
-    Just time -> Layer.getLayerDetail layer Layer._layerLastModified > time
-
-isModified :: Layer.Layer -> Maybe Text.Text -> Bool
-isModified layer mText =
-  case mText of
-    Nothing   -> True
-    Just text -> isModifiedTime layer $ parseIfModifiedSince text
+metreValue :: HE.Value Tile.Metres
+metreValue =
+  Contravariant.contramap metreTodouble HE.float8
+  where metreTodouble (Tile.Metres double) = double

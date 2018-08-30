@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Hastile.TileSpec where
+module Hastile.Types.TileSpec where
 
 import           Control.Lens
 import qualified Data.ByteString                as BS (ByteString, readFile)
@@ -17,7 +17,7 @@ import           Test.Hspec                     (Spec, describe, it, shouldBe)
 
 
 import           Data.Geometry.Types.Simplify
-import           Hastile.Tile                   (BBox (..), addBufferToBBox,
+import           Hastile.Types.Tile             (BBox (..), addBufferToBBox,
                                                  extent, googleToBBoxM, mkTile)
 
 spec :: Spec

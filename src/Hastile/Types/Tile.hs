@@ -1,8 +1,9 @@
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Hastile.Tile ( addBufferToBBox
+module Hastile.Types.Tile ( addBufferToBBox
             , extent
+            , getBbox
             , googleToBBoxM
             , mkTile
             , BBox (..)
@@ -48,6 +49,12 @@ earthCircumference = 2 * maxExtent
 extent :: BBox Metres
 extent = BBox (-maxExtent) (-maxExtent) maxExtent maxExtent
 
+getBbox :: DGTT.Pixels -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> BBox Metres
+getBbox buffer z xy =
+  addBufferToBBox Config.defaultTileSize buffer z bboxM
+  where
+    bboxM = googleToBBoxM Config.defaultTileSize z xy
+
 addBufferToBBox :: DGTT.Pixels -> DGTT.Pixels -> DGTT.ZoomLevel -> BBox Metres -> BBox Metres
 addBufferToBBox tileSize buffer z (BBox llX llY urX urY) =
   hardLimit $ BBox (llX - bufferM) (llY - bufferM) (urX + bufferM) (urY + bufferM)
@@ -83,7 +90,6 @@ mPerPxAtZoom (Metres m) tile z = Ratio $ m / fromIntegral p
 mPerPxToM :: Ratio Metres DGTT.Pixels -> DGTT.Pixels -> Metres
 mPerPxToM (Ratio r) p = Metres $ r * fromIntegral p
 
--- mkConfig :: Text -> Pixels -> (Pixels, Pixels) -> Pixels -> Pixels -> Pixels -> Config
 mkTile :: T.Text -> DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> DGTT.Pixels -> DGTT.Pixels -> DGTS.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
 mkTile l z xy buffer quantizePixels algo geoJson = DGM.encodeMvt <$> DGM.createMvt config geoJson
   where
