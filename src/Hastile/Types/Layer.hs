@@ -49,7 +49,7 @@ instance Aeson.FromJSON LayerSettings where
   parseJSON = withObject "LayerSettings" $ \o -> LayerSettings
     <$> o .:? "security" .!= LayerSecurity.Private
     <*> o .:  "format"
-    <*> o .:  "table_name"
+    <*> o .:  "table-name"
     <*> o .:  "quantize"
     <*> o .:  "simplify"
 
@@ -61,7 +61,7 @@ layerSettingsToPairs :: LayerSettings -> [AT.Pair]
 layerSettingsToPairs ls =
   [ "security"   .= _layerSecurity ls
   , "format"     .= _layerFormat ls
-  , "table_name" .= _layerTableName ls
+  , "table-name" .= _layerTableName ls
   , "quantize"   .= _layerQuantize ls
   , "simplify"   .= _layerAlgorithms ls
   ]

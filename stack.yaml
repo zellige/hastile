@@ -38,6 +38,7 @@ resolver: lts-11.22
 packages:
 - '.'
 - '../hs-geojson'
+- '../wkt-geom'
 - '../zellige'
 
 # Dependency packages to be pulled from upstream that are not in the resolver

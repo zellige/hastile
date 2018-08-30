@@ -29,7 +29,12 @@ data LatLon a = Lat Double
               deriving (Show, Eq)
 
 -- SW and NE points given as W,S,E,N
-data BBox a = BBox a a a a deriving (Show, Eq, Functor)
+data BBox a = BBox
+  { _bboxLlx :: a
+  , _bboxLly :: a
+  , _bboxUrx :: a
+  , _bboxUry :: a
+  } deriving (Show, Eq, Functor)
 
 earthRadius :: Metres
 earthRadius = Metres 6378137

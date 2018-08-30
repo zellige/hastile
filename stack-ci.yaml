@@ -42,6 +42,9 @@ packages:
     commit: master
   extra-dep: true
 - location:
+    git: https://github.com/sitewisely/wkt-geom.git
+    commit: master
+- location:
     git: https://github.com/sitewisely/zellige.git
     commit: master
   extra-dep: true

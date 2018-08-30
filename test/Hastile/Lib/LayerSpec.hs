@@ -15,6 +15,7 @@ import qualified Hastile.DB.Token             as TokenDB
 import qualified Hastile.Lib.Layer            as LayerLib
 import qualified Hastile.Lib.Token            as TokenLib
 import qualified Hastile.Types.Layer          as Layer
+import qualified Hastile.Types.Layer.Format   as LayerFormat
 import qualified Hastile.Types.Layer.Security as LayerSecurity
 import qualified Hastile.Types.Token          as Token
 
@@ -118,7 +119,8 @@ publicLayer =
           , Layer._layerSettings =
               Layer.LayerSettings
                 { Layer._layerSecurity     = LayerSecurity.Public
-                , Layer._layerQuery        = "SELECT geojson FROM public_layer WHERE ST_Intersects(wkb_geometry, !bbox_4326!)"
+                , Layer._layerFormat       = LayerFormat.GeoJSON
+                , Layer._layerTableName    = "public_layer"
                 , Layer._layerQuantize     = 4
                 , Layer._layerAlgorithms   = Map.empty
                 }
@@ -135,7 +137,8 @@ privateLayer =
           , Layer._layerSettings =
               Layer.LayerSettings
                 { Layer._layerSecurity     = LayerSecurity.Private
-                , Layer._layerQuery        = "SELECT geojson FROM private_layer WHERE ST_Intersects(wkb_geometry, !bbox_4326!)"
+                , Layer._layerFormat       = LayerFormat.GeoJSON
+                , Layer._layerTableName    = "private_layer"
                 , Layer._layerQuantize     = 4
                 , Layer._layerAlgorithms   = Map.empty
                 }

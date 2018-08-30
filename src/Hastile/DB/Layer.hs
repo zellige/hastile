@@ -11,20 +11,26 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import qualified Data.Aeson                    as Aeson
 import qualified Data.ByteString               as BS
+import qualified Data.ByteString.Lazy          as LazyByteString
+import qualified Data.Functor.Contravariant    as Contravariant
 import qualified Data.Geometry.Types.Geography as DGTT
+import qualified Data.Geospatial               as Geospatial
 import           Data.Monoid
 import qualified Data.Text                     as Text
 import qualified Data.Text.Encoding            as TE
 import qualified Data.Time                     as DT
+import qualified Data.Wkb                      as Wkb
 import           GHC.Conc
 import qualified Hasql.Decoders                as HD
 import qualified Hasql.Encoders                as HE
 import qualified Hasql.Pool                    as P
 import qualified Hasql.Query                   as HQ
-import qualified Hasql.Session                 as HS
+import qualified Hasql.Transaction             as Transaction
+import qualified Hasql.Transaction.Sessions    as Transaction
 import           STMContainers.Map             as STM
 
 import           Hastile.Tile
+import qualified Hastile.Tile                  as Tile
 import qualified Hastile.Types.App             as App
 import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
@@ -34,21 +40,47 @@ data LayerError = LayerNotFound
 findFeatures :: (MonadIO m, MonadReader App.ServerState m)
              => Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m (Either P.UsageError [Aeson.Value])
 findFeatures layer z xy = do
-  sql <- mkQuery layer z xy
-  let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
-  p <- asks App._ssPool
-  liftIO $ P.use p sessTfs
+  buffer <- asks (^. App.ssBuffer)
+  let bboxM = googleToBBoxM Config.defaultTileSize z xy
+      bbox = addBufferToBBox Config.defaultTileSize buffer z bboxM
+      query = layerQueryJSON (Layer.getLayerSetting layer Layer._layerTableName)
+      action = Transaction.query bbox query
+      session = Transaction.transaction
+              Transaction.ReadCommitted Transaction.Read action
+  hpool <- asks App._ssPool
+  liftIO $ P.use hpool session
 
-mkQuery :: (MonadReader App.ServerState m) => Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m Text.Text
-mkQuery layer z xy =
-  do buffer <- asks (^. App.ssBuffer)
-     let bboxM = googleToBBoxM Config.defaultTileSize z xy
-         (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
-           addBufferToBBox Config.defaultTileSize buffer z bboxM
-         bbox4326 = Text.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint(" ++
-           show llX ++ ", " ++ show llY ++ "), ST_MakePoint(" ++ show urX ++ ", " ++
-           show urY ++ ")), 3857), 4326)"
-     pure $ escape bbox4326 (Layer.getLayerSetting layer Layer._layerQuery)
+layerQueryEncoder :: HE.Params (BBox Metres)
+layerQueryEncoder =
+  Contravariant.contramap Tile._bboxLlx (HE.value metreValue)
+  <> Contravariant.contramap Tile._bboxLly (HE.value metreValue)
+  <> Contravariant.contramap Tile._bboxUrx (HE.value metreValue)
+  <> Contravariant.contramap Tile._bboxUry (HE.value metreValue)
+
+metreValue :: HE.Value Tile.Metres
+metreValue =
+  Contravariant.contramap metreTodouble HE.float8
+  where metreTodouble (Tile.Metres double) = double
+
+layerQueryJSON :: Text.Text -> HQ.Query (BBox Metres) [Aeson.Value]
+layerQueryJSON tableName =
+    HQ.statement sql layerQueryEncoder (HD.rowsList (HD.value HD.json)) False
+  where
+    sql = TE.encodeUtf8 $ Text.pack $ "SELECT geojson FROM " ++ Text.unpack  tableName ++ layerQueryWhereClause
+
+layerQueryWkbProperties :: Text.Text -> HQ.Query (BBox Metres) [Geospatial.GeospatialGeometry]
+layerQueryWkbProperties tableName =
+    HQ.statement sql layerQueryEncoder (HD.rowsList wkbPropertiesDecoder) False
+  where
+    sql = TE.encodeUtf8 $ Text.pack $ "SELECT wkb_geometry FROM " ++ Text.unpack tableName ++ layerQueryWhereClause
+
+wkbPropertiesDecoder :: HD.Row Geospatial.GeospatialGeometry
+wkbPropertiesDecoder =
+  HD.value $ HD.custom (\_ -> either (Left . Text.pack) Right . Wkb.parseByteString . LazyByteString.fromStrict)
+
+layerQueryWhereClause :: String
+layerQueryWhereClause =
+  " WHERE ST_Intersects(wkb_geometry, ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint($1, $2), ST_MakePoint($3, $4)), 3857), 4326));"
 
 getLayer :: (MonadIO m, MonadReader App.ServerState m) => Text.Text -> m (Either LayerError Layer.Layer)
 getLayer l = do
@@ -61,13 +93,6 @@ getLayer l = do
 mkStatement :: BS.ByteString -> HQ.Query () [Aeson.Value]
 mkStatement sql = HQ.statement sql
     HE.unit (HD.rowsList (HD.value HD.json)) False
-
--- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
-escape :: Text.Text -> Text.Text -> Text.Text
-escape bbox = Text.concat . fmap replace' . Text.split (== '!')
-  where
-    replace' "bbox_4326" = bbox
-    replace' t           = t
 
 lastModified :: Layer.Layer -> Text.Text
 lastModified layer = Text.dropEnd 3 (Text.pack rfc822Str) <> "GMT"

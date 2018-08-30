@@ -40,10 +40,7 @@ import qualified Hastile.Types.Layer           as Layer
 import qualified Hastile.Types.Layer.Security  as LayerSecurity
 
 layerServer :: Servant.ServerT Routes.LayerApi App.ActionHandler
-layerServer l = provisionLayer l Servant.:<|> coordsServer l
-
-coordsServer :: T.Text -> Natural -> Natural -> Servant.ServerT Routes.HastileContentApi App.ActionHandler
-coordsServer l z x = getQuery l z x Servant.:<|> serveLayer l z x
+layerServer l = provisionLayer l Servant.:<|> serveLayer l
 
 stmMapToList :: STMMap.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STMMap.stream
@@ -67,11 +64,6 @@ newLayer b = do
   let newNewLayers = fmap (\(k, v) -> (k, Layer.layerToLayerDetails v)) newLayers
   liftIO $ LBS8.writeFile cfgFile (AE.encodePretty (originalCfg {Config._configLayers = fromList newNewLayers}))
   pure Servant.NoContent
-
-getQuery :: T.Text -> Natural -> Natural -> Natural -> App.ActionHandler T.Text
-getQuery l z x y = do
-  layer <- getLayerOrThrow l
-  DBLayer.mkQuery layer z (x, y)
 
 serveLayer :: T.Text -> Natural -> Natural -> T.Text -> Maybe T.Text -> Maybe T.Text -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" T.Text] BS.ByteString)
 serveLayer l z x stringY maybeToken maybeIfModified = do
