@@ -34,7 +34,7 @@ import qualified Hastile.Tile                  as Tile
 import qualified Hastile.Types.App             as App
 import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
--- import qualified Hastile.Types.Layer.Format    as LayerFormat
+import qualified Hastile.Types.Layer.Format    as LayerFormat
 
 data LayerError = LayerNotFound
 
@@ -45,12 +45,11 @@ findFeatures layer z xy = do
   let bboxM = googleToBBoxM Config.defaultTileSize z xy
       bbox = addBufferToBBox Config.defaultTileSize buffer z bboxM
       tableName = Layer.getLayerSetting layer Layer._layerTableName
-      query = layerQueryWkbProperties tableName
-              -- case Layer.getLayerSetting layer Layer._layerFormat of
-                -- LayerFormat.GeoJSON ->
-                --   layerQueryJSON tableName
-                -- LayerFormat.WkbProperteis ->
-                  -- layerQueryWkbProperties tableName
+      query = case Layer.getLayerSetting layer Layer._layerFormat of
+                LayerFormat.GeoJSON ->
+                  layerQueryJSON tableName
+                LayerFormat.WkbProperties ->
+                  layerQueryWkbProperties tableName
       action = Transaction.query bbox query
       session = Transaction.transaction
               Transaction.ReadCommitted Transaction.Read action
@@ -69,9 +68,9 @@ metreValue =
   Contravariant.contramap metreTodouble HE.float8
   where metreTodouble (Tile.Metres double) = double
 
-layerQueryJSON :: Text.Text -> HQ.Query (BBox Metres) [Aeson.Value]
+layerQueryJSON :: Text.Text -> HQ.Query (BBox Metres) [Geospatial.GeoFeature AesonTypes.Value]
 layerQueryJSON tableName =
-    HQ.statement sql layerQueryEncoder (HD.rowsList (HD.value HD.json)) False
+    HQ.statement sql layerQueryEncoder (HD.rowsList jsonDecoder) False
   where
     sql = TE.encodeUtf8 $ Text.pack $ "SELECT geojson FROM " ++ Text.unpack  tableName ++ layerQueryWhereClause
 
@@ -81,12 +80,23 @@ layerQueryWkbProperties tableName =
   where
     sql = TE.encodeUtf8 $ Text.pack $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " ++ Text.unpack tableName ++ layerQueryWhereClause
 
+jsonDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
+jsonDecoder =
+  HD.value $
+    HD.jsonBytes $
+      either
+        (Left . Text.pack)
+        Right . eitherDecode . LazyByteString.fromStrict
+  where
+    eitherDecode =
+      Aeson.eitherDecode :: LazyByteString.ByteString
+        -> Either String (Geospatial.GeoFeature AesonTypes.Value)
+
 wkbPropertiesDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
 wkbPropertiesDecoder =
   (\x y -> Geospatial.GeoFeature Nothing x y Nothing)
     <$> HD.value (HD.custom (\_ -> either (Left . Text.pack) Right . Wkb.parseByteString . LazyByteString.fromStrict))
     <*> HD.value HD.json
-    -- <*> HD.value (Just . Geospatial.FeatureIDText <$> HD.text)
 
 layerQueryWhereClause :: String
 layerQueryWhereClause =
