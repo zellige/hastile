@@ -11,7 +11,6 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import qualified Data.Aeson                    as Aeson
 import qualified Data.Aeson.Types              as AesonTypes
-import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Lazy          as LazyByteString
 import qualified Data.Functor.Contravariant    as Contravariant
 import qualified Data.Geometry.Types.Geography as DGTT
@@ -46,11 +45,12 @@ findFeatures layer z xy = do
   let bboxM = googleToBBoxM Config.defaultTileSize z xy
       bbox = addBufferToBBox Config.defaultTileSize buffer z bboxM
       tableName = Layer.getLayerSetting layer Layer._layerTableName
-      query = case Layer.getLayerSetting layer Layer._layerFormat of
+      query = layerQueryWkbProperties tableName
+              -- case Layer.getLayerSetting layer Layer._layerFormat of
                 -- LayerFormat.GeoJSON ->
                 --   layerQueryJSON tableName
                 -- LayerFormat.WkbProperteis ->
-                _ -> layerQueryWkbProperties tableName
+                  -- layerQueryWkbProperties tableName
       action = Transaction.query bbox query
       session = Transaction.transaction
               Transaction.ReadCommitted Transaction.Read action
@@ -79,11 +79,14 @@ layerQueryWkbProperties :: Text.Text -> HQ.Query (BBox Metres) [Geospatial.GeoFe
 layerQueryWkbProperties tableName =
     HQ.statement sql layerQueryEncoder (HD.rowsList wkbPropertiesDecoder) False
   where
-    sql = TE.encodeUtf8 $ Text.pack $ "SELECT ST_AsBinary(wkb_geometry) FROM " ++ Text.unpack tableName ++ layerQueryWhereClause
+    sql = TE.encodeUtf8 $ Text.pack $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " ++ Text.unpack tableName ++ layerQueryWhereClause
 
 wkbPropertiesDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
 wkbPropertiesDecoder =
-  HD.value $ HD.custom (\_ -> either (Left . Text.pack) (\g -> Right $ Geospatial.GeoFeature Nothing g AesonTypes.Null Nothing) . Wkb.parseByteString . LazyByteString.fromStrict)
+  (\x y -> Geospatial.GeoFeature Nothing x y Nothing)
+    <$> HD.value (HD.custom (\_ -> either (Left . Text.pack) Right . Wkb.parseByteString . LazyByteString.fromStrict))
+    <*> HD.value HD.json
+    -- <*> HD.value (Just . Geospatial.FeatureIDText <$> HD.text)
 
 layerQueryWhereClause :: String
 layerQueryWhereClause =
@@ -96,10 +99,6 @@ getLayer l = do
   pure $ case result of
     Nothing    -> Left LayerNotFound
     Just layer -> Right layer
-
-mkStatement :: BS.ByteString -> HQ.Query () [Aeson.Value]
-mkStatement sql = HQ.statement sql
-    HE.unit (HD.rowsList (HD.value HD.json)) False
 
 lastModified :: Layer.Layer -> Text.Text
 lastModified layer = Text.dropEnd 3 (Text.pack rfc822Str) <> "GMT"
