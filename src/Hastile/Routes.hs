@@ -20,7 +20,6 @@ type LayerName = Capture "layer" Text.Text
 type Z = Capture "z" DGTT.ZoomLevel
 type X = Capture "x" DGTT.Pixels
 type Y = Capture "y" Text.Text
-type YI = Capture "y" DGTT.Pixels
 
 type HastileApi =
   Get '[JSON] Config.InputConfig

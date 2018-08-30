@@ -118,7 +118,7 @@ getJson' layer z xy = do
   errorOrTfs <- DBLayer.findFeatures layer z xy
   case errorOrTfs of
     Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }
-    Right tfs -> pure $ DG.GeoFeatureCollection Nothing (Layer.mkGeoJSON tfs)
+    Right tfs -> pure $ DG.GeoFeatureCollection Nothing tfs
 
 getLayerOrThrow :: T.Text -> App.ActionHandler Layer.Layer
 getLayerOrThrow l = do
