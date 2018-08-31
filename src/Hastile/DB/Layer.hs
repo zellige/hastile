@@ -12,20 +12,18 @@ import           Control.Monad.Reader.Class
 import qualified Data.Aeson                    as Aeson
 import qualified Data.Aeson.Types              as AesonTypes
 import qualified Data.ByteString.Lazy          as LazyByteString
-import qualified Data.Functor.Contravariant    as Contravariant
 import qualified Data.Geometry.Types.Geography as DGTT
 import qualified Data.Geospatial               as Geospatial
-import           Data.Monoid
 import qualified Data.Text                     as Text
 import qualified Data.Text.Encoding            as TextEncoding
 import qualified Data.Wkb                      as Wkb
 import qualified Hasql.Decoders                as HD
-import qualified Hasql.Encoders                as HE
 import qualified Hasql.Pool                    as Pool
 import qualified Hasql.Query                   as HQ
 import qualified Hasql.Transaction             as Transaction
 import qualified Hasql.Transaction.Sessions    as Transaction
 
+import qualified Hastile.Lib.Tile              as TileLib
 import qualified Hastile.Types.App             as App
 import qualified Hastile.Types.Layer           as Layer
 import qualified Hastile.Types.Layer.Format    as LayerFormat
@@ -35,7 +33,7 @@ findFeatures :: (MonadIO m, MonadReader App.ServerState m) => Layer.Layer -> DGT
 findFeatures layer z xy = do
   buffer <- asks (^. App.ssBuffer)
   let
-    bbox = Tile.getBbox buffer z xy
+    bbox = TileLib.getBbox buffer z xy
     query = getLayerQuery layer
     action = Transaction.query bbox query
     session = Transaction.transaction
@@ -47,16 +45,16 @@ getLayerQuery :: Layer.Layer -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.Geo
 getLayerQuery layer =
   case layerFormat of
     LayerFormat.GeoJSON ->
-      layerQueryJSON tableName
+      layerQueryGeoJSON tableName
     LayerFormat.WkbProperties ->
       layerQueryWkbProperties tableName
   where
     tableName = Layer.getLayerSetting layer Layer._layerTableName
     layerFormat = Layer.getLayerSetting layer Layer._layerFormat
 
-layerQueryJSON :: Text.Text -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
-layerQueryJSON tableName =
-    HQ.statement sql bboxEncoder (HD.rowsList jsonDecoder) False
+layerQueryGeoJSON :: Text.Text -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
+layerQueryGeoJSON tableName =
+    HQ.statement sql Tile.bboxEncoder (HD.rowsList jsonDecoder) False
   where
     sql = TextEncoding.encodeUtf8 $ Text.pack $
             "SELECT geojson FROM " ++
@@ -64,7 +62,7 @@ layerQueryJSON tableName =
 
 layerQueryWkbProperties :: Text.Text -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
 layerQueryWkbProperties tableName =
-    HQ.statement sql bboxEncoder (HD.rowsList wkbPropertiesDecoder) False
+    HQ.statement sql Tile.bboxEncoder (HD.rowsList wkbPropertiesDecoder) False
   where
     sql = TextEncoding.encodeUtf8 $ Text.pack $
             "SELECT ST_AsBinary(wkb_geometry), properties FROM " ++
@@ -91,15 +89,3 @@ wkbPropertiesDecoder =
 layerQueryWhereClause :: String
 layerQueryWhereClause =
   " WHERE ST_Intersects(wkb_geometry, ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint($1, $2), ST_MakePoint($3, $4)), 3857), 4326));"
-
-bboxEncoder :: HE.Params (Tile.BBox Tile.Metres)
-bboxEncoder =
-  Contravariant.contramap Tile._bboxLlx (HE.value metreValue)
-  <> Contravariant.contramap Tile._bboxLly (HE.value metreValue)
-  <> Contravariant.contramap Tile._bboxUrx (HE.value metreValue)
-  <> Contravariant.contramap Tile._bboxUry (HE.value metreValue)
-
-metreValue :: HE.Value Tile.Metres
-metreValue =
-  Contravariant.contramap metreTodouble HE.float8
-  where metreTodouble (Tile.Metres double) = double

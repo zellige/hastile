@@ -32,12 +32,12 @@ import qualified STMContainers.Map             as STMMap
 
 import qualified Hastile.DB.Layer              as DBLayer
 import qualified Hastile.Lib.Layer             as LayerLib
+import qualified Hastile.Lib.Tile              as TileLib
 import qualified Hastile.Routes                as Routes
 import qualified Hastile.Types.App             as App
 import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
 import qualified Hastile.Types.Layer.Security  as LayerSecurity
-import qualified Hastile.Types.Tile            as Tile
 
 layerServer :: Servant.ServerT Routes.LayerApi App.ActionHandler
 layerServer l = provisionLayer l Servant.:<|> serveLayer l
@@ -99,10 +99,10 @@ getAnything f layer z x stringY =
 
 getTile :: Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
 getTile layer z xy = do
-  geoJson <- getJson' layer z xy
+  geoFeature <- getGeoFeature layer z xy
   buffer  <- RC.asks (^. App.ssBuffer)
   let simplificationAlgorithm = Layer.getAlgorithm z layer
-  tile    <- liftIO $ Tile.mkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoJson
+  tile <- liftIO $ TileLib.mkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoFeature
   checkEmpty tile layer
 
 checkEmpty :: BS.ByteString -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
@@ -111,10 +111,10 @@ checkEmpty tile layer
   | otherwise = pure $ Servant.addHeader (Layer.lastModified layer) tile
 
 getJson :: Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
-getJson layer z xy = Servant.addHeader (Layer.lastModified layer) . LBS8.toStrict . A.encode <$> getJson' layer z xy
+getJson layer z xy = Servant.addHeader (Layer.lastModified layer) . LBS8.toStrict . A.encode <$> getGeoFeature layer z xy
 
-getJson' :: Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> App.ActionHandler (DG.GeoFeatureCollection A.Value)
-getJson' layer z xy = do
+getGeoFeature :: Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> App.ActionHandler (DG.GeoFeatureCollection A.Value)
+getGeoFeature layer z xy = do
   errorOrTfs <- DBLayer.findFeatures layer z xy
   case errorOrTfs of
     Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }

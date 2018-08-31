@@ -1,33 +1,11 @@
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Hastile.Types.Tile ( addBufferToBBox
-            , extent
-            , getBbox
-            , googleToBBoxM
-            , mkTile
-            , BBox (..)
-            , Metres (..)
-            ) where
+module Hastile.Types.Tile where
 
-import qualified Data.Aeson                     as A
-import qualified Data.ByteString.Char8          as BS8
-import qualified Data.Geometry.MapnikVectorTile as DGM
-import qualified Data.Geometry.Types.Config     as DGTC
-import qualified Data.Geometry.Types.Geography  as DGTT
-import qualified Data.Geometry.Types.Simplify   as DGTS
-import qualified Data.Geospatial                as DG
-import qualified Data.Text                      as T
-
-import qualified Hastile.Types.Config           as Config
-
-newtype TileCoord  = TileCoord Integer deriving (Show, Eq, Num)
-newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional, Ord)
-newtype Ratio n d = Ratio Double deriving (Show, Eq, Num, Floating, Fractional)
-
-data LatLon a = Lat Double
-              | Lon Double
-              deriving (Show, Eq)
+import qualified Data.Functor.Contravariant as Contravariant
+import           Data.Monoid                ((<>))
+import qualified Hasql.Encoders
 
 -- SW and NE points given as W,S,E,N
 data BBox a = BBox
@@ -37,60 +15,16 @@ data BBox a = BBox
   , _bboxUry :: a
   } deriving (Show, Eq, Functor)
 
-earthRadius :: Metres
-earthRadius = Metres 6378137
+newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional, Ord)
 
-maxExtent :: Metres
-maxExtent = pi * earthRadius
+metreValue :: Hasql.Encoders.Value Metres
+metreValue =
+  Contravariant.contramap metreTodouble Hasql.Encoders.float8
+  where metreTodouble (Metres double) = double
 
-earthCircumference :: Metres
-earthCircumference = 2 * maxExtent
-
-extent :: BBox Metres
-extent = BBox (-maxExtent) (-maxExtent) maxExtent maxExtent
-
-getBbox :: DGTT.Pixels -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> BBox Metres
-getBbox buffer z xy =
-  addBufferToBBox Config.defaultTileSize buffer z bboxM
-  where
-    bboxM = googleToBBoxM Config.defaultTileSize z xy
-
-addBufferToBBox :: DGTT.Pixels -> DGTT.Pixels -> DGTT.ZoomLevel -> BBox Metres -> BBox Metres
-addBufferToBBox tileSize buffer z (BBox llX llY urX urY) =
-  hardLimit $ BBox (llX - bufferM) (llY - bufferM) (urX + bufferM) (urY + bufferM)
-  where mPerPx = mPerPxAtZoom earthCircumference tileSize z
-        bufferM = mPerPxToM mPerPx buffer
-        -- Gots to hard limit the bounds because of buffering
-        hardLimit (BBox llX' llY' urX' urY') =
-          BBox (max llX' (- maxExtent))
-               (max llY' (- maxExtent))
-               (min urX' maxExtent)
-               (min urY' maxExtent)
-
-googleToBBoxM :: DGTT.Pixels -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> BBox Metres
-googleToBBoxM tileSize z xy =
-  flipYs . fmap googleTo3857 $ googleToBBoxPx tileSize xy
-  where googleTo3857 coord = mPerPxToM mPerPx coord - maxExtent
-        mPerPx = mPerPxAtZoom earthCircumference tileSize z
-        flipYs (BBox llX llY urX urY) = BBox llX (-llY) urX (-urY)
-
-googleToBBoxPx :: DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> BBox DGTT.Pixels
-googleToBBoxPx tileSize (x, y) =
-  (* tileSize) . fromIntegral <$> BBox x (y + 1) (x + 1) y
-
-pixelMaxExtent :: DGTT.Pixels -> DGTT.ZoomLevel -> DGTT.Pixels
-pixelMaxExtent tile z = (2 ^ z) * tile
-
--- At each zoom level we double the number of tiles in both the x and y direction.
--- z = 0: 1 tile, z = 1: 2 * 2 = 4 tiles, z = 3: 4 * 4 = 16 tiles
-mPerPxAtZoom :: Metres -> DGTT.Pixels -> DGTT.ZoomLevel -> Ratio Metres DGTT.Pixels
-mPerPxAtZoom (Metres m) tile z = Ratio $ m / fromIntegral p
-  where p = pixelMaxExtent tile z
-
-mPerPxToM :: Ratio Metres DGTT.Pixels -> DGTT.Pixels -> Metres
-mPerPxToM (Ratio r) p = Metres $ r * fromIntegral p
-
-mkTile :: T.Text -> DGTT.Pixels -> (DGTT.Pixels, DGTT.Pixels) -> DGTT.Pixels -> DGTT.Pixels -> DGTS.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
-mkTile l z xy buffer quantizePixels algo geoJson = DGM.encodeMvt <$> DGM.createMvt config geoJson
-  where
-    config = DGTC.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo
+bboxEncoder :: Hasql.Encoders.Params (BBox Metres)
+bboxEncoder =
+  Contravariant.contramap _bboxLlx (Hasql.Encoders.value metreValue)
+  <> Contravariant.contramap _bboxLly (Hasql.Encoders.value metreValue)
+  <> Contravariant.contramap _bboxUrx (Hasql.Encoders.value metreValue)
+  <> Contravariant.contramap _bboxUry (Hasql.Encoders.value metreValue)
