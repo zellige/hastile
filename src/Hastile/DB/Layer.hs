@@ -11,6 +11,7 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import qualified Data.Aeson                    as Aeson
 import qualified Data.Aeson.Types              as AesonTypes
+import qualified Data.ByteString               as ByteString
 import qualified Data.ByteString.Lazy          as LazyByteString
 import qualified Data.Geometry.Types.Geography as DGTT
 import qualified Data.Geospatial               as Geospatial
@@ -32,13 +33,11 @@ import qualified Hastile.Types.Tile            as Tile
 findFeatures :: (MonadIO m, MonadReader App.ServerState m) => Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m (Either Pool.UsageError [Geospatial.GeoFeature AesonTypes.Value])
 findFeatures layer z xy = do
   buffer <- asks (^. App.ssBuffer)
-  let
-    bbox = TileLib.getBbox buffer z xy
-    query = getLayerQuery layer
-    action = Transaction.query bbox query
-    session = Transaction.transaction
-                Transaction.ReadCommitted Transaction.Read action
   hpool <- asks App._ssPool
+  let bbox = TileLib.getBbox buffer z xy
+      query = getLayerQuery layer
+      action = Transaction.query bbox query
+      session = Transaction.transaction Transaction.ReadCommitted Transaction.Read action
   liftIO $ Pool.use hpool session
 
 getLayerQuery :: Layer.Layer -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
@@ -54,7 +53,7 @@ getLayerQuery layer =
 
 layerQueryGeoJSON :: Text.Text -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
 layerQueryGeoJSON tableName =
-    HQ.statement sql Tile.bboxEncoder (HD.rowsList jsonDecoder) False
+    HQ.statement sql Tile.bboxEncoder (HD.rowsList geoJsonDecoder) False
   where
     sql = TextEncoding.encodeUtf8 $ Text.pack $
             "SELECT geojson FROM " ++
@@ -68,13 +67,9 @@ layerQueryWkbProperties tableName =
             "SELECT ST_AsBinary(wkb_geometry), properties FROM " ++
             Text.unpack tableName ++ layerQueryWhereClause
 
-jsonDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
-jsonDecoder =
-  HD.value $
-    HD.jsonBytes $
-      either
-        (Left . Text.pack)
-        Right . eitherDecode . LazyByteString.fromStrict
+geoJsonDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
+geoJsonDecoder =
+  HD.value $ HD.jsonBytes $ convertDecoder eitherDecode
   where
     eitherDecode =
       Aeson.eitherDecode :: LazyByteString.ByteString
@@ -83,8 +78,12 @@ jsonDecoder =
 wkbPropertiesDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
 wkbPropertiesDecoder =
   (\x y -> Geospatial.GeoFeature Nothing x y Nothing)
-    <$> HD.value (HD.custom (\_ -> either (Left . Text.pack) Right . Wkb.parseByteString . LazyByteString.fromStrict))
+    <$> HD.value (HD.custom (\_ -> convertDecoder Wkb.parseByteString))
     <*> HD.value HD.json
+
+convertDecoder :: (LazyByteString.ByteString -> Either String b) -> ByteString.ByteString -> Either Text.Text b
+convertDecoder decoder =
+  either (Left . Text.pack) Right . decoder . LazyByteString.fromStrict
 
 layerQueryWhereClause :: String
 layerQueryWhereClause =
