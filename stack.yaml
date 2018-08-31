@@ -37,6 +37,7 @@ resolver: lts-11.22
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - '.'
+- '../wkt-geom'
 - '../zellige'
 
 # Dependency packages to be pulled from upstream that are not in the resolver

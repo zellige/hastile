@@ -10,80 +10,81 @@ import           Control.Lens                  ((^.))
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
 import qualified Data.Aeson                    as Aeson
-import qualified Data.ByteString               as BS
+import qualified Data.Aeson.Types              as AesonTypes
+import qualified Data.ByteString               as ByteString
+import qualified Data.ByteString.Lazy          as LazyByteString
 import qualified Data.Geometry.Types.Geography as DGTT
-import           Data.Monoid
+import qualified Data.Geospatial               as Geospatial
 import qualified Data.Text                     as Text
-import qualified Data.Text.Encoding            as TE
-import qualified Data.Time                     as DT
-import           GHC.Conc
+import qualified Data.Text.Encoding            as TextEncoding
+import qualified Data.Wkb                      as Wkb
 import qualified Hasql.Decoders                as HD
-import qualified Hasql.Encoders                as HE
-import qualified Hasql.Pool                    as P
+import qualified Hasql.Pool                    as Pool
 import qualified Hasql.Query                   as HQ
-import qualified Hasql.Session                 as HS
-import           STMContainers.Map             as STM
+import qualified Hasql.Transaction             as Transaction
+import qualified Hasql.Transaction.Sessions    as Transaction
 
-import           Hastile.Tile
+import qualified Hastile.Lib.Tile              as TileLib
 import qualified Hastile.Types.App             as App
-import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
+import qualified Hastile.Types.Layer.Format    as LayerFormat
+import qualified Hastile.Types.Tile            as Tile
 
-data LayerError = LayerNotFound
-
-findFeatures :: (MonadIO m, MonadReader App.ServerState m)
-             => Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m (Either P.UsageError [Aeson.Value])
+findFeatures :: (MonadIO m, MonadReader App.ServerState m) => Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m (Either Pool.UsageError [Geospatial.GeoFeature AesonTypes.Value])
 findFeatures layer z xy = do
-  sql <- mkQuery layer z xy
-  let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
-  p <- asks App._ssPool
-  liftIO $ P.use p sessTfs
+  buffer <- asks (^. App.ssBuffer)
+  hpool <- asks App._ssPool
+  let bbox = TileLib.getBbox buffer z xy
+      query = getLayerQuery layer
+      action = Transaction.query bbox query
+      session = Transaction.transaction Transaction.ReadCommitted Transaction.Read action
+  liftIO $ Pool.use hpool session
 
-mkQuery :: (MonadReader App.ServerState m) => Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m Text.Text
-mkQuery layer z xy =
-  do buffer <- asks (^. App.ssBuffer)
-     let bboxM = googleToBBoxM Config.defaultTileSize z xy
-         (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
-           addBufferToBBox Config.defaultTileSize buffer z bboxM
-         bbox4326 = Text.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint(" ++
-           show llX ++ ", " ++ show llY ++ "), ST_MakePoint(" ++ show urX ++ ", " ++
-           show urY ++ ")), 3857), 4326)"
-     pure $ escape bbox4326 (Layer.getLayerSetting layer Layer._layerQuery)
-
-getLayer :: (MonadIO m, MonadReader App.ServerState m) => Text.Text -> m (Either LayerError Layer.Layer)
-getLayer l = do
-  ls <- asks App._ssStateLayers
-  result <- liftIO . atomically $ STM.lookup l ls
-  pure $ case result of
-    Nothing    -> Left LayerNotFound
-    Just layer -> Right layer
-
-mkStatement :: BS.ByteString -> HQ.Query () [Aeson.Value]
-mkStatement sql = HQ.statement sql
-    HE.unit (HD.rowsList (HD.value HD.json)) False
-
--- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
-escape :: Text.Text -> Text.Text -> Text.Text
-escape bbox = Text.concat . fmap replace' . Text.split (== '!')
+getLayerQuery :: Layer.Layer -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
+getLayerQuery layer =
+  case layerFormat of
+    LayerFormat.GeoJSON ->
+      layerQueryGeoJSON tableName
+    LayerFormat.WkbProperties ->
+      layerQueryWkbProperties tableName
   where
-    replace' "bbox_4326" = bbox
-    replace' t           = t
+    tableName = Layer.getLayerSetting layer Layer._layerTableName
+    layerFormat = Layer.getLayerSetting layer Layer._layerFormat
 
-lastModified :: Layer.Layer -> Text.Text
-lastModified layer = Text.dropEnd 3 (Text.pack rfc822Str) <> "GMT"
-       where rfc822Str = DT.formatTime DT.defaultTimeLocale DT.rfc822DateFormat $ Layer.getLayerDetail layer Layer._layerLastModified
+layerQueryGeoJSON :: Text.Text -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
+layerQueryGeoJSON tableName =
+    HQ.statement sql Tile.bboxEncoder (HD.rowsList geoJsonDecoder) False
+  where
+    sql = TextEncoding.encodeUtf8 $ Text.pack $
+            "SELECT geojson FROM " ++
+            Text.unpack tableName ++ layerQueryWhereClause
 
-parseIfModifiedSince :: Text.Text -> Maybe DT.UTCTime
-parseIfModifiedSince t = DT.parseTimeM True DT.defaultTimeLocale "%a, %e %b %Y %T GMT" $ Text.unpack t
+layerQueryWkbProperties :: Text.Text -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
+layerQueryWkbProperties tableName =
+    HQ.statement sql Tile.bboxEncoder (HD.rowsList wkbPropertiesDecoder) False
+  where
+    sql = TextEncoding.encodeUtf8 $ Text.pack $
+            "SELECT ST_AsBinary(wkb_geometry), properties FROM " ++
+            Text.unpack tableName ++ layerQueryWhereClause
 
-isModifiedTime :: Layer.Layer -> Maybe DT.UTCTime -> Bool
-isModifiedTime layer mTime =
-  case mTime of
-    Nothing   -> True
-    Just time -> Layer.getLayerDetail layer Layer._layerLastModified > time
+geoJsonDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
+geoJsonDecoder =
+  HD.value $ HD.jsonBytes $ convertDecoder eitherDecode
+  where
+    eitherDecode =
+      Aeson.eitherDecode :: LazyByteString.ByteString
+        -> Either String (Geospatial.GeoFeature AesonTypes.Value)
 
-isModified :: Layer.Layer -> Maybe Text.Text -> Bool
-isModified layer mText =
-  case mText of
-    Nothing   -> True
-    Just text -> isModifiedTime layer $ parseIfModifiedSince text
+wkbPropertiesDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
+wkbPropertiesDecoder =
+  (\x y -> Geospatial.GeoFeature Nothing x y Nothing)
+    <$> HD.value (HD.custom (\_ -> convertDecoder Wkb.parseByteString))
+    <*> HD.value HD.json
+
+convertDecoder :: (LazyByteString.ByteString -> Either String b) -> ByteString.ByteString -> Either Text.Text b
+convertDecoder decoder =
+  either (Left . Text.pack) Right . decoder . LazyByteString.fromStrict
+
+layerQueryWhereClause :: String
+layerQueryWhereClause =
+  " WHERE ST_Intersects(wkb_geometry, ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint($1, $2), ST_MakePoint($3, $4)), 3857), 4326));"

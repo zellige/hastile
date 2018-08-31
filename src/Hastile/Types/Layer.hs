@@ -18,16 +18,19 @@ import qualified Data.Aeson                    as Aeson
 import           Data.Aeson.Types              as AT
 import qualified Data.Geometry.Types.Geography as DGTT
 import qualified Data.Geometry.Types.Simplify  as DGTS
-import qualified Data.Geospatial               as DG
 import           Data.Map.Strict               as M
-import qualified Data.Text                     as T
+import           Data.Monoid
+import qualified Data.Text                     as Text
 import qualified Data.Time                     as DT
 import           Options.Generic
 
+import qualified Hastile.Types.Layer.Format    as LayerFormat
 import qualified Hastile.Types.Layer.Security  as LayerSecurity
 
+data LayerError = LayerNotFound
+
 data NewLayerRequest = NewLayerRequest
-  {  _newLayerRequestName     :: T.Text
+  {  _newLayerRequestName     :: Text.Text
   ,  _newLayerRequestSettings :: LayerSettings
   } deriving (Show, Eq)
 
@@ -38,7 +41,8 @@ instance Aeson.FromJSON LayerRequestList where
 
 data LayerSettings = LayerSettings
   { _layerSecurity   :: LayerSecurity.LayerSecurity
-  , _layerQuery      :: Text
+  , _layerFormat     :: LayerFormat.LayerFormat
+  , _layerTableName  :: Text
   , _layerQuantize   :: DGTT.Pixels
   , _layerAlgorithms :: Algorithms
   } deriving (Show, Eq)
@@ -46,9 +50,10 @@ data LayerSettings = LayerSettings
 instance Aeson.FromJSON LayerSettings where
   parseJSON = withObject "LayerSettings" $ \o -> LayerSettings
     <$> o .:? "security" .!= LayerSecurity.Private
-    <*> o .: "query"
-    <*> o .: "quantize"
-    <*> o .: "simplify"
+    <*> o .:  "format"
+    <*> o .:  "table-name"
+    <*> o .:  "quantize"
+    <*> o .:  "simplify"
 
 instance Aeson.ToJSON LayerSettings where
   toJSON ls = object $
@@ -56,10 +61,11 @@ instance Aeson.ToJSON LayerSettings where
 
 layerSettingsToPairs :: LayerSettings -> [AT.Pair]
 layerSettingsToPairs ls =
-  [ "security" .= _layerSecurity ls
-  , "query"    .= _layerQuery ls
-  , "quantize" .= _layerQuantize ls
-  , "simplify" .= _layerAlgorithms ls
+  [ "security"   .= _layerSecurity ls
+  , "format"     .= _layerFormat ls
+  , "table-name" .= _layerTableName ls
+  , "quantize"   .= _layerQuantize ls
+  , "simplify"   .= _layerAlgorithms ls
   ]
 
 requestToLayer :: Text -> LayerSettings -> DT.UTCTime -> Layer
@@ -95,6 +101,24 @@ getLayerSetting :: Layer -> (LayerSettings -> a) -> a
 getLayerSetting layer getter =
   getter $ _layerSettings $ _layerDetails layer
 
+lastModified :: Layer -> Text.Text
+lastModified layer = Text.dropEnd 3 (Text.pack rfc822Str) <> "GMT"
+       where rfc822Str = DT.formatTime DT.defaultTimeLocale DT.rfc822DateFormat $ getLayerDetail layer _layerLastModified
+
+parseIfModifiedSince :: Text.Text -> Maybe DT.UTCTime
+parseIfModifiedSince t = DT.parseTimeM True DT.defaultTimeLocale "%a, %e %b %Y %T GMT" $ Text.unpack t
+
+isModifiedTime :: Layer -> Maybe DT.UTCTime -> Bool
+isModifiedTime layer mTime =
+  case mTime of
+    Nothing   -> True
+    Just time -> getLayerDetail layer _layerLastModified > time
+
+isModified :: Layer -> Maybe Text.Text -> Bool
+isModified layer mText =
+  case mText of
+    Nothing   -> True
+    Just text -> isModifiedTime layer $ parseIfModifiedSince text
 
 -- Zoom dependant simplification algorithms
 
@@ -109,14 +133,3 @@ getAlgorithm' :: DGTT.ZoomLevel -> Algorithms -> DGTS.SimplificationAlgorithm
 getAlgorithm' z algos = case M.lookupGE z algos of
   Nothing        -> DGTS.NoAlgorithm
   Just (_, algo) -> algo
-
-newtype TileFeature = TileFeature
-  { unTileFeature :: Value
-  } deriving (Show, Eq)
-
--- Helpers
-
-mkGeoJSON :: [Value] -> [DG.GeoFeature AT.Value]
-mkGeoJSON = fmap (x . parseEither parseJSON)
-  where
-    x = either (\_ -> DG.GeoFeature Nothing (DG.Collection []) Null Nothing) id
