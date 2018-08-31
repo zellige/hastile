@@ -55,7 +55,7 @@ layerQueryGeoJSON :: Text.Text -> HQ.Query (Tile.BBox Tile.Metres) [Geospatial.G
 layerQueryGeoJSON tableName =
     HQ.statement sql Tile.bboxEncoder (HD.rowsList geoJsonDecoder) False
   where
-    sql = TextEncoding.encodeUtf8 $ Text.pack $
+    sql = TextEncoding.encodeUtf8 . Text.pack $
             "SELECT geojson FROM " ++
             Text.unpack tableName ++ layerQueryWhereClause
 
@@ -63,7 +63,7 @@ layerQueryWkbProperties :: Text.Text -> HQ.Query (Tile.BBox Tile.Metres) [Geospa
 layerQueryWkbProperties tableName =
     HQ.statement sql Tile.bboxEncoder (HD.rowsList wkbPropertiesDecoder) False
   where
-    sql = TextEncoding.encodeUtf8 $ Text.pack $
+    sql = TextEncoding.encodeUtf8 . Text.pack $
             "SELECT ST_AsBinary(wkb_geometry), properties FROM " ++
             Text.unpack tableName ++ layerQueryWhereClause
 
