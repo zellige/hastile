@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-11.20
+resolver: lts-11.22
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -38,7 +38,11 @@ resolver: lts-11.20
 packages:
 - '.'
 - location:
-    git: https://github.com/sitewisely/hs-geojson.git
+    git: https://github.com/newmana/hs-geojson.git
+    commit: master
+  extra-dep: true
+- location:
+    git: https://github.com/sitewisely/wkt-geom.git
     commit: master
   extra-dep: true
 - location:
@@ -49,7 +53,6 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: 
-  - validation-0.5.5
   - vectortiles-1.4.0
 
 # Override default flag values for local packages and extra-deps
