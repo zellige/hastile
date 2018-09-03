@@ -39,11 +39,11 @@ packages:
 - '.'
 - location:
     git: https://github.com/sitewisely/wkt-geom.git
-    commit: master
+    commit: bc7f839aad500acc7411d6dbbdb7f51453adb5df
   extra-dep: true
 - location:
     git: https://github.com/sitewisely/zellige.git
-    commit: master
+    commit: bd8c39847cd9db14cd469aa00e0fb4eb45ebe132
   extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
