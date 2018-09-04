@@ -39,7 +39,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/sitewisely/wkt-geom.git
-    commit: bc7f839aad500acc7411d6dbbdb7f51453adb5df
+    commit: e3ab2943c6b6e3df970d5c3fe1d827140df9604c
   extra-dep: true
 - location:
     git: https://github.com/sitewisely/zellige.git

@@ -13,11 +13,11 @@ import qualified Data.Aeson                    as Aeson
 import qualified Data.Aeson.Types              as AesonTypes
 import qualified Data.ByteString               as ByteString
 import qualified Data.ByteString.Lazy          as LazyByteString
+import qualified Data.Ewkb                     as Ewkb
 import qualified Data.Geometry.Types.Geography as DGTT
 import qualified Data.Geospatial               as Geospatial
 import qualified Data.Text                     as Text
 import qualified Data.Text.Encoding            as TextEncoding
-import qualified Data.Wkb                      as Wkb
 import qualified Hasql.Decoders                as HD
 import qualified Hasql.Pool                    as Pool
 import qualified Hasql.Query                   as HQ
@@ -64,7 +64,7 @@ layerQueryWkbProperties tableName =
     HQ.statement sql Tile.bboxEncoder (HD.rowsList wkbPropertiesDecoder) False
   where
     sql = TextEncoding.encodeUtf8 . Text.pack $
-            "SELECT ST_AsBinary(wkb_geometry), properties FROM " ++
+            "SELECT wkb_geometry, properties FROM " ++
             Text.unpack tableName ++ layerQueryWhereClause
 
 geoJsonDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
@@ -78,7 +78,7 @@ geoJsonDecoder =
 wkbPropertiesDecoder :: HD.Row (Geospatial.GeoFeature AesonTypes.Value)
 wkbPropertiesDecoder =
   (\x y -> Geospatial.GeoFeature Nothing x y Nothing)
-    <$> HD.value (HD.custom (\_ -> convertDecoder Wkb.parseByteString))
+    <$> HD.value (HD.custom (\_ -> convertDecoder Ewkb.parseByteString))
     <*> HD.value HD.json
 
 convertDecoder :: (LazyByteString.ByteString -> Either String b) -> ByteString.ByteString -> Either Text.Text b
