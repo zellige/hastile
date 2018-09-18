@@ -20,7 +20,8 @@ newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional, Or
 metreValue :: Hasql.Encoders.Value Metres
 metreValue =
   Contravariant.contramap metreTodouble Hasql.Encoders.float8
-  where metreTodouble (Metres double) = double
+  where
+    metreTodouble (Metres double) = double
 
 bboxEncoder :: Hasql.Encoders.Params (BBox Metres)
 bboxEncoder =

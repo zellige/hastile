@@ -39,6 +39,7 @@ library
                      , bytestring
                      , containers
                      , contravariant
+                     , foldl
                      , geojson
                      , hasql
                      , hasql-cursor-query
