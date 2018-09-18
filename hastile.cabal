@@ -41,6 +41,7 @@ library
                      , contravariant
                      , geojson
                      , hasql
+                     , hasql-cursor-query
                      , hasql-pool
                      , hasql-transaction
                      , here
