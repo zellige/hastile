@@ -56,13 +56,13 @@ getLayerQuery layer =
 
 layerQueryGeoJSON :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
 layerQueryGeoJSON tableName =
-  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder geoJsonDecoder Foldl.list) HasqlCursorQuery.batchSize_1000
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder geoJsonDecoder Foldl.list) HasqlCursorQuery.batchSize_10000
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT geojson FROM " <> tableName <> layerQueryWhereClause
 
 layerQueryWkbProperties :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
 layerQueryWkbProperties tableName =
-  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder wkbPropertiesDecoder Foldl.list) HasqlCursorQuery.batchSize_1000
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder wkbPropertiesDecoder Foldl.list) HasqlCursorQuery.batchSize_10000
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " <> tableName <> layerQueryWhereClause
 
