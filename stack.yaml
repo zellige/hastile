@@ -37,14 +37,17 @@ resolver: lts-11.22
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - '.'
-- '../wkt-geom'
 - '../zellige'
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: 
-- geojson-1.3.3
+- wkt-geom-0.0.1
+- geojson-2.0.0
 - vectortiles-1.4.0
+- hasql-cursor-query-0.4.4
+- hasql-cursor-transaction-0.6.3
+- hasql-transaction-0.5.2
 
 # Override default flag values for local packages and extra-deps
 flags: {}

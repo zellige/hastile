@@ -14,8 +14,8 @@ import qualified Data.Aeson                    as A
 import qualified Data.Aeson.Encode.Pretty      as AE
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Lazy.Char8    as LBS8
-import qualified Data.Char                     as C
-import qualified Data.Geometry.Types.Geography as DGTT
+import qualified Data.Char                     as Char
+import qualified Data.Geometry.Types.Geography as TypesGeography
 import qualified Data.Geospatial               as DG
 import           Data.Map                      as M
 import           Data.Monoid
@@ -23,6 +23,7 @@ import qualified Data.Text                     as Text
 import qualified Data.Text.Encoding            as TE
 import qualified Data.Text.Read                as DTR
 import           Data.Time
+import qualified Data.Vector                   as Vector
 import           GHC.Conc
 import           ListT
 import           Network.HTTP.Types.Header     (hLastModified)
@@ -89,15 +90,15 @@ getContent' l z x stringY
   | ".json" `Text.isSuffixOf` stringY = getAnything getJson l z x stringY
   | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> LBS8.fromStrict (TE.encodeUtf8 stringY) }
 
-getAnything :: (t -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> App.ActionHandler a) -> t -> DGTT.ZoomLevel -> DGTT.Pixels -> Text.Text -> App.ActionHandler a
+getAnything :: (t -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler a) -> t -> TypesGeography.ZoomLevel -> TypesGeography.Pixels -> Text.Text -> App.ActionHandler a
 getAnything f layer z x stringY =
   case getY stringY of
     Left e       -> fail $ show e
     Right (y, _) -> f layer z (x, y)
   where
-    getY s = DTR.decimal $ Text.takeWhile C.isNumber s
+    getY s = DTR.decimal $ Text.takeWhile Char.isNumber s
 
-getTile :: Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
+getTile :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
 getTile layer z xy = do
   geoFeature <- getGeoFeature layer z xy
   buffer  <- RC.asks (^. App.ssBuffer)
@@ -110,15 +111,15 @@ checkEmpty tile layer
   | BS.null tile = throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TE.encodeUtf8 $ Layer.lastModified layer)] }
   | otherwise = pure $ Servant.addHeader (Layer.lastModified layer) tile
 
-getJson :: Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
+getJson :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
 getJson layer z xy = Servant.addHeader (Layer.lastModified layer) . LBS8.toStrict . A.encode <$> getGeoFeature layer z xy
 
-getGeoFeature :: Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> App.ActionHandler (DG.GeoFeatureCollection A.Value)
+getGeoFeature :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (DG.GeoFeatureCollection A.Value)
 getGeoFeature layer z xy = do
   errorOrTfs <- DBLayer.findFeatures layer z xy
   case errorOrTfs of
     Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }
-    Right tfs -> pure $ DG.GeoFeatureCollection Nothing tfs
+    Right tfs -> pure $ DG.GeoFeatureCollection Nothing (Vector.fromList tfs)
 
 getLayerOrThrow :: Text.Text -> App.ActionHandler Layer.Layer
 getLayerOrThrow l = do

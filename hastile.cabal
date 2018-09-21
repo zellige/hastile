@@ -39,8 +39,10 @@ library
                      , bytestring
                      , containers
                      , contravariant
+                     , foldl
                      , geojson
                      , hasql
+                     , hasql-cursor-query
                      , hasql-pool
                      , hasql-transaction
                      , here
@@ -60,6 +62,7 @@ library
                      , text
                      , time
                      , transformers
+                     , vector
                      , wai
                      , wai-middleware-prometheus
                      , word8

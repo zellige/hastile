@@ -38,19 +38,19 @@ resolver: lts-11.22
 packages:
 - '.'
 - location:
-    git: https://github.com/sitewisely/wkt-geom.git
-    commit: e3ab2943c6b6e3df970d5c3fe1d827140df9604c
-  extra-dep: true
-- location:
     git: https://github.com/sitewisely/zellige.git
-    commit: bd8c39847cd9db14cd469aa00e0fb4eb45ebe132
+    commit: 84edb3d626cadde4613a8df21831bbd986587885
   extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: 
-  - vectortiles-1.4.0
-  - geojson-1.3.3
+- wkt-geom-0.0.1
+- geojson-2.0.0
+- vectortiles-1.4.0
+- hasql-cursor-query-0.4.4
+- hasql-cursor-transaction-0.6.3
+- hasql-transaction-0.5.2
 
 # Override default flag values for local packages and extra-deps
 flags: {}
