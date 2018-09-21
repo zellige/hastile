@@ -20,7 +20,6 @@ import qualified Data.Geospatial                as Geospatial
 import           Data.Monoid                    ((<>))
 import qualified Data.Text                      as Text
 import qualified Data.Text.Encoding             as TextEncoding
-import qualified Data.Wkb                       as Wkb
 import qualified Hasql.CursorQuery              as HasqlCursorQuery
 import qualified Hasql.CursorQuery.Transactions as HasqlCursorQueryTransactions
 import qualified Hasql.Decoders                 as HasqlDecoders
@@ -79,8 +78,8 @@ geoJsonDecoder =
 wkbPropertiesDecoder :: HasqlDecoders.Row (Geospatial.GeoFeature AesonTypes.Value)
 wkbPropertiesDecoder =
   (\x y -> Geospatial.GeoFeature Nothing x y Nothing)
-    <$> HD.value (HD.custom (\_ -> convertDecoder Ewkb.parseByteString))
-    <*> HD.value HD.json
+    <$> HasqlDecoders.value (HasqlDecoders.custom (\_ -> convertDecoder Ewkb.parseByteString))
+    <*> HasqlDecoders.value HasqlDecoders.json
 
 convertDecoder :: (LazyByteString.ByteString -> Either String b) -> ByteString.ByteString -> Either Text.Text b
 convertDecoder decoder =
