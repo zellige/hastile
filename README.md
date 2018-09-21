@@ -27,10 +27,10 @@ The ```POST /``` with a layer configuration or ```POST /layername``` with a laye
 and will save the configuration file to disk.
 
 To create a new layer:
-- ```curl -d '{ "layer_name": { "query": "...", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
+- ```curl -d '{ "layer_name": { "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
 
 To modify an existing layer:
-- ```curl -d '{ "query": "...", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
+- ```curl -d '{ "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
 
 Token API
 ---------
@@ -77,11 +77,13 @@ The file contains settings for the database connection and layer configuration, 
   "db-connection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
   "layers": {
     "layer1": { 
-      "query": "SELECT geojson FROM layer1_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      "table_name": "layer1_table",
+      "format": "wkb-properties",
       "last-modified": "2017-01-15T23:49:36Z"
     },
     "layer2": {
-      "query": "SELECT geojson FROM layer2_table WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
+      "table_name": "layer2_table",
+      "format": "geojson",
       "last-modified": "2017-01-15T23:49:36Z"
     }
   }
@@ -90,7 +92,7 @@ The file contains settings for the database connection and layer configuration, 
 
 Where, db-connection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
 
-The layer table has two columns: a single GeoJSON formatted feature as JSON and the geometry.  The geometry is used to perform the spatial query and the geojson is the feature returned.
+The layer table has three columns: a single GeoJSON formatted feature as JSON, the properties part of the geojson and the geometry. The geometry is used to perform the spatial query. The GeoJSON column is the feature returned if the layer format is `geojson`. The properties column is returned along side the geometry if the layer format is `wkb-properties`.
 
 To construct a table with a GeoJSON feature with all properties containing arbitrary columns from a table, create a materialized view like:
 ```javascript
@@ -99,7 +101,7 @@ CREATE MATERIALIZED VIEW layer1_table as SELECT jsonb_build_object(
     'id',         ogc_fid,
     'geometry',   ST_AsGeoJSON(wkb_geometry)::jsonb,
     'properties', to_jsonb(row) - 'ogc_fid' - 'wkb_geometry'
-)::json as geojson, row.wkb_geometry as wkb_geometry FROM (SELECT * FROM source_layer1_table) row;
+)::json as geojson, (to_jsonb(row) - 'wkb_geometry') :: JSON as properties,row.wkb_geometry as wkb_geometry FROM (SELECT * FROM source_layer1_table) row;
 ```
 
 This will create the two columns required: geojson (a GeoJSON feature in JSON format) and the geometry column.
@@ -114,8 +116,6 @@ You can configure other database, mapnik and HTTP port settings too:
 }
 ```
 
-Hastile will replace `!bbox_4326!` with the SQL for a bounding box for the requested tile in EPSG4326. This allows your query to dynamically select the features to be included in the requested tile.
-
 If you want to combine multiple tables into a single layer you can use UNION and MATERIALIZED VIEWS and then query it directly:
 ```SQL
 CREATE MATERIALIZED VIEW layers AS
@@ -128,7 +128,6 @@ Changing the configuration to:
 ```javascript
   "layers": {
     "layer": {
-      "query": "SELECT geojson FROM layers WHERE ST_Intersects(wkb_geometry, !bbox_4326!)",
       ...
     }  
   }

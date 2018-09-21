@@ -14,6 +14,7 @@ import qualified Data.Aeson                     as Aeson
 import qualified Data.Aeson.Types               as AesonTypes
 import qualified Data.ByteString                as ByteString
 import qualified Data.ByteString.Lazy           as LazyByteString
+import qualified Data.Ewkb                      as Ewkb
 import qualified Data.Geometry.Types.Geography  as TypesGeography
 import qualified Data.Geospatial                as Geospatial
 import           Data.Monoid                    ((<>))
@@ -26,6 +27,7 @@ import qualified Hasql.Decoders                 as HasqlDecoders
 import qualified Hasql.Pool                     as HasqlPool
 import qualified Hasql.Transaction              as HasqlTransaction
 import qualified Hasql.Transaction.Sessions     as HasqlTransactionSession
+
 
 import qualified Hastile.Lib.Tile               as TileLib
 import qualified Hastile.Types.App              as App
@@ -77,8 +79,8 @@ geoJsonDecoder =
 wkbPropertiesDecoder :: HasqlDecoders.Row (Geospatial.GeoFeature AesonTypes.Value)
 wkbPropertiesDecoder =
   (\x y -> Geospatial.GeoFeature Nothing x y Nothing)
-    <$> HasqlDecoders.value (HasqlDecoders.custom (\_ -> convertDecoder Wkb.parseByteString))
-    <*> HasqlDecoders.value HasqlDecoders.json
+    <$> HD.value (HD.custom (\_ -> convertDecoder Ewkb.parseByteString))
+    <*> HD.value HD.json
 
 convertDecoder :: (LazyByteString.ByteString -> Either String b) -> ByteString.ByteString -> Either Text.Text b
 convertDecoder decoder =
