@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-11.22
+resolver: lts-12.10
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -44,10 +44,11 @@ packages:
 extra-deps: 
 - wkt-geom-0.0.1
 - geojson-2.0.0
-- vectortiles-1.4.0
-- hasql-cursor-query-0.4.4
-- hasql-cursor-transaction-0.6.3
-- hasql-transaction-0.5.2
+- hasql-cursor-query-0.4.4.2
+- hasql-cursor-transaction-0.6.3.1
+- prometheus-client-1.0.0
+- prometheus-metrics-ghc-1.0.0
+- wai-middleware-prometheus-1.0.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}

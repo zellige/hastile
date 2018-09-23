@@ -5,7 +5,7 @@ module Hastile.Types.Tile where
 
 import qualified Data.Functor.Contravariant as Contravariant
 import           Data.Monoid                ((<>))
-import qualified Hasql.Encoders
+import qualified Hasql.Encoders             as HasqlEncoders
 
 -- SW and NE points given as W,S,E,N
 data BBox a = BBox
@@ -17,15 +17,15 @@ data BBox a = BBox
 
 newtype Metres = Metres Double deriving (Show, Eq, Num, Floating, Fractional, Ord)
 
-metreValue :: Hasql.Encoders.Value Metres
+metreValue :: HasqlEncoders.Value Metres
 metreValue =
-  Contravariant.contramap metreTodouble Hasql.Encoders.float8
+  Contravariant.contramap metreTodouble HasqlEncoders.float8
   where
     metreTodouble (Metres double) = double
 
-bboxEncoder :: Hasql.Encoders.Params (BBox Metres)
+bboxEncoder :: HasqlEncoders.Params (BBox Metres)
 bboxEncoder =
-  Contravariant.contramap _bboxLlx (Hasql.Encoders.value metreValue)
-  <> Contravariant.contramap _bboxLly (Hasql.Encoders.value metreValue)
-  <> Contravariant.contramap _bboxUrx (Hasql.Encoders.value metreValue)
-  <> Contravariant.contramap _bboxUry (Hasql.Encoders.value metreValue)
+  Contravariant.contramap _bboxLlx (HasqlEncoders.param metreValue)
+  <> Contravariant.contramap _bboxLly (HasqlEncoders.param metreValue)
+  <> Contravariant.contramap _bboxUrx (HasqlEncoders.param metreValue)
+  <> Contravariant.contramap _bboxUry (HasqlEncoders.param metreValue)

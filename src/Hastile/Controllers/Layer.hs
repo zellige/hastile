@@ -18,7 +18,6 @@ import qualified Data.Char                     as Char
 import qualified Data.Geometry.Types.Geography as TypesGeography
 import qualified Data.Geospatial               as DG
 import           Data.Map                      as M
-import           Data.Monoid
 import qualified Data.Text                     as Text
 import qualified Data.Text.Encoding            as TE
 import qualified Data.Text.Read                as DTR

@@ -24,9 +24,7 @@ import qualified Hasql.CursorQuery              as HasqlCursorQuery
 import qualified Hasql.CursorQuery.Transactions as HasqlCursorQueryTransactions
 import qualified Hasql.Decoders                 as HasqlDecoders
 import qualified Hasql.Pool                     as HasqlPool
-import qualified Hasql.Transaction              as HasqlTransaction
 import qualified Hasql.Transaction.Sessions     as HasqlTransactionSession
-
 
 import qualified Hastile.Lib.Tile               as TileLib
 import qualified Hastile.Types.App              as App
@@ -41,7 +39,7 @@ findFeatures layer z xy = do
   let bbox = TileLib.getBbox buffer z xy
       query = getLayerQuery layer
       action = HasqlCursorQueryTransactions.cursorQuery bbox query
-      session = HasqlTransactionSession.transaction HasqlTransaction.ReadCommitted HasqlTransaction.Read action
+      session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
   liftIO $ HasqlPool.use hpool session
 
 getLayerQuery :: Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
@@ -69,17 +67,15 @@ layerQueryWkbProperties tableName =
 
 geoJsonDecoder :: HasqlDecoders.Row (Geospatial.GeoFeature AesonTypes.Value)
 geoJsonDecoder =
-  HasqlDecoders.value $ HasqlDecoders.jsonBytes $ convertDecoder eitherDecode
+  HasqlDecoders.column $ HasqlDecoders.jsonBytes $ convertDecoder eitherDecode
   where
-    eitherDecode =
-      Aeson.eitherDecode :: LazyByteString.ByteString
-        -> Either String (Geospatial.GeoFeature AesonTypes.Value)
+    eitherDecode = Aeson.eitherDecode :: LazyByteString.ByteString -> Either String (Geospatial.GeoFeature AesonTypes.Value)
 
 wkbPropertiesDecoder :: HasqlDecoders.Row (Geospatial.GeoFeature AesonTypes.Value)
 wkbPropertiesDecoder =
   (\x y -> Geospatial.GeoFeature Nothing x y Nothing)
-    <$> HasqlDecoders.value (HasqlDecoders.custom (\_ -> convertDecoder Ewkb.parseByteString))
-    <*> HasqlDecoders.value HasqlDecoders.json
+    <$> HasqlDecoders.column (HasqlDecoders.custom (\_ -> convertDecoder Ewkb.parseByteString))
+    <*> HasqlDecoders.column HasqlDecoders.json
 
 convertDecoder :: (LazyByteString.ByteString -> Either String b) -> ByteString.ByteString -> Either Text.Text b
 convertDecoder decoder =
