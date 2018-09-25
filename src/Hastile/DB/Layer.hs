@@ -20,6 +20,7 @@ import qualified Data.Geospatial                as Geospatial
 import           Data.Monoid                    ((<>))
 import qualified Data.Text                      as Text
 import qualified Data.Text.Encoding             as TextEncoding
+import qualified Data.Vector                    as Vector
 import qualified Hasql.CursorQuery              as HasqlCursorQuery
 import qualified Hasql.CursorQuery.Transactions as HasqlCursorQueryTransactions
 import qualified Hasql.Decoders                 as HasqlDecoders
@@ -32,7 +33,7 @@ import qualified Hastile.Types.Layer            as Layer
 import qualified Hastile.Types.Layer.Format     as LayerFormat
 import qualified Hastile.Types.Tile             as Tile
 
-findFeatures :: (MonadIO m, MonadReader App.ServerState m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError [Geospatial.GeoFeature AesonTypes.Value])
+findFeatures :: (MonadIO m, MonadReader App.ServerState m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value)))
 findFeatures layer z xy = do
   buffer <- asks (^. App.ssBuffer)
   hpool <- asks App._ssPool
@@ -42,7 +43,7 @@ findFeatures layer z xy = do
       session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
   liftIO $ HasqlPool.use hpool session
 
-getLayerQuery :: Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
+getLayerQuery :: Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
 getLayerQuery layer =
   case layerFormat of
     LayerFormat.GeoJSON ->
@@ -53,15 +54,15 @@ getLayerQuery layer =
     tableName = Layer.getLayerSetting layer Layer._layerTableName
     layerFormat = Layer.getLayerSetting layer Layer._layerFormat
 
-layerQueryGeoJSON :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
+layerQueryGeoJSON :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
 layerQueryGeoJSON tableName =
-  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder geoJsonDecoder Foldl.list) HasqlCursorQuery.batchSize_10000
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder geoJsonDecoder Foldl.vector) HasqlCursorQuery.batchSize_10000
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT geojson FROM " <> tableName <> layerQueryWhereClause
 
-layerQueryWkbProperties :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) [Geospatial.GeoFeature AesonTypes.Value]
+layerQueryWkbProperties :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
 layerQueryWkbProperties tableName =
-  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder wkbPropertiesDecoder Foldl.list) HasqlCursorQuery.batchSize_10000
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder wkbPropertiesDecoder Foldl.vector) HasqlCursorQuery.batchSize_10000
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " <> tableName <> layerQueryWhereClause
 

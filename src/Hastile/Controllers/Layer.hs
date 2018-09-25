@@ -22,7 +22,6 @@ import qualified Data.Text                     as Text
 import qualified Data.Text.Encoding            as TE
 import qualified Data.Text.Read                as DTR
 import           Data.Time
-import qualified Data.Vector                   as Vector
 import           GHC.Conc
 import           ListT
 import           Network.HTTP.Types.Header     (hLastModified)
@@ -118,7 +117,7 @@ getGeoFeature layer z xy = do
   errorOrTfs <- DBLayer.findFeatures layer z xy
   case errorOrTfs of
     Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }
-    Right tfs -> pure $ DG.GeoFeatureCollection Nothing (Vector.fromList tfs)
+    Right tfs -> pure $ DG.GeoFeatureCollection Nothing tfs
 
 getLayerOrThrow :: Text.Text -> App.ActionHandler Layer.Layer
 getLayerOrThrow l = do
