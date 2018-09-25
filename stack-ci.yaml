@@ -39,7 +39,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/sitewisely/zellige.git
-    commit: 311805fd5c7114f3868f92fda9fdd9cfd33fa805
+    commit: 73ecc33ee256e9ebf753d77be16dae2064828e4c
   extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
