@@ -15,6 +15,8 @@ import qualified Data.Aeson.Types               as AesonTypes
 import qualified Data.ByteString                as ByteString
 import qualified Data.ByteString.Lazy           as LazyByteString
 import qualified Data.Ewkb                      as Ewkb
+import qualified Data.Geometry.MapnikVectorTile as MapnikVectorTile
+import qualified Data.Geometry.Types.Config     as TypesConfig
 import qualified Data.Geometry.Types.Geography  as TypesGeography
 import qualified Data.Geospatial                as Geospatial
 import           Data.Monoid                    ((<>))
@@ -33,23 +35,23 @@ import qualified Hastile.Types.Layer            as Layer
 import qualified Hastile.Types.Layer.Format     as LayerFormat
 import qualified Hastile.Types.Tile             as Tile
 
-findFeatures :: (MonadIO m, MonadReader App.ServerState m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value)))
-findFeatures layer z xy = do
+findFeatures :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value)))
+findFeatures config layer z xy = do
   buffer <- asks (^. App.ssBuffer)
   hpool <- asks App._ssPool
   let bbox = TileLib.getBbox buffer z xy
-      query = getLayerQuery layer
+      query = getLayerQuery config layer
       action = HasqlCursorQueryTransactions.cursorQuery bbox query
       session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
   liftIO $ HasqlPool.use hpool session
 
-getLayerQuery :: Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
-getLayerQuery layer =
+getLayerQuery :: TypesConfig.Config -> Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
+getLayerQuery config layer =
   case layerFormat of
     LayerFormat.GeoJSON ->
       layerQueryGeoJSON tableName
     LayerFormat.WkbProperties ->
-      layerQueryWkbProperties tableName
+      layerQueryWkbProperties config tableName
   where
     tableName = Layer.getLayerSetting layer Layer._layerTableName
     layerFormat = Layer.getLayerSetting layer Layer._layerFormat
@@ -60,9 +62,9 @@ layerQueryGeoJSON tableName =
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT geojson FROM " <> tableName <> layerQueryWhereClause
 
-layerQueryWkbProperties :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
-layerQueryWkbProperties tableName =
-  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder wkbPropertiesDecoder Foldl.vector) HasqlCursorQuery.batchSize_10000
+layerQueryWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
+layerQueryWkbProperties config tableName =
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder (wkbPropertiesDecoder config) Foldl.vector) HasqlCursorQuery.batchSize_10000
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " <> tableName <> layerQueryWhereClause
 
@@ -72,9 +74,9 @@ geoJsonDecoder =
   where
     eitherDecode = Aeson.eitherDecode :: LazyByteString.ByteString -> Either String (Geospatial.GeoFeature AesonTypes.Value)
 
-wkbPropertiesDecoder :: HasqlDecoders.Row (Geospatial.GeoFeature AesonTypes.Value)
-wkbPropertiesDecoder =
-  (\x y -> Geospatial.GeoFeature Nothing x y Nothing)
+wkbPropertiesDecoder :: TypesConfig.Config -> HasqlDecoders.Row (Geospatial.GeoFeature AesonTypes.Value)
+wkbPropertiesDecoder config =
+  (\geom props -> Geospatial.GeoFeature Nothing (MapnikVectorTile.convertClipSimplify config geom) props Nothing)
     <$> HasqlDecoders.column (HasqlDecoders.custom (\_ -> convertDecoder Ewkb.parseByteString))
     <*> HasqlDecoders.column HasqlDecoders.json
 

@@ -15,6 +15,7 @@ import qualified Data.Aeson.Encode.Pretty      as AE
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Lazy.Char8    as LBS8
 import qualified Data.Char                     as Char
+import qualified Data.Geometry.Types.Config    as TypesConfig
 import qualified Data.Geometry.Types.Geography as TypesGeography
 import qualified Data.Geospatial               as DG
 import           Data.Map                      as M
@@ -98,10 +99,11 @@ getAnything f layer z x stringY =
 
 getTile :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
 getTile layer z xy = do
-  geoFeature <- getGeoFeature layer z xy
   buffer  <- RC.asks (^. App.ssBuffer)
   let simplificationAlgorithm = Layer.getAlgorithm z layer
-  tile <- liftIO $ TileLib.mkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoFeature
+      config = TypesConfig.mkConfig (Layer._layerName layer) z xy buffer Config.defaultTileSize (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm
+  geoFeature <- getGeoFeature config layer z xy
+  tile <- liftIO $ TileLib.newMkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoFeature
   checkEmpty tile layer
 
 checkEmpty :: BS.ByteString -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
@@ -110,11 +112,15 @@ checkEmpty tile layer
   | otherwise = pure $ Servant.addHeader (Layer.lastModified layer) tile
 
 getJson :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
-getJson layer z xy = Servant.addHeader (Layer.lastModified layer) . LBS8.toStrict . A.encode <$> getGeoFeature layer z xy
+getJson layer z xy = do
+  buffer <- RC.asks (^. App.ssBuffer)
+  let simplificationAlgorithm = Layer.getAlgorithm z layer
+      config = TypesConfig.mkConfig (Layer._layerName layer) z xy buffer Config.defaultTileSize (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm
+  Servant.addHeader (Layer.lastModified layer) . LBS8.toStrict . A.encode <$> getGeoFeature config layer z xy
 
-getGeoFeature :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (DG.GeoFeatureCollection A.Value)
-getGeoFeature layer z xy = do
-  errorOrTfs <- DBLayer.findFeatures layer z xy
+getGeoFeature :: TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (DG.GeoFeatureCollection A.Value)
+getGeoFeature config layer z xy = do
+  errorOrTfs <- DBLayer.findFeatures config layer z xy
   case errorOrTfs of
     Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }
     Right tfs -> pure $ DG.GeoFeatureCollection Nothing tfs
