@@ -20,9 +20,9 @@ import qualified Data.Geometry.Types.Config     as TypesConfig
 import qualified Data.Geometry.Types.Geography  as TypesGeography
 import qualified Data.Geospatial                as Geospatial
 import           Data.Monoid                    ((<>))
+import qualified Data.Sequence                  as Sequence
 import qualified Data.Text                      as Text
 import qualified Data.Text.Encoding             as TextEncoding
-import qualified Data.Vector                    as Vector
 import qualified Hasql.CursorQuery              as HasqlCursorQuery
 import qualified Hasql.CursorQuery.Transactions as HasqlCursorQueryTransactions
 import qualified Hasql.Decoders                 as HasqlDecoders
@@ -35,7 +35,7 @@ import qualified Hastile.Types.Layer            as Layer
 import qualified Hastile.Types.Layer.Format     as LayerFormat
 import qualified Hastile.Types.Tile             as Tile
 
-findFeatures :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value)))
+findFeatures :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value)))
 findFeatures config layer z xy = do
   buffer <- asks (^. App.ssBuffer)
   hpool <- asks App._ssPool
@@ -45,7 +45,7 @@ findFeatures config layer z xy = do
       session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
   liftIO $ HasqlPool.use hpool session
 
-getLayerQuery :: TypesConfig.Config -> Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
+getLayerQuery :: TypesConfig.Config -> Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value))
 getLayerQuery config layer =
   case layerFormat of
     LayerFormat.GeoJSON ->
@@ -56,15 +56,24 @@ getLayerQuery config layer =
     tableName = Layer.getLayerSetting layer Layer._layerTableName
     layerFormat = Layer.getLayerSetting layer Layer._layerFormat
 
-layerQueryGeoJSON :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
+layerQueryGeoJSON :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value))
 layerQueryGeoJSON tableName =
-  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder geoJsonDecoder Foldl.vector) HasqlCursorQuery.batchSize_10000
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder geoJsonDecoder foldSeq) HasqlCursorQuery.batchSize_10000
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT geojson FROM " <> tableName <> layerQueryWhereClause
 
-layerQueryWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
+foldSeq :: Foldl.Fold a (Sequence.Seq a)
+foldSeq = Foldl.Fold step begin done
+  where
+    begin = Sequence.empty
+
+    step x a = x <> Sequence.singleton a
+
+    done = id
+
+layerQueryWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value))
 layerQueryWkbProperties config tableName =
-  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder (wkbPropertiesDecoder config) Foldl.vector) HasqlCursorQuery.batchSize_10000
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder (wkbPropertiesDecoder config) foldSeq) HasqlCursorQuery.batchSize_10000
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " <> tableName <> layerQueryWhereClause
 
