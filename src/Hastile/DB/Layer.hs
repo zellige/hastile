@@ -14,15 +14,19 @@ import qualified Data.Aeson                     as Aeson
 import qualified Data.Aeson.Types               as AesonTypes
 import qualified Data.ByteString                as ByteString
 import qualified Data.ByteString.Lazy           as LazyByteString
+import qualified Data.ByteString.Lazy           as ByteStringLazy
 import qualified Data.Ewkb                      as Ewkb
 import qualified Data.Geometry.MapnikVectorTile as MapnikVectorTile
 import qualified Data.Geometry.Types.Config     as TypesConfig
 import qualified Data.Geometry.Types.Geography  as TypesGeography
 import qualified Data.Geospatial                as Geospatial
+import qualified Data.HashMap.Strict            as HashMapStrict
 import           Data.Monoid                    ((<>))
 import qualified Data.Sequence                  as Sequence
 import qualified Data.Text                      as Text
 import qualified Data.Text.Encoding             as TextEncoding
+import qualified Geography.VectorTile           as VectorTile
+import qualified Geography.VectorTile.Internal  as VectorTileInternal
 import qualified Hasql.CursorQuery              as HasqlCursorQuery
 import qualified Hasql.CursorQuery.Transactions as HasqlCursorQueryTransactions
 import qualified Hasql.Decoders                 as HasqlDecoders
@@ -70,6 +74,23 @@ foldSeq = Foldl.Fold step begin done
     step x a = x <> Sequence.singleton a
 
     done = id
+
+-- Fold (x -> a -> x) x (x -> b) -- Fold step initial extract
+data StreamingLayer = StreamingLayer
+  { slKeys     :: HashMapStrict.HashMap ByteStringLazy.ByteString Int
+  , slVals     :: HashMapStrict.HashMap VectorTile.Val Int
+  , slFeatures :: Sequence.Seq VectorTileInternal.Feature
+  }
+--  M.Map Text Int -> M.Map VT.Val Int
+
+foldLayer :: Foldl.Fold a (Sequence.Seq a)
+foldLayer = Foldl.Fold step begin done
+  where
+    begin = StreamingLayer HashMapStrict.empty HashMapStrict.empty Sequence.empty
+
+    step _ _ = undefined
+
+    done = undefined
 
 layerQueryWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value))
 layerQueryWkbProperties config tableName =
