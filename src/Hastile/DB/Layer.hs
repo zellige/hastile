@@ -16,6 +16,7 @@ import qualified Data.ByteString                as ByteString
 import qualified Data.ByteString.Lazy           as LazyByteString
 import qualified Data.ByteString.Lazy           as ByteStringLazy
 import qualified Data.Ewkb                      as Ewkb
+import qualified Data.Geometry.GeoJsonToMvt     as GeoJsonToMvt
 import qualified Data.Geometry.MapnikVectorTile as MapnikVectorTile
 import qualified Data.Geometry.Types.Config     as TypesConfig
 import qualified Data.Geometry.Types.Geography  as TypesGeography
@@ -49,7 +50,7 @@ findFeatures config layer z xy = do
       session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
   liftIO $ HasqlPool.use hpool session
 
-newFindFeatures :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value)))
+newFindFeatures :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError GeoJsonToMvt.StreamingLayer)
 newFindFeatures config layer z xy = do
   buffer <- asks (^. App.ssBuffer)
   hpool <- asks App._ssPool
@@ -92,9 +93,9 @@ layerQueryWkbProperties config tableName =
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " <> tableName <> layerQueryWhereClause
 
-newLayerQueryWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value))
+newLayerQueryWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) GeoJsonToMvt.StreamingLayer
 newLayerQueryWkbProperties config tableName =
-  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder (wkbPropertiesDecoder config) foldSeq) HasqlCursorQuery.batchSize_10000
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder (newWkbPropertiesDecoder config) GeoJsonToMvt.foldLayer) HasqlCursorQuery.batchSize_10000
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " <> tableName <> layerQueryWhereClause
 
@@ -107,6 +108,12 @@ geoJsonDecoder =
 wkbPropertiesDecoder :: TypesConfig.Config -> HasqlDecoders.Row (Geospatial.GeoFeature AesonTypes.Value)
 wkbPropertiesDecoder config =
   (\geom props -> Geospatial.GeoFeature Nothing (MapnikVectorTile.convertClipSimplify config geom) props Nothing)
+    <$> HasqlDecoders.column (HasqlDecoders.custom (\_ -> convertDecoder Ewkb.parseByteString))
+    <*> HasqlDecoders.column HasqlDecoders.json
+
+newWkbPropertiesDecoder :: TypesConfig.Config -> HasqlDecoders.Row (Geospatial.GeospatialGeometry, AesonTypes.Value)
+newWkbPropertiesDecoder config =
+  (\geom props -> (MapnikVectorTile.convertClipSimplify config geom, props))
     <$> HasqlDecoders.column (HasqlDecoders.custom (\_ -> convertDecoder Ewkb.parseByteString))
     <*> HasqlDecoders.column HasqlDecoders.json
 

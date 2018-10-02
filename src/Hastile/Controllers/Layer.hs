@@ -15,6 +15,7 @@ import qualified Data.Aeson.Encode.Pretty      as AE
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Lazy.Char8    as LBS8
 import qualified Data.Char                     as Char
+import qualified Data.Geometry.GeoJsonToMvt    as GeoJsonToMvt
 import qualified Data.Geometry.Types.Config    as TypesConfig
 import qualified Data.Geometry.Types.Geography as TypesGeography
 import qualified Data.Geospatial               as DG
@@ -32,7 +33,6 @@ import qualified STMContainers.Map             as STMMap
 
 import qualified Hastile.DB.Layer              as DBLayer
 import qualified Hastile.Lib.Layer             as LayerLib
-import qualified Hastile.Lib.Tile              as TileLib
 import qualified Hastile.Routes                as Routes
 import qualified Hastile.Types.App             as App
 import qualified Hastile.Types.Config          as Config
@@ -102,9 +102,8 @@ getTile layer z xy = do
   buffer  <- RC.asks (^. App.ssBuffer)
   let simplificationAlgorithm = Layer.getAlgorithm z layer
       config = TypesConfig.mkConfig (Layer._layerName layer) z xy buffer Config.defaultTileSize (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm
-  geoFeature <- getGeoFeature config layer z xy
-  tile <- liftIO $ TileLib.newMkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoFeature
-  checkEmpty tile layer
+  geoFeature <- getNewGeoFeature config layer z xy
+  checkEmpty (GeoJsonToMvt.vtToBytes config geoFeature) layer
 
 checkEmpty :: BS.ByteString -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
 checkEmpty tile layer
@@ -124,6 +123,13 @@ getGeoFeature config layer z xy = do
   case errorOrTfs of
     Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }
     Right tfs -> pure $ DG.GeoFeatureCollection Nothing tfs
+
+getNewGeoFeature :: TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler GeoJsonToMvt.StreamingLayer
+getNewGeoFeature config layer z xy = do
+  errorOrTfs <- DBLayer.newFindFeatures config layer z xy
+  case errorOrTfs of
+    Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }
+    Right tfs -> pure tfs
 
 getLayerOrThrow :: Text.Text -> App.ActionHandler Layer.Layer
 getLayerOrThrow l = do
