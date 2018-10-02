@@ -49,6 +49,17 @@ findFeatures config layer z xy = do
       session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
   liftIO $ HasqlPool.use hpool session
 
+newFindFeatures :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value)))
+newFindFeatures config layer z xy = do
+  buffer <- asks (^. App.ssBuffer)
+  hpool <- asks App._ssPool
+  let bbox = TileLib.getBbox buffer z xy
+      query = newLayerQueryWkbProperties config tableName
+      action = HasqlCursorQueryTransactions.cursorQuery bbox query
+      tableName = Layer.getLayerSetting layer Layer._layerTableName
+      session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
+  liftIO $ HasqlPool.use hpool session
+
 getLayerQuery :: TypesConfig.Config -> Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value))
 getLayerQuery config layer =
   case layerFormat of
@@ -75,25 +86,14 @@ foldSeq = Foldl.Fold step begin done
 
     done = id
 
--- Fold (x -> a -> x) x (x -> b) -- Fold step initial extract
-data StreamingLayer = StreamingLayer
-  { slKeys     :: HashMapStrict.HashMap ByteStringLazy.ByteString Int
-  , slVals     :: HashMapStrict.HashMap VectorTile.Val Int
-  , slFeatures :: Sequence.Seq VectorTileInternal.Feature
-  }
---  M.Map Text Int -> M.Map VT.Val Int
-
-foldLayer :: Foldl.Fold a (Sequence.Seq a)
-foldLayer = Foldl.Fold step begin done
-  where
-    begin = StreamingLayer HashMapStrict.empty HashMapStrict.empty Sequence.empty
-
-    step _ _ = undefined
-
-    done = undefined
-
 layerQueryWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value))
 layerQueryWkbProperties config tableName =
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder (wkbPropertiesDecoder config) foldSeq) HasqlCursorQuery.batchSize_10000
+  where
+    sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " <> tableName <> layerQueryWhereClause
+
+newLayerQueryWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value))
+newLayerQueryWkbProperties config tableName =
   HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder (wkbPropertiesDecoder config) foldSeq) HasqlCursorQuery.batchSize_10000
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " <> tableName <> layerQueryWhereClause
