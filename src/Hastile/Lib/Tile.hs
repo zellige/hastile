@@ -5,20 +5,18 @@ module Hastile.Lib.Tile (
             , extent
             , getBbox
             , googleToBBoxM
-            , mkTile
-            , newMkTile
             ) where
 
-import qualified Data.Aeson                     as A
-import qualified Data.ByteString.Char8          as BS8
-import qualified Data.Geometry.MapnikVectorTile as MapnikVectorTile
-import qualified Data.Geometry.Types.Config     as TypesConfig
-import qualified Data.Geometry.Types.Geography  as TypesGeography
-import qualified Data.Geospatial                as DG
-import qualified Data.Text                      as Text
+-- import qualified Data.Aeson                     as A
+-- import qualified Data.ByteString.Char8          as BS8
+-- import qualified Data.Geometry.MapnikVectorTile as MapnikVectorTile
+-- import qualified Data.Geometry.Types.Config    as TypesConfig
+import qualified Data.Geometry.Types.Geography as TypesGeography
+-- import qualified Data.Geospatial               as DG
+-- import qualified Data.Text                     as Text
 
-import qualified Hastile.Types.Config           as Config
-import qualified Hastile.Types.Tile             as Tile
+import qualified Hastile.Types.Config          as Config
+import qualified Hastile.Types.Tile            as Tile
 
 addBufferToBBox :: TypesGeography.Pixels -> TypesGeography.Pixels -> TypesGeography.ZoomLevel -> Tile.BBox Tile.Metres -> Tile.BBox Tile.Metres
 addBufferToBBox tileSize buffer z (Tile.BBox llX llY urX urY) =
@@ -75,13 +73,13 @@ mPerPxAtZoom (Tile.Metres m) tile z = Ratio $ m / fromIntegral p
 mPerPxToM :: Ratio Tile.Metres TypesGeography.Pixels -> TypesGeography.Pixels -> Tile.Metres
 mPerPxToM (Ratio r) p = Tile.Metres $ r * fromIntegral p
 
-mkTile :: Text.Text -> TypesGeography.Pixels -> (TypesGeography.Pixels, TypesGeography.Pixels) -> TypesGeography.Pixels -> TypesGeography.Pixels -> TypesConfig.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
-mkTile l z xy buffer quantizePixels algo geoJson = MapnikVectorTile.encodeMvt <$> MapnikVectorTile.createMvt config geoJson
-  where
-    config = TypesConfig.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo
+-- mkTile :: Text.Text -> TypesGeography.Pixels -> (TypesGeography.Pixels, TypesGeography.Pixels) -> TypesGeography.Pixels -> TypesGeography.Pixels -> TypesConfig.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
+-- mkTile l z xy buffer quantizePixels algo geoJson = MapnikVectorTile.encodeMvt <$> MapnikVectorTile.createMvt config geoJson
+--   where
+--     config = TypesConfig.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo
 
-newMkTile :: Text.Text -> TypesGeography.Pixels -> (TypesGeography.Pixels, TypesGeography.Pixels) -> TypesGeography.Pixels -> TypesGeography.Pixels -> TypesConfig.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
-newMkTile l z xy buffer quantizePixels algo geoJson = MapnikVectorTile.encodeMvt <$> MapnikVectorTile.convertedGeojsonToMvt config geoJson
-  where
-    config = TypesConfig.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo
+-- newMkTile :: Text.Text -> TypesGeography.Pixels -> (TypesGeography.Pixels, TypesGeography.Pixels) -> TypesGeography.Pixels -> TypesGeography.Pixels -> TypesConfig.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
+-- newMkTile l z xy buffer quantizePixels algo geoJson = MapnikVectorTile.encodeMvt <$> MapnikVectorTile.convertedGeojsonToMvt config geoJson
+--   where
+--     config = TypesConfig.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo
 
