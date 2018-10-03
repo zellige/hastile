@@ -43,8 +43,8 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: 
-- wkt-geom-0.0.4
-- geojson-3.0.3
+- wkt-geom-0.0.1
+- geojson-2.0.0
 - hasql-cursor-query-0.4.4.2
 - hasql-cursor-transaction-0.6.3.1
 - prometheus-client-1.0.0

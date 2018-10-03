@@ -41,6 +41,7 @@ library
                      , contravariant
                      , foldl
                      , geojson
+                     , hashable
                      , hasql
                      , hasql-cursor-query
                      , hasql-pool
@@ -55,6 +56,7 @@ library
                      , optparse-generic
                      , prometheus-client
                      , prometheus-metrics-ghc
+                     , protocol-buffers >=2.4 && <2.5
                      , scientific
                      , servant
                      , servant-server
@@ -91,6 +93,7 @@ executable hastile
                      , servant-server
                      , stm-containers
                      , transformers
+                     , vectortiles >= 1.5.0                
                      , wai
                      , wai-cors
                      , wai-middleware-prometheus
