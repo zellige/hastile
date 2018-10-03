@@ -1,1 +1,0 @@
-stack exec -- zellige --layer-input ../profiling/1187.json --layer-output foo.mvt --layer-name foo --layer-zoom 11 --layer-x 1892 --layer-y 1187 --layer-buffer 128 --layer-extent 2048 +RTS -p -hc -RTS
