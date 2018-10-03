@@ -14,20 +14,16 @@ import qualified Data.Aeson                     as Aeson
 import qualified Data.Aeson.Types               as AesonTypes
 import qualified Data.ByteString                as ByteString
 import qualified Data.ByteString.Lazy           as LazyByteString
-import qualified Data.ByteString.Lazy           as ByteStringLazy
 import qualified Data.Ewkb                      as Ewkb
 import qualified Data.Geometry.GeoJsonToMvt     as GeoJsonToMvt
 import qualified Data.Geometry.MapnikVectorTile as MapnikVectorTile
 import qualified Data.Geometry.Types.Config     as TypesConfig
 import qualified Data.Geometry.Types.Geography  as TypesGeography
 import qualified Data.Geospatial                as Geospatial
-import qualified Data.HashMap.Strict            as HashMapStrict
 import           Data.Monoid                    ((<>))
 import qualified Data.Sequence                  as Sequence
 import qualified Data.Text                      as Text
 import qualified Data.Text.Encoding             as TextEncoding
-import qualified Geography.VectorTile           as VectorTile
-import qualified Geography.VectorTile.Internal  as VectorTileInternal
 import qualified Hasql.CursorQuery              as HasqlCursorQuery
 import qualified Hasql.CursorQuery.Transactions as HasqlCursorQueryTransactions
 import qualified Hasql.Decoders                 as HasqlDecoders
