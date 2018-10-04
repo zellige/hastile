@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE LambdaCase                #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
@@ -16,131 +15,121 @@ module Hastile.Types.Layer where
 
 import           Control.Applicative
 import qualified Data.Aeson                    as Aeson
-import           Data.Aeson.Types              as AT
-import qualified Data.Geometry.Types.Geography as DGTT
-import qualified Data.Geometry.Types.Simplify  as DGTS
-import qualified Data.Geospatial               as DG
-import           Data.Map.Strict               as M
-import qualified Data.Text                     as T
-import qualified Data.Time                     as DT
+import           Data.Aeson.Types              as AesonTypes
+import qualified Data.Geometry.Types.Config    as TypesConfig
+import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
+import qualified Data.Map.Strict               as MapStrict
+import qualified Data.Monoid                   as Monoid
+import qualified Data.Text                     as Text
+import qualified Data.Time                     as Time
 import           Options.Generic
 
+import qualified Hastile.Types.Layer.Format    as LayerFormat
+import qualified Hastile.Types.Layer.Security  as LayerSecurity
+
+data LayerError = LayerNotFound
+
 data NewLayerRequest = NewLayerRequest
-  {  _newLayerRequestName     :: T.Text
+  {  _newLayerRequestName     :: Text.Text
   ,  _newLayerRequestSettings :: LayerSettings
   } deriving (Show, Eq)
 
 newtype LayerRequestList = LayerRequestList [NewLayerRequest]
 
 instance Aeson.FromJSON LayerRequestList where
-  parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . M.toList) Control.Applicative.<$> parseJSON v
+  parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . MapStrict.toList) Control.Applicative.<$> parseJSON v
 
 data LayerSettings = LayerSettings
-  { _lsSecurity   :: LayerSecurity
-  , _lsQuery      :: Text
-  , _lsQuantize   :: DGTT.Pixels
-  , _lsAlgorithms :: Algorithms
+  { _layerSecurity   :: LayerSecurity.LayerSecurity
+  , _layerFormat     :: LayerFormat.LayerFormat
+  , _layerTableName  :: Text
+  , _layerQuantize   :: GeometryTypesGeography.Pixels
+  , _layerAlgorithms :: Algorithms
   } deriving (Show, Eq)
-
-data LayerSecurity = LayerSecurityPublic | LayerSecurityPrivate deriving (Eq)
-
-data LayerAuthorisation = Authorised | Unauthorised deriving (Show, Eq)
-
-instance Show LayerSecurity where
-  show LayerSecurityPublic  = "public"
-  show LayerSecurityPrivate = "private"
-
-instance Aeson.FromJSON LayerSecurity where
-  parseJSON = withText "LayerSecurity" $ \case
-    "public"  -> pure LayerSecurityPublic
-    "private" -> pure LayerSecurityPrivate
-    _         -> fail "Unknown layer security"
-
-instance Aeson.ToJSON LayerSecurity where
-  toJSON algo =
-    Aeson.String $ case algo of
-      LayerSecurityPublic  -> "public"
-      LayerSecurityPrivate -> "private"
 
 instance Aeson.FromJSON LayerSettings where
   parseJSON = withObject "LayerSettings" $ \o -> LayerSettings
-    <$> o .:? "security" .!= LayerSecurityPrivate
-    <*> o .: "query"
-    <*> o .: "quantize"
-    <*> o .: "simplify"
+    <$> o .:? "security" .!= LayerSecurity.Private
+    <*> o .:  "format"
+    <*> o .:  "table-name"
+    <*> o .:  "quantize"
+    <*> o .:  "simplify"
 
 instance Aeson.ToJSON LayerSettings where
-  toJSON ls = object
-    [ "security" .= _lsSecurity ls
-    , "query"    .= _lsQuery ls
-    , "quantize" .= _lsQuantize ls
-    , "simplify" .= _lsAlgorithms ls
-    ]
+  toJSON ls = object $
+    layerSettingsToPairs ls
 
-requestToLayer :: Text -> LayerSettings -> DT.UTCTime -> Layer
-requestToLayer layerName (LayerSettings security query quantize simplify) time = Layer layerName security query time quantize simplify
+layerSettingsToPairs :: LayerSettings -> [AesonTypes.Pair]
+layerSettingsToPairs ls =
+  [ "security"   .= _layerSecurity ls
+  , "format"     .= _layerFormat ls
+  , "table-name" .= _layerTableName ls
+  , "quantize"   .= _layerQuantize ls
+  , "simplify"   .= _layerAlgorithms ls
+  ]
+
+requestToLayer :: Text -> LayerSettings -> Time.UTCTime -> Layer
+requestToLayer layerName layerSettings time = Layer layerName $ LayerDetails time layerSettings
 
 data Layer = Layer
-  { _layerName         :: Text
-  , _layerSecurity     :: LayerSecurity
-  , _layerQuery        :: Text
-  , _layerLastModified :: DT.UTCTime
-  , _layerQuantize     :: DGTT.Pixels
-  , _layerAlgorithms   :: Algorithms
+  { _layerName    :: Text
+  , _layerDetails :: LayerDetails
   } deriving (Show, Eq, Generic)
 
 data LayerDetails = LayerDetails
-  { _layerDetailsSecurity     :: LayerSecurity
-  , _layerDetailsQuery        :: Text
-  , _layerDetailsLastModified :: DT.UTCTime
-  , _layerDetailsQuantize     :: DGTT.Pixels
-  , _layerDetailsAlgorithms   :: Algorithms
+  { _layerLastModified :: Time.UTCTime
+  , _layerSettings     :: LayerSettings
   } deriving (Show, Eq, Generic)
 
 instance Aeson.FromJSON LayerDetails where
-  parseJSON = withObject "Layer" $ \o -> LayerDetails
-    <$> o .:? "security" .!= LayerSecurityPrivate
-    <*> o .: "query"
-    <*> o .: "last-modified"
-    <*> o .: "quantize"
-    <*> o .: "simplify"
+  parseJSON = withObject "LayerDetails" $ \o -> LayerDetails
+    <$> o .: "last-modified"
+    <*> parseJSON (Aeson.Object o)
 
 instance Aeson.ToJSON LayerDetails where
-  toJSON l = object
-    [ "security"      .= _layerDetailsSecurity l
-    , "query"         .= _layerDetailsQuery l
-    , "last-modified" .= _layerDetailsLastModified l
-    , "quantize"      .= _layerDetailsQuantize l
-    , "simplify"      .= _layerDetailsAlgorithms l
-    ]
-
-layerDetailsToLayer :: Text -> LayerDetails -> Layer
-layerDetailsToLayer name LayerDetails{..} = Layer name _layerDetailsSecurity _layerDetailsQuery _layerDetailsLastModified _layerDetailsQuantize _layerDetailsAlgorithms
+  toJSON l = object $
+    "last-modified" .= _layerLastModified l : layerSettingsToPairs (_layerSettings l)
 
 layerToLayerDetails :: Layer -> LayerDetails
-layerToLayerDetails Layer{..} = LayerDetails _layerSecurity _layerQuery _layerLastModified _layerQuantize _layerAlgorithms
+layerToLayerDetails Layer{..} = _layerDetails
+
+getLayerDetail :: Layer -> (LayerDetails -> a) -> a
+getLayerDetail layer getter =
+  getter $ _layerDetails layer
+
+getLayerSetting :: Layer -> (LayerSettings -> a) -> a
+getLayerSetting layer getter =
+  getter $ _layerSettings $ _layerDetails layer
+
+lastModified :: Layer -> Text.Text
+lastModified layer = Text.dropEnd 3 (Text.pack rfc822Str) Monoid.<> "GMT"
+       where rfc822Str = Time.formatTime Time.defaultTimeLocale Time.rfc822DateFormat $ getLayerDetail layer _layerLastModified
+
+parseIfModifiedSince :: Text.Text -> Maybe Time.UTCTime
+parseIfModifiedSince t = Time.parseTimeM True Time.defaultTimeLocale "%a, %e %b %Y %T GMT" $ Text.unpack t
+
+isModifiedTime :: Layer -> Maybe Time.UTCTime -> Bool
+isModifiedTime layer mTime =
+  case mTime of
+    Nothing   -> True
+    Just time -> getLayerDetail layer _layerLastModified > time
+
+isModified :: Layer -> Maybe Text.Text -> Bool
+isModified layer mText =
+  case mText of
+    Nothing   -> True
+    Just text -> isModifiedTime layer $ parseIfModifiedSince text
 
 -- Zoom dependant simplification algorithms
 
 -- TODO use map Strict
 
-type Algorithms = M.Map DGTT.ZoomLevel DGTS.SimplificationAlgorithm
+type Algorithms = MapStrict.Map GeometryTypesGeography.ZoomLevel TypesConfig.SimplificationAlgorithm
 
-getAlgorithm :: DGTT.ZoomLevel -> Layer -> DGTS.SimplificationAlgorithm
-getAlgorithm z layer = getAlgorithm' z (_layerAlgorithms layer)
+getAlgorithm :: GeometryTypesGeography.ZoomLevel -> Layer -> TypesConfig.SimplificationAlgorithm
+getAlgorithm z layer = getAlgorithm' z $ getLayerSetting layer _layerAlgorithms
 
-getAlgorithm' :: DGTT.ZoomLevel -> Algorithms -> DGTS.SimplificationAlgorithm
-getAlgorithm' z algos = case M.lookupGE z algos of
-  Nothing        -> DGTS.NoAlgorithm
+getAlgorithm' :: GeometryTypesGeography.ZoomLevel -> Algorithms -> TypesConfig.SimplificationAlgorithm
+getAlgorithm' z algos = case MapStrict.lookupGE z algos of
+  Nothing        -> TypesConfig.NoAlgorithm
   Just (_, algo) -> algo
-
-newtype TileFeature = TileFeature
-  { unTileFeature :: Value
-  } deriving (Show, Eq)
-
--- Helpers
-
-mkGeoJSON :: [Value] -> [DG.GeoFeature AT.Value]
-mkGeoJSON = fmap (x . parseEither parseJSON)
-  where
-    x = either (\_ -> DG.GeoFeature Nothing (DG.Collection []) Null Nothing) id
