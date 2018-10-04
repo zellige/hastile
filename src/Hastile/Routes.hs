@@ -20,7 +20,6 @@ type LayerName = Capture "layer" Text.Text
 type Z = Capture "z" DGTT.ZoomLevel
 type X = Capture "x" DGTT.Pixels
 type Y = Capture "y" Text.Text
-type YI = Capture "y" DGTT.Pixels
 
 type HastileApi =
   Get '[JSON] Config.InputConfig
@@ -44,8 +43,7 @@ type LayerApi =
     )
 
 type HastileContentApi =
-       YI :> "query" :> Get '[PlainText] Text.Text
-  :<|> Y :> QueryParam "token" Text.Text :> Servant.Header "If-Modified-Since" Text.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" Text.Text] BS.ByteString)
+  Y :> QueryParam "token" Text.Text :> Servant.Header "If-Modified-Since" Text.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" Text.Text] BS.ByteString)
 
 hastileApi :: P.Proxy HastileApi
 hastileApi = P.Proxy

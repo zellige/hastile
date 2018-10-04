@@ -53,7 +53,7 @@ testDelete pool =
         result <- TokenLib.deleteToken pool cache exampleToken
         result `shouldBe` Right "OK"
         foundLayers <- TokenDB.getToken pool exampleToken
-        foundLayers `shouldBe` Left "SessionError (ResultError (UnexpectedAmountOfRows 0))"
+        foundLayers `shouldBe` Left "SessionError (QueryError \"SELECT layers FROM tokens WHERE token LIKE $1;\" [\"\\\"example\\\"\"] (ResultError (UnexpectedAmountOfRows 0)))"
         checkCache cache exampleToken []
       it "should fail to delete a non-existent token" $ \cache -> do
         result <- TokenLib.deleteToken pool cache exampleToken

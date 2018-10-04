@@ -6,84 +6,118 @@
 
 module Hastile.DB.Layer where
 
-import           Control.Lens                  ((^.))
+import qualified Control.Foldl                  as Foldl
+import           Control.Lens                   ((^.))
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
-import qualified Data.Aeson                    as Aeson
-import qualified Data.ByteString               as BS
-import qualified Data.Geometry.Types.Geography as DGTT
-import           Data.Monoid
-import qualified Data.Text                     as Text
-import qualified Data.Text.Encoding            as TE
-import qualified Data.Time                     as DT
-import           GHC.Conc
-import qualified Hasql.Decoders                as HD
-import qualified Hasql.Encoders                as HE
-import qualified Hasql.Pool                    as P
-import qualified Hasql.Query                   as HQ
-import qualified Hasql.Session                 as HS
-import           STMContainers.Map             as STM
+import qualified Data.Aeson                     as Aeson
+import qualified Data.Aeson.Types               as AesonTypes
+import qualified Data.ByteString                as ByteString
+import qualified Data.ByteString.Lazy           as LazyByteString
+import qualified Data.Ewkb                      as Ewkb
+import qualified Data.Geometry.GeoJsonToMvt     as GeoJsonToMvt
+import qualified Data.Geometry.MapnikVectorTile as MapnikVectorTile
+import qualified Data.Geometry.Types.Config     as TypesConfig
+import qualified Data.Geometry.Types.Geography  as TypesGeography
+import qualified Data.Geospatial                as Geospatial
+import           Data.Monoid                    ((<>))
+import qualified Data.Sequence                  as Sequence
+import qualified Data.Text                      as Text
+import qualified Data.Text.Encoding             as TextEncoding
+import qualified Data.Vector                    as Vector
+import qualified Hasql.CursorQuery              as HasqlCursorQuery
+import qualified Hasql.CursorQuery.Transactions as HasqlCursorQueryTransactions
+import qualified Hasql.Decoders                 as HasqlDecoders
+import qualified Hasql.Pool                     as HasqlPool
+import qualified Hasql.Transaction.Sessions     as HasqlTransactionSession
 
-import           Hastile.Tile
-import qualified Hastile.Types.App             as App
-import qualified Hastile.Types.Config          as Config
-import qualified Hastile.Types.Layer           as Layer
+import qualified Hastile.Lib.Tile               as TileLib
+import qualified Hastile.Types.App              as App
+import qualified Hastile.Types.Layer            as Layer
+import qualified Hastile.Types.Layer.Format     as LayerFormat
+import qualified Hastile.Types.Tile             as Tile
 
-data LayerError = LayerNotFound
+findFeatures :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value)))
+findFeatures config layer z xy = do
+  buffer <- asks (^. App.ssBuffer)
+  hpool <- asks App._ssPool
+  let bbox = TileLib.getBbox buffer z xy
+      query = getLayerQuery config layer
+      action = HasqlCursorQueryTransactions.cursorQuery bbox query
+      session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
+  liftIO $ HasqlPool.use hpool session
 
-findFeatures :: (MonadIO m, MonadReader App.ServerState m)
-             => Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m (Either P.UsageError [Aeson.Value])
-findFeatures layer z xy = do
-  sql <- mkQuery layer z xy
-  let sessTfs = HS.query () (mkStatement (TE.encodeUtf8 sql))
-  p <- asks App._ssPool
-  liftIO $ P.use p sessTfs
+newFindFeatures :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError GeoJsonToMvt.StreamingLayer)
+newFindFeatures config layer z xy = do
+  buffer <- asks (^. App.ssBuffer)
+  hpool <- asks App._ssPool
+  let bbox = TileLib.getBbox buffer z xy
+      query = newLayerQueryWkbProperties config tableName
+      action = HasqlCursorQueryTransactions.cursorQuery bbox query
+      tableName = Layer.getLayerSetting layer Layer._layerTableName
+      session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
+  liftIO $ HasqlPool.use hpool session
 
-mkQuery :: (MonadReader App.ServerState m) => Layer.Layer -> DGTT.ZoomLevel -> (DGTT.Pixels, DGTT.Pixels) -> m Text.Text
-mkQuery layer z xy =
-  do buffer <- asks (^. App.ssBuffer)
-     let bboxM = googleToBBoxM Config.defaultTileSize z xy
-         (BBox (Metres llX) (Metres llY) (Metres urX) (Metres urY)) =
-           addBufferToBBox Config.defaultTileSize buffer z bboxM
-         bbox4326 = Text.pack $ "ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint(" ++
-           show llX ++ ", " ++ show llY ++ "), ST_MakePoint(" ++ show urX ++ ", " ++
-           show urY ++ ")), 3857), 4326)"
-     pure $ escape bbox4326 . Layer._layerQuery $ layer
-
-getLayer :: (MonadIO m, MonadReader App.ServerState m) => Text.Text -> m (Either LayerError Layer.Layer)
-getLayer l = do
-  ls <- asks App._ssStateLayers
-  result <- liftIO . atomically $ STM.lookup l ls
-  pure $ case result of
-    Nothing    -> Left LayerNotFound
-    Just layer -> Right layer
-
-mkStatement :: BS.ByteString -> HQ.Query () [Aeson.Value]
-mkStatement sql = HQ.statement sql
-    HE.unit (HD.rowsList (HD.value HD.json)) False
-
--- Replace any occurrance of the string "!bbox_4326!" in a string with some other string
-escape :: Text.Text -> Text.Text -> Text.Text
-escape bbox = Text.concat . fmap replace' . Text.split (== '!')
+getLayerQuery :: TypesConfig.Config -> Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
+getLayerQuery config layer =
+  case layerFormat of
+    LayerFormat.GeoJSON ->
+      layerQueryGeoJSON tableName
+    LayerFormat.WkbProperties ->
+      layerQueryWkbProperties config tableName
   where
-    replace' "bbox_4326" = bbox
-    replace' t           = t
+    tableName = Layer.getLayerSetting layer Layer._layerTableName
+    layerFormat = Layer.getLayerSetting layer Layer._layerFormat
 
-lastModified :: Layer.Layer -> Text.Text
-lastModified layer = Text.dropEnd 3 (Text.pack rfc822Str) <> "GMT"
-       where rfc822Str = DT.formatTime DT.defaultTimeLocale DT.rfc822DateFormat $ Layer._layerLastModified layer
+layerQueryGeoJSON :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
+layerQueryGeoJSON tableName =
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder geoJsonDecoder Foldl.vector) HasqlCursorQuery.batchSize_10000
+  where
+    sql = TextEncoding.encodeUtf8 $ "SELECT geojson FROM " <> tableName <> layerQueryWhereClause
 
-parseIfModifiedSince :: Text.Text -> Maybe DT.UTCTime
-parseIfModifiedSince t = DT.parseTimeM True DT.defaultTimeLocale "%a, %e %b %Y %T GMT" $ Text.unpack t
+layerQueryWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Vector.Vector (Geospatial.GeoFeature AesonTypes.Value))
+layerQueryWkbProperties config tableName =
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder (wkbPropertiesDecoder config) Foldl.vector) HasqlCursorQuery.batchSize_10000
+  where
+    sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " <> tableName <> layerQueryWhereClause
 
-isModifiedTime :: Layer.Layer -> Maybe DT.UTCTime -> Bool
-isModifiedTime layer mTime =
-  case mTime of
-    Nothing   -> True
-    Just time -> Layer._layerLastModified layer > time
+foldSeq :: Foldl.Fold a (Sequence.Seq a)
+foldSeq = Foldl.Fold step begin done
+  where
+    begin = Sequence.empty
 
-isModified :: Layer.Layer -> Maybe Text.Text -> Bool
-isModified layer mText =
-  case mText of
-    Nothing   -> True
-    Just text -> isModifiedTime layer $ parseIfModifiedSince text
+    step x a = x <> Sequence.singleton a
+
+    done = id
+
+newLayerQueryWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) GeoJsonToMvt.StreamingLayer
+newLayerQueryWkbProperties config tableName =
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder (newWkbPropertiesDecoder config) GeoJsonToMvt.foldLayer) HasqlCursorQuery.batchSize_10000
+  where
+    sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(wkb_geometry), properties FROM " <> tableName <> layerQueryWhereClause
+
+geoJsonDecoder :: HasqlDecoders.Row (Geospatial.GeoFeature AesonTypes.Value)
+geoJsonDecoder =
+  HasqlDecoders.column $ HasqlDecoders.jsonBytes $ convertDecoder eitherDecode
+  where
+    eitherDecode = Aeson.eitherDecode :: LazyByteString.ByteString -> Either String (Geospatial.GeoFeature AesonTypes.Value)
+
+wkbPropertiesDecoder :: TypesConfig.Config -> HasqlDecoders.Row (Geospatial.GeoFeature AesonTypes.Value)
+wkbPropertiesDecoder config =
+  (\geom props -> Geospatial.GeoFeature Nothing (MapnikVectorTile.convertClipSimplify config geom) props Nothing)
+    <$> HasqlDecoders.column (HasqlDecoders.custom (\_ -> convertDecoder Ewkb.parseByteString))
+    <*> HasqlDecoders.column HasqlDecoders.json
+
+newWkbPropertiesDecoder :: TypesConfig.Config -> HasqlDecoders.Row (Geospatial.GeospatialGeometry, AesonTypes.Value)
+newWkbPropertiesDecoder config =
+  (\geom props -> (MapnikVectorTile.convertClipSimplify config geom, props))
+    <$> HasqlDecoders.column (HasqlDecoders.custom (\_ -> convertDecoder Ewkb.parseByteString))
+    <*> HasqlDecoders.column HasqlDecoders.json
+
+convertDecoder :: (LazyByteString.ByteString -> Either String b) -> ByteString.ByteString -> Either Text.Text b
+convertDecoder decoder =
+  either (Left . Text.pack) Right . decoder . LazyByteString.fromStrict
+
+layerQueryWhereClause :: Text.Text
+layerQueryWhereClause =
+  " WHERE ST_Intersects(wkb_geometry, ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint($1, $2), ST_MakePoint($3, $4)), 3857), 4326));"

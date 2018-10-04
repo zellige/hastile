@@ -11,7 +11,6 @@ module Hastile.Config where
 import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Maybe                 as M
-import           Data.Monoid
 import           System.Exit
 
 import qualified Hastile.Types.Config       as Config

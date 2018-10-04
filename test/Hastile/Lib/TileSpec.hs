@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Hastile.TileSpec where
+module Hastile.Lib.TileSpec where
 
 import           Control.Lens
 import qualified Data.ByteString                as BS (ByteString, readFile)
@@ -16,9 +16,10 @@ import           System.IO.Temp                 (withSystemTempFile)
 import           Test.Hspec                     (Spec, describe, it, shouldBe)
 
 
-import           Data.Geometry.Types.Simplify
-import           Hastile.Tile                   (BBox (..), addBufferToBBox,
-                                                 extent, googleToBBoxM, mkTile)
+import qualified Data.Geometry.Types.Config     as TypesConfig
+import           Hastile.Lib.Tile               (addBufferToBBox, extent,
+                                                 googleToBBoxM, mkTile)
+import           Hastile.Types.Tile             (BBox (..))
 
 spec :: Spec
 spec = do
@@ -78,6 +79,6 @@ generateMvtAdelaide filename = do
 generateMvtFile :: FilePath -> T.Text -> DGT.ZoomLevel -> (DGT.Pixels, DGT.Pixels) -> IO LBS.ByteString
 generateMvtFile geoJsonFile layerName z xy = do
   mvt <- MVT.readGeoJson geoJsonFile
-  x <- mkTile layerName z xy 128 1 NoAlgorithm mvt
+  x <- mkTile layerName z xy 128 1 TypesConfig.NoAlgorithm mvt
   pure $ LBS.fromStrict x
 
