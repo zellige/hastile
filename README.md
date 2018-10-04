@@ -1,8 +1,6 @@
 hastile
 =======
 
-test
-
 A Haskell tile server that produces GeoJSON or MVT (Mapbox Vector Tiles) from a PostGIS database.
 
 ![Build Status](https://circleci.com/gh/sitewisely/hastile/tree/master.png?circle-token=151e6cea2b027041b06878de8694bbfdaf2b6aba)
