@@ -6,7 +6,6 @@ module Hastile.Lib.Tile (
             , getBbox
             , googleToBBoxM
             , mkTile
-            , newMkTile
             ) where
 
 import qualified Data.Aeson                     as A
@@ -79,9 +78,3 @@ mkTile :: Text.Text -> TypesGeography.Pixels -> (TypesGeography.Pixels, TypesGeo
 mkTile l z xy buffer quantizePixels algo geoJson = MapnikVectorTile.encodeMvt <$> MapnikVectorTile.createMvt config geoJson
   where
     config = TypesConfig.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo
-
-newMkTile :: Text.Text -> TypesGeography.Pixels -> (TypesGeography.Pixels, TypesGeography.Pixels) -> TypesGeography.Pixels -> TypesGeography.Pixels -> TypesConfig.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
-newMkTile l z xy buffer quantizePixels algo geoJson = MapnikVectorTile.encodeMvt <$> MapnikVectorTile.convertedGeojsonToMvt config geoJson
-  where
-    config = TypesConfig.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo
-
