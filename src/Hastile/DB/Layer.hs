@@ -16,7 +16,6 @@ import qualified Data.ByteString                     as ByteString
 import qualified Data.ByteString.Lazy                as LazyByteString
 import qualified Data.Ewkb                           as Ewkb
 import qualified Data.Geometry.GeoJsonStreamingToMvt as GeoJsonStreamingToMvt
-import qualified Data.Geometry.GeoJsonToMvt          as GeoJsonToMvt
 import qualified Data.Geometry.MapnikVectorTile      as MapnikVectorTile
 import qualified Data.Geometry.Types.Config          as TypesConfig
 import qualified Data.Geometry.Types.Geography       as TypesGeography

@@ -39,8 +39,12 @@ packages:
 - '.'
 - location:
     git: https://github.com/sitewisely/zellige.git
-    commit: 73ecc33ee256e9ebf753d77be16dae2064828e4c
+    commit: master
   extra-dep: true
+- location:
+    git: https://github.com/indicatrix/vectortiles
+    commit: de3c02c64690c0f1251302edf42ffa3e943e1d86
+  extra-dep: true  
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
