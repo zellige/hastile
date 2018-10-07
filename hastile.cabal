@@ -67,7 +67,7 @@ library
                      , wai
                      , wai-middleware-prometheus
                      , word8
-                     , wkt-geom
+                     , wkt-geom >= 0.0.4
                      , unordered-containers
                      , zellige
   ghc-options:       -Wall -Werror -O2
