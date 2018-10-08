@@ -104,9 +104,6 @@ getTile layer z xy = do
   buffer  <- RC.asks (^. App.ssBuffer)
   let simplificationAlgorithm = Layer.getAlgorithm z layer
       config = TypesConfig.mkConfig (Layer._layerName layer) z xy buffer Config.defaultTileSize (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm
-  -- geoFeature <- getGeoFeature config layer z xy
-  -- tile <- liftIO $ TileLib.mkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoFeature
-  -- checkEmpty tile layer
   geoFeature <- getNewGeoFeature config layer z xy
   checkEmpty (GeoJsonStreamingToMvt.vtToBytes config geoFeature) layer
 
