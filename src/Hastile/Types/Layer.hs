@@ -14,12 +14,14 @@
 module Hastile.Types.Layer where
 
 import           Control.Applicative
+import qualified Control.Foldl                 as Foldl
 import qualified Data.Aeson                    as Aeson
-import           Data.Aeson.Types              as AesonTypes
+import qualified Data.Aeson.Types              as AesonTypes
 import qualified Data.Geometry.Types.Config    as TypesConfig
 import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
 import qualified Data.Map.Strict               as MapStrict
 import qualified Data.Monoid                   as Monoid
+import qualified Data.Sequence                 as Sequence
 import qualified Data.Text                     as Text
 import qualified Data.Time                     as Time
 import           Options.Generic
@@ -36,8 +38,18 @@ data NewLayerRequest = NewLayerRequest
 
 newtype LayerRequestList = LayerRequestList [NewLayerRequest]
 
+
+foldSeq :: Foldl.Fold a (Sequence.Seq a)
+foldSeq = Foldl.Fold step begin done
+  where
+    begin = Sequence.empty
+
+    step x a = x <> Sequence.singleton a
+
+    done = id
+
 instance Aeson.FromJSON LayerRequestList where
-  parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . MapStrict.toList) Control.Applicative.<$> parseJSON v
+  parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . MapStrict.toList) Control.Applicative.<$> AesonTypes.parseJSON v
 
 data LayerSettings = LayerSettings
   { _layerSecurity   :: LayerSecurity.LayerSecurity
@@ -48,24 +60,23 @@ data LayerSettings = LayerSettings
   } deriving (Show, Eq)
 
 instance Aeson.FromJSON LayerSettings where
-  parseJSON = withObject "LayerSettings" $ \o -> LayerSettings
-    <$> o .:? "security" .!= LayerSecurity.Private
-    <*> o .:  "format"
-    <*> o .:  "table-name"
-    <*> o .:  "quantize"
-    <*> o .:  "simplify"
+  parseJSON = AesonTypes.withObject "LayerSettings" $ \o -> LayerSettings
+    <$> o AesonTypes..:? "security" AesonTypes..!= LayerSecurity.Private
+    <*> o AesonTypes..:  "format"
+    <*> o AesonTypes..:  "table-name"
+    <*> o AesonTypes..:  "quantize"
+    <*> o AesonTypes..:  "simplify"
 
 instance Aeson.ToJSON LayerSettings where
-  toJSON ls = object $
-    layerSettingsToPairs ls
+  toJSON ls = AesonTypes.object $ layerSettingsToPairs ls
 
 layerSettingsToPairs :: LayerSettings -> [AesonTypes.Pair]
 layerSettingsToPairs ls =
-  [ "security"   .= _layerSecurity ls
-  , "format"     .= _layerFormat ls
-  , "table-name" .= _layerTableName ls
-  , "quantize"   .= _layerQuantize ls
-  , "simplify"   .= _layerAlgorithms ls
+  [ "security"   AesonTypes..= _layerSecurity ls
+  , "format"     AesonTypes..= _layerFormat ls
+  , "table-name" AesonTypes..= _layerTableName ls
+  , "quantize"   AesonTypes..= _layerQuantize ls
+  , "simplify"   AesonTypes..= _layerAlgorithms ls
   ]
 
 requestToLayer :: Text -> LayerSettings -> Time.UTCTime -> Layer
@@ -82,13 +93,13 @@ data LayerDetails = LayerDetails
   } deriving (Show, Eq, Generic)
 
 instance Aeson.FromJSON LayerDetails where
-  parseJSON = withObject "LayerDetails" $ \o -> LayerDetails
-    <$> o .: "last-modified"
-    <*> parseJSON (Aeson.Object o)
+  parseJSON = AesonTypes.withObject "LayerDetails" $ \o -> LayerDetails
+    <$> o AesonTypes..: "last-modified"
+    <*> AesonTypes.parseJSON (Aeson.Object o)
 
 instance Aeson.ToJSON LayerDetails where
-  toJSON l = object $
-    "last-modified" .= _layerLastModified l : layerSettingsToPairs (_layerSettings l)
+  toJSON l = AesonTypes.object $
+    "last-modified" AesonTypes..= _layerLastModified l : layerSettingsToPairs (_layerSettings l)
 
 layerToLayerDetails :: Layer -> LayerDetails
 layerToLayerDetails Layer{..} = _layerDetails
