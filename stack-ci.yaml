@@ -38,12 +38,12 @@ resolver: lts-12.10
 packages:
 - '.'
 - location:
-    git: https://github.com/sitewisely/zellige.git
-    commit: master
+    git: https://github.com/indicatrix/zellige.git
+    commit: d10b7daeb02a7834c6d82e4e86105b87d2044820
   extra-dep: true
 - location:
     git: https://github.com/indicatrix/vectortiles
-    commit: a6509d7587bf9407da9f3e1d091ca7ed0457e4bd
+    commit: 8f70b302a39458704acf4373947bf9337daf7135
   extra-dep: true  
 
 # Dependency packages to be pulled from upstream that are not in the resolver
