@@ -112,7 +112,7 @@ getTile layer z xy = do
       tile <- liftIO $ TileLib.mkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoFeature
       checkEmpty tile layer
     LayerFormat.WkbProperties -> do
-      geoFeature <- getNewGeoFeature config layer z xy
+      geoFeature <- getStreamingLayer config layer z xy
       checkEmpty (GeoJsonStreamingToMvt.vtToBytes config geoFeature) layer
 
 checkEmpty :: BS.ByteString -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
@@ -130,8 +130,8 @@ getGeoFeature layer z xy = do
     Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }
     Right tfs -> pure $ DG.GeoFeatureCollection Nothing tfs
 
-getNewGeoFeature :: TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler TypesMvtFeatures.StreamingLayer
-getNewGeoFeature config layer z xy = do
+getStreamingLayer :: TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler TypesMvtFeatures.StreamingLayer
+getStreamingLayer config layer z xy = do
   errorOrTfs <- DBLayer.findFeaturesStreaming config layer z xy
   case errorOrTfs of
     Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }
