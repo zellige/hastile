@@ -39,7 +39,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/indicatrix/zellige.git
-    commit: 39a372630910ad65558c522dc029e41dbca0b2f5
+    commit: dd72c4ea13059903bf9d5886a3087b60153d6463
   extra-dep: true
 - location:
     git: https://github.com/indicatrix/vectortiles
