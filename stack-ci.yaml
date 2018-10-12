@@ -43,7 +43,7 @@ packages:
   extra-dep: true
 - location:
     git: https://github.com/indicatrix/vectortiles
-    commit: 8f70b302a39458704acf4373947bf9337daf7135
+    commit: f4788b5eb5a22174c85d3edeb36e439258df2c14
   extra-dep: true  
 
 # Dependency packages to be pulled from upstream that are not in the resolver
