@@ -157,4 +157,4 @@ test-suite              hastile-hlint
 
 source-repository head
   type:     git
-  location: https://github.com/vlc/hastile
+  location: https://github.com/indicatrix/hastile
