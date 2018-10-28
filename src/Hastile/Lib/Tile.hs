@@ -8,12 +8,12 @@ module Hastile.Lib.Tile (
             , mkTile
             ) where
 
-import qualified Data.Aeson                     as A
-import qualified Data.ByteString.Char8          as BS8
+import qualified Data.Aeson                     as Aeson
+import qualified Data.ByteString.Char8          as ByteStringChar8
 import qualified Data.Geometry.MapnikVectorTile as MapnikVectorTile
 import qualified Data.Geometry.Types.Config     as TypesConfig
 import qualified Data.Geometry.Types.Geography  as TypesGeography
-import qualified Data.Geospatial                as DG
+import qualified Data.Geospatial                as Geospatial
 import qualified Data.Text                      as Text
 
 import qualified Hastile.Types.Config           as Config
@@ -74,7 +74,7 @@ mPerPxAtZoom (Tile.Metres m) tile z = Ratio $ m / fromIntegral p
 mPerPxToM :: Ratio Tile.Metres TypesGeography.Pixels -> TypesGeography.Pixels -> Tile.Metres
 mPerPxToM (Ratio r) p = Tile.Metres $ r * fromIntegral p
 
-mkTile :: Text.Text -> TypesGeography.Pixels -> (TypesGeography.Pixels, TypesGeography.Pixels) -> TypesGeography.Pixels -> TypesGeography.Pixels -> TypesConfig.SimplificationAlgorithm -> DG.GeoFeatureCollection A.Value -> IO BS8.ByteString
+mkTile :: Text.Text -> TypesGeography.Pixels -> (TypesGeography.Pixels, TypesGeography.Pixels) -> TypesGeography.Pixels -> TypesGeography.Pixels -> TypesConfig.SimplificationAlgorithm -> Geospatial.GeoFeatureCollection Aeson.Value -> IO ByteStringChar8.ByteString
 mkTile l z xy buffer quantizePixels algo geoJson = MapnikVectorTile.encodeMvt <$> MapnikVectorTile.createMvt config geoJson
   where
     config = TypesConfig.mkConfig l z xy buffer Config.defaultTileSize quantizePixels algo

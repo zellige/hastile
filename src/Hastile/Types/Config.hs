@@ -16,11 +16,11 @@
 module Hastile.Types.Config where
 
 import           Control.Lens                  (makeLenses)
-import           Data.Aeson                    as A
+import qualified Data.Aeson                    as Aeson
 import qualified Data.Geometry.Types.Geography as DGTT
-import           Data.Map.Strict               as M
+import qualified Data.Map.Strict               as MapStrict
 import           Data.Maybe                    (catMaybes)
-import qualified Data.Time                     as DT
+import qualified Data.Time                     as Time
 import           Options.Generic
 
 import qualified Hastile.Types.Layer           as Layer
@@ -28,65 +28,65 @@ import qualified Hastile.Types.Layer           as Layer
 data InputConfig = InputConfig
   { _inputConfigPgConnection       :: Text
   , _inputConfigPgPoolSize         :: Maybe Int
-  , _inputConfigPgTimeout          :: Maybe DT.NominalDiffTime
+  , _inputConfigPgTimeout          :: Maybe Time.NominalDiffTime
   , _inputConfigMapnikInputPlugins :: Maybe FilePath
   , _inputConfigPort               :: Maybe Int
   , _inputConfigTokenCacheSize     :: Maybe Int
-  , _inputConfigLayers             :: M.Map Text Layer.LayerDetails
+  , _inputConfigLayers             :: MapStrict.Map Text Layer.LayerDetails
   , _inputConfigTileBuffer         :: Maybe DGTT.Pixels
   } deriving (Show, Generic)
 
 makeLenses ''InputConfig
 
-instance ToJSON InputConfig where
-  toJSON ic = object $ catMaybes
-    [ ("db-connection" .=)        <$> Just (_inputConfigPgConnection ic)
-    , ("db-pool-size" .=)         <$> _inputConfigPgPoolSize ic
-    , ("db-timeout" .=)           <$> _inputConfigPgTimeout ic
-    , ("mapnik-input-plugins" .=) <$> _inputConfigMapnikInputPlugins ic
-    , ("port" .=)                 <$> _inputConfigPort ic
-    , ("token-cache-size" .=)     <$> _inputConfigTokenCacheSize ic
-    , ("layers" .=)               <$> Just (_inputConfigLayers ic)
-    , ("tile-buffer" .=)          <$> Just (_inputConfigTileBuffer ic)
+instance Aeson.ToJSON InputConfig where
+  toJSON ic = Aeson.object $ catMaybes
+    [ ("db-connection" Aeson..=)        <$> Just (_inputConfigPgConnection ic)
+    , ("db-pool-size" Aeson..=)         <$> _inputConfigPgPoolSize ic
+    , ("db-timeout" Aeson..=)           <$> _inputConfigPgTimeout ic
+    , ("mapnik-input-plugins" Aeson..=) <$> _inputConfigMapnikInputPlugins ic
+    , ("port" Aeson..=)                 <$> _inputConfigPort ic
+    , ("token-cache-size" Aeson..=)     <$> _inputConfigTokenCacheSize ic
+    , ("layers" Aeson..=)               <$> Just (_inputConfigLayers ic)
+    , ("tile-buffer" Aeson..=)          <$> Just (_inputConfigTileBuffer ic)
     ]
 
-instance FromJSON InputConfig where
-  parseJSON = withObject "Config" $ \o -> InputConfig
-    <$> o .:  "db-connection"
-    <*> o .:? "db-pool-size"
-    <*> o .:? "db-timeout"
-    <*> o .:? "mapnik-input-plugins"
-    <*> o .:? "port"
-    <*> o .:? "token-cache-size"
-    <*> o .:  "layers"
-    <*> o .:? "tile-buffer"
+instance Aeson.FromJSON InputConfig where
+  parseJSON = Aeson.withObject "Config" $ \o -> InputConfig
+    <$> o Aeson..:  "db-connection"
+    <*> o Aeson..:? "db-pool-size"
+    <*> o Aeson..:? "db-timeout"
+    <*> o Aeson..:? "mapnik-input-plugins"
+    <*> o Aeson..:? "port"
+    <*> o Aeson..:? "token-cache-size"
+    <*> o Aeson..:  "layers"
+    <*> o Aeson..:? "tile-buffer"
 
 emptyInputConfig :: InputConfig
-emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing Nothing (fromList []) Nothing
+emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing Nothing (MapStrict.fromList []) Nothing
 
 data Config = Config
   { _configPgConnection       :: Text
   , _configPgPoolSize         :: Int
-  , _configPgTimeout          :: DT.NominalDiffTime
+  , _configPgTimeout          :: Time.NominalDiffTime
   , _configMapnikInputPlugins :: FilePath
   , _configPort               :: Int
   , _configTokenCacheSize     :: Int
-  , _configLayers             :: M.Map Text Layer.LayerDetails
+  , _configLayers             :: MapStrict.Map Text Layer.LayerDetails
   , _configTileBuffer         :: DGTT.Pixels
   } deriving (Show, Generic)
 
 makeLenses ''Config
 
-instance ToJSON Config where
-  toJSON c = object
-    [ "db-connection"        .= _configPgConnection c
-    , "db-pool-size"         .= _configPgPoolSize c
-    , "db-timeout"           .= _configPgTimeout c
-    , "mapnik-input-plugins" .= _configMapnikInputPlugins c
-    , "port"                 .= _configPort c
-    , "token-cache-size"     .= _configTokenCacheSize c
-    , "layers"               .= _configLayers c
-    , "tile-buffer"          .= _configTileBuffer c
+instance Aeson.ToJSON Config where
+  toJSON c = Aeson.object
+    [ "db-connection"        Aeson..= _configPgConnection c
+    , "db-pool-size"         Aeson..= _configPgPoolSize c
+    , "db-timeout"           Aeson..= _configPgTimeout c
+    , "mapnik-input-plugins" Aeson..= _configMapnikInputPlugins c
+    , "port"                 Aeson..= _configPort c
+    , "token-cache-size"     Aeson..= _configTokenCacheSize c
+    , "layers"               Aeson..= _configLayers c
+    , "tile-buffer"          Aeson..= _configTileBuffer c
     ]
 
 newtype CmdLine = CmdLine
