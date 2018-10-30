@@ -6,56 +6,56 @@
 module Hastile.Controllers.Token where
 
 import           Control.Monad.Error.Class
-import qualified Control.Monad.Reader.Class as RC
-import qualified Data.ByteString.Lazy.Char8 as LBS8
-import qualified Data.Text                  as T
-import qualified Servant                    as S
+import qualified Control.Monad.Reader.Class as MonadReaderClass
+import qualified Data.ByteString.Lazy.Char8 as LazyByteStringChar8
+import qualified Data.Text                  as Text
+import qualified Servant
 
-import qualified Hastile.DB.Token           as DB
-import qualified Hastile.Lib.Token          as TokenLib
+import qualified Hastile.DB.Token           as DBToken
+import qualified Hastile.Lib.Token          as LibToken
 import qualified Hastile.Routes             as Routes
 import qualified Hastile.Types.App          as App
 import qualified Hastile.Types.Token        as Token
 
-tokenServer :: S.ServerT Routes.TokenApi App.ActionHandler
+tokenServer :: Servant.ServerT Routes.TokenApi App.ActionHandler
 tokenServer = getTokens
-  S.:<|> getToken
-  S.:<|> updateOrInsertToken
-  S.:<|> deleteToken
+  Servant.:<|> getToken
+  Servant.:<|> updateOrInsertToken
+  Servant.:<|> deleteToken
 
 getTokens :: App.ActionHandler [Token.TokenAuthorisation]
 getTokens = do
-  pool <- RC.asks App._ssPool
-  er <- DB.getTokens pool
+  pool <- MonadReaderClass.asks App._ssPool
+  er <- DBToken.getTokens pool
   case er of
     Left err     -> defaultErrorHandler err
     Right tokens -> return tokens
 
-getToken :: T.Text -> App.ActionHandler Token.Layers
+getToken :: Text.Text -> App.ActionHandler Token.Layers
 getToken token = do
-  pool <- RC.asks App._ssPool
-  er <- DB.getToken pool token
+  pool <- MonadReaderClass.asks App._ssPool
+  er <- DBToken.getToken pool token
   case er of
     Left err     -> defaultErrorHandler err
     Right layers -> return layers
 
-updateOrInsertToken :: Token.TokenAuthorisation -> App.ActionHandler T.Text
+updateOrInsertToken :: Token.TokenAuthorisation -> App.ActionHandler Text.Text
 updateOrInsertToken tokenAuthorisation = do
-  pool <- RC.asks App._ssPool
-  cache <- RC.asks App._ssTokenAuthorisationCache
-  er <- TokenLib.updateOrInsertToken pool cache tokenAuthorisation
+  pool <- MonadReaderClass.asks App._ssPool
+  cache <- MonadReaderClass.asks App._ssTokenAuthorisationCache
+  er <- LibToken.updateOrInsertToken pool cache tokenAuthorisation
   case er of
     Left err     -> defaultErrorHandler err
     Right result -> return result
 
-deleteToken :: T.Text -> App.ActionHandler T.Text
+deleteToken :: Text.Text -> App.ActionHandler Text.Text
 deleteToken token = do
-  pool <- RC.asks App._ssPool
-  cache <- RC.asks App._ssTokenAuthorisationCache
-  er <- TokenLib.deleteToken pool cache token
+  pool <- MonadReaderClass.asks App._ssPool
+  cache <- MonadReaderClass.asks App._ssTokenAuthorisationCache
+  er <- LibToken.deleteToken pool cache token
   case er of
     Left err     -> defaultErrorHandler err
     Right result -> return result
 
-defaultErrorHandler :: MonadError S.ServantErr m => T.Text -> m a
-defaultErrorHandler e =  throwError $ S.err500 { S.errBody = LBS8.pack $ T.unpack e }
+defaultErrorHandler :: MonadError Servant.ServantErr m => Text.Text -> m a
+defaultErrorHandler e =  throwError $ Servant.err500 { Servant.errBody = LazyByteStringChar8.pack $ Text.unpack e }
