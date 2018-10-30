@@ -88,7 +88,8 @@ getContent z x stringY maybeIfModified layer =
 
 getContent' :: Layer.Layer -> Natural -> Natural -> Text.Text -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
 getContent' l z x stringY
-  | ".mvt" `Text.isSuffixOf` stringY = getAnything getTile l z x stringY
+  | (".mvt" `Text.isSuffixOf` stringY) || (".pbf" `Text.isSuffixOf` stringY) || (".vector.pbf" `Text.isSuffixOf` stringY) = getAnything getTile l z x stringY
+  | ".vector.pbf" `Text.isSuffixOf` stringY = getAnything getTile l z x stringY
   | ".json" `Text.isSuffixOf` stringY = getAnything getJson l z x stringY
   | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> LBS8.fromStrict (TE.encodeUtf8 stringY) }
 
