@@ -19,6 +19,7 @@ library
                      , Hastile.Controllers.Token
                      , Hastile.Config
                      , Hastile.DB.Layer
+                     , Hastile.DB.Layers
                      , Hastile.DB.Token
                      , Hastile.Lib.Layer
                      , Hastile.Lib.Tile
