@@ -5,9 +5,9 @@
 
 module Hastile.Routes where
 
-import qualified Data.ByteString               as BS
+import qualified Data.ByteString               as ByteString
 import qualified Data.Geometry.Types.Geography as DGTT
-import qualified Data.Proxy                    as P
+import qualified Data.Proxy                    as Proxy
 import qualified Data.Text                     as Text
 import           Servant
 
@@ -43,7 +43,7 @@ type LayerApi =
     )
 
 type HastileContentApi =
-  Y :> QueryParam "token" Text.Text :> Servant.Header "If-Modified-Since" Text.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" Text.Text] BS.ByteString)
+  Y :> QueryParam "token" Text.Text :> Servant.Header "If-Modified-Since" Text.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" Text.Text] ByteString.ByteString)
 
-hastileApi :: P.Proxy HastileApi
-hastileApi = P.Proxy
+hastileApi :: Proxy.Proxy HastileApi
+hastileApi = Proxy.Proxy

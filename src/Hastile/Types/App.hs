@@ -19,7 +19,7 @@ import qualified Control.Lens                  as ControlLens
 import qualified Control.Monad.Except          as ControlMonadExcept
 import qualified Control.Monad.Reader          as ControlMonadReader
 import qualified Data.Geometry.Types.Geography as DataGeometryTypesGeography
-import qualified Data.Text                     as DataText
+import qualified Data.Text                     as Text
 import qualified Hasql.Pool                    as HasqlPool
 import qualified Servant
 import qualified STMContainers.Map             as STMMap
@@ -33,7 +33,7 @@ data ServerState = ServerState
   , _ssPluginDir               :: FilePath
   , _ssConfigFile              :: FilePath
   , _ssOriginalConfig          :: Config.Config
-  , _ssStateLayers             :: STMMap.Map DataText.Text Layer.Layer
+  , _ssStateLayers             :: STMMap.Map Text.Text Layer.Layer
   , _ssTokenAuthorisationCache :: Token.Cache
   }
 
