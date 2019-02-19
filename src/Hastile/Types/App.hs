@@ -21,11 +21,13 @@ import qualified Control.Monad.Reader          as ControlMonadReader
 import qualified Data.Geometry.Types.Geography as DataGeometryTypesGeography
 import qualified Data.Text                     as Text
 import qualified Hasql.Pool                    as HasqlPool
+import qualified Katip
 import qualified Servant
 import qualified STMContainers.Map             as STMMap
 
 import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
+import qualified Hastile.Types.Logger          as Logger
 import qualified Hastile.Types.Token           as Token
 
 data ServerState = ServerState
@@ -35,6 +37,7 @@ data ServerState = ServerState
   , _ssOriginalConfig          :: Config.Config
   , _ssStateLayers             :: STMMap.Map Text.Text Layer.Layer
   , _ssTokenAuthorisationCache :: Token.Cache
+  , _ssLogEnv                  :: Katip.LogEnv
   }
 
 ControlLens.makeLenses ''ServerState

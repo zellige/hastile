@@ -19,9 +19,11 @@ defaultLogEnv = do
     env <- Katip.initLogEnv "hastile" "production"
     Katip.registerScribe "stdout" handleScribe Katip.defaultScribeSettings env
 
-adapt :: (FastLogger.ToLogStr msg, Applicative m, Katip.Katip m)  => (Katip.Namespace -> Katip.Severity -> Katip.LogStr -> m ()) -> Logger.Loc -> Logger.LogSource -> Logger.LogLevel -> msg -> m ()
+adapt :: (FastLogger.ToLogStr msg, Applicative m, Katip.Katip m) => (Katip.Namespace -> Katip.Severity -> Katip.LogStr -> m ()) -> Logger.Loc -> Logger.LogSource -> Logger.LogLevel -> msg -> m ()
 adapt f _ src lvl msg =
     f ns (fromLevel lvl) $ logStr' msg
   where
     ns = Katip.Namespace [src]
+
+logStr' :: (FastLogger.ToLogStr msg) => msg -> Katip.LogStr
 logStr' = Katip.logStr . FastLogger.fromLogStr . Logger.toLogStr
