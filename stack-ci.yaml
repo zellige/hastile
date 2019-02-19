@@ -56,6 +56,7 @@ extra-deps:
 - prometheus-client-1.0.0
 - prometheus-metrics-ghc-1.0.0
 - wai-middleware-prometheus-1.0.0
+- katip-0.8.0.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}

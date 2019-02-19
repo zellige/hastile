@@ -9,18 +9,18 @@ module Hastile.Controllers.Layer where
 import           Control.Lens                        ((^.))
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
-import qualified Control.Monad.Reader.Class          as RC
-import qualified Data.Aeson                          as A
-import qualified Data.Aeson.Encode.Pretty            as AE
-import qualified Data.ByteString                     as BS
-import qualified Data.ByteString.Lazy.Char8          as LBS8
+import qualified Control.Monad.Reader.Class          as ReaderClass
+import qualified Data.Aeson                          as Aeson
+import qualified Data.Aeson.Encode.Pretty            as AesonPretty
+import qualified Data.ByteString                     as ByteString
+import qualified Data.ByteString.Lazy.Char8          as ByteStringLazyChar8
 import qualified Data.Char                           as Char
 import qualified Data.Geometry.GeoJsonStreamingToMvt as GeoJsonStreamingToMvt
 import qualified Data.Geometry.Types.Config          as TypesConfig
 import qualified Data.Geometry.Types.Geography       as TypesGeography
 import qualified Data.Geometry.Types.MvtFeatures     as TypesMvtFeatures
-import qualified Data.Geospatial                     as DG
-import           Data.Map                            as M
+import qualified Data.Geospatial                     as Geospatial
+import qualified Data.Map                            as Map
 import qualified Data.Text                           as Text
 import qualified Data.Text.Encoding                  as TE
 import qualified Data.Text.Read                      as DTR
@@ -56,23 +56,23 @@ provisionLayer :: Text.Text -> Layer.LayerSettings -> App.ActionHandler Servant.
 provisionLayer l settings =
   newLayer (\lastModifiedTime -> STMMap.insert (Layer.requestToLayer l settings lastModifiedTime) l)
 
-newLayer :: (MonadIO m, RC.MonadReader App.ServerState m) => (UTCTime -> STMMap.Map Text.Text Layer.Layer -> STM a) -> m Servant.NoContent
+newLayer :: (MonadIO m, ReaderClass.MonadReader App.ServerState m) => (UTCTime -> STMMap.Map Text.Text Layer.Layer -> STM a) -> m Servant.NoContent
 newLayer b = do
-  r <- RC.ask
+  r <- ReaderClass.ask
   lastModifiedTime <- liftIO getCurrentTime
   let (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
   newLayers <- liftIO . atomically $ do
     _ <- b lastModifiedTime ls
     stmMapToList ls
   let newNewLayers = fmap (\(k, v) -> (k, Layer.layerToLayerDetails v)) newLayers
-  liftIO $ LBS8.writeFile cfgFile (AE.encodePretty (originalCfg {Config._configLayers = fromList newNewLayers}))
+  liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {Config._configLayers = Map.fromList newNewLayers}))
   pure Servant.NoContent
 
-serveLayer :: Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
+serveLayer :: Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 serveLayer l z x stringY maybeToken maybeIfModified = do
   layer <- getLayerOrThrow l
-  pool <- RC.asks App._ssPool
-  cache <- RC.asks App._ssTokenAuthorisationCache
+  pool <- ReaderClass.asks App._ssPool
+  cache <- ReaderClass.asks App._ssTokenAuthorisationCache
   layerAuthorisation <- liftIO $ LayerLib.checkLayerAuthorisation pool cache layer maybeToken
   case layerAuthorisation of
     LayerSecurity.Authorised ->
@@ -80,17 +80,17 @@ serveLayer l z x stringY maybeToken maybeIfModified = do
     LayerSecurity.Unauthorised ->
       throwError layerNotFoundError
 
-getContent :: Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text] BS.ByteString)
+getContent :: Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text] ByteString.ByteString)
 getContent z x stringY maybeIfModified layer =
   if Layer.isModified layer maybeIfModified
       then getContent' layer z x stringY
       else throwError Servant.err304
 
-getContent' :: Layer.Layer -> Natural -> Natural -> Text.Text -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
+getContent' :: Layer.Layer -> Natural -> Natural -> Text.Text -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 getContent' l z x stringY
   | (".mvt" `Text.isSuffixOf` stringY) || (".pbf" `Text.isSuffixOf` stringY) || (".vector.pbf" `Text.isSuffixOf` stringY) = getAnything getTile l z x stringY
   | ".json" `Text.isSuffixOf` stringY = getAnything getJson l z x stringY
-  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> LBS8.fromStrict (TE.encodeUtf8 stringY) }
+  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TE.encodeUtf8 stringY) }
 
 getAnything :: (t -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler a) -> t -> TypesGeography.ZoomLevel -> TypesGeography.Pixels -> Text.Text -> App.ActionHandler a
 getAnything f layer z x stringY =
@@ -100,9 +100,9 @@ getAnything f layer z x stringY =
   where
     getY s = DTR.decimal $ Text.takeWhile Char.isNumber s
 
-getTile :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
+getTile :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 getTile layer z xy = do
-  buffer  <- RC.asks (^. App.ssBuffer)
+  buffer  <- ReaderClass.asks (^. App.ssBuffer)
   let simplificationAlgorithm = Layer.getAlgorithm z layer
       config = TypesConfig.mkConfig (Layer._layerName layer) z xy buffer Config.defaultTileSize (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm
       layerFormat = Layer.getLayerSetting layer Layer._layerFormat
@@ -115,26 +115,26 @@ getTile layer z xy = do
       geoFeature <- getStreamingLayer config layer z xy
       checkEmpty (GeoJsonStreamingToMvt.vtToBytes config geoFeature) layer
 
-checkEmpty :: BS.ByteString -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
+checkEmpty :: ByteString.ByteString -> Layer.Layer -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 checkEmpty tile layer
-  | BS.null tile = throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TE.encodeUtf8 $ Layer.lastModified layer)] }
+  | ByteString.null tile = throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TE.encodeUtf8 $ Layer.lastModified layer)] }
   | otherwise = pure $ Servant.addHeader (Layer.lastModified layer) tile
 
-getJson :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] BS.ByteString)
-getJson layer z xy = Servant.addHeader (Layer.lastModified layer) . LBS8.toStrict . A.encode <$> getGeoFeature layer z xy
+getJson :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
+getJson layer z xy = Servant.addHeader (Layer.lastModified layer) . ByteStringLazyChar8.toStrict . Aeson.encode <$> getGeoFeature layer z xy
 
-getGeoFeature :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (DG.GeoFeatureCollection A.Value)
+getGeoFeature :: Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler (Geospatial.GeoFeatureCollection Aeson.Value)
 getGeoFeature layer z xy = do
   errorOrTfs <- DBLayer.findFeatures layer z xy
   case errorOrTfs of
-    Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }
-    Right tfs -> pure $ DG.GeoFeatureCollection Nothing tfs
+    Left e    -> throwError $ Servant.err500 { Servant.errBody = ByteStringLazyChar8.pack $ show e }
+    Right tfs -> pure $ Geospatial.GeoFeatureCollection Nothing tfs
 
 getStreamingLayer :: TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler TypesMvtFeatures.StreamingLayer
 getStreamingLayer config layer z xy = do
   errorOrTfs <- DBLayer.findFeaturesStreaming config layer z xy
   case errorOrTfs of
-    Left e    -> throwError $ Servant.err500 { Servant.errBody = LBS8.pack $ show e }
+    Left e    -> throwError $ Servant.err500 { Servant.errBody = ByteStringLazyChar8.pack $ show e }
     Right tfs -> pure tfs
 
 getLayerOrThrow :: Text.Text -> App.ActionHandler Layer.Layer
@@ -144,9 +144,9 @@ getLayerOrThrow l = do
     Left Layer.LayerNotFound -> throwError layerNotFoundError
     Right layer              -> pure layer
 
-getLayer :: (MonadIO m, RC.MonadReader App.ServerState m) => Text.Text -> m (Either Layer.LayerError Layer.Layer)
+getLayer :: (MonadIO m, ReaderClass.MonadReader App.ServerState m) => Text.Text -> m (Either Layer.LayerError Layer.Layer)
 getLayer l = do
-  ls <- RC.asks App._ssStateLayers
+  ls <- ReaderClass.asks App._ssStateLayers
   result <- liftIO . atomically $ STMMap.lookup l ls
   pure $ case result of
     Nothing    -> Left Layer.LayerNotFound

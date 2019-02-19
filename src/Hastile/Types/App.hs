@@ -27,12 +27,10 @@ import qualified STMContainers.Map             as STMMap
 
 import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
-import qualified Hastile.Types.Logger          as Logger
 import qualified Hastile.Types.Token           as Token
 
 data ServerState = ServerState
   { _ssPool                    :: HasqlPool.Pool
-  , _ssPluginDir               :: FilePath
   , _ssConfigFile              :: FilePath
   , _ssOriginalConfig          :: Config.Config
   , _ssStateLayers             :: STMMap.Map Text.Text Layer.Layer

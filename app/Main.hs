@@ -44,7 +44,7 @@ doItWithConfig cfgFile config@Config.Config{..} = do
   ControlException.bracket
     (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
     HasqlPool.release
-    (\p -> getWarp _configPort (Server.runServer (App.ServerState p _configMapnikInputPlugins cfgFile config layers newTokenAuthorisationCache logEnv)))
+    (\p -> getWarp _configPort (Server.runServer (App.ServerState p cfgFile config layers newTokenAuthorisationCache logEnv)))
   pure ()
 
 getWarp :: WaiWarp.Port -> Wai.Application -> IO ()

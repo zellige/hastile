@@ -111,7 +111,6 @@ You can configure other database, mapnik and HTTP port settings too:
 {
   "db-pool-size": 10,
   "db-timeout": 5,
-  "mapnik-input-plugins": "/usr/local/lib/mapnik/input"
   "port": 8080
 }
 ```
