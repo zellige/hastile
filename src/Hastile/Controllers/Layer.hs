@@ -43,21 +43,21 @@ import qualified Hastile.Types.Layer                 as Layer
 import qualified Hastile.Types.Layer.Format          as LayerFormat
 import qualified Hastile.Types.Layer.Security        as LayerSecurity
 
---layerServer :: Servant.ServerT Routes.LayerApi App.ActionHandler
+layerServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
 layerServer l = provisionLayer l Servant.:<|> serveLayer l
 
 stmMapToList :: STMMap.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STMMap.stream
 
---createNewLayer :: Layer.LayerRequestList -> App.ActionHandler Servant.NoContent
+createNewLayer :: (MonadIO.MonadIO m) => Layer.LayerRequestList -> App.ActionHandler m Servant.NoContent
 createNewLayer (Layer.LayerRequestList layerRequests) =
   newLayer (\lastModifiedTime ls -> mapM_ (\lr -> STMMap.insert (Layer.requestToLayer (Layer._newLayerRequestName lr) (Layer._newLayerRequestSettings lr) lastModifiedTime) (Layer._newLayerRequestName lr) ls) layerRequests)
 
---provisionLayer :: Text.Text -> Layer.LayerSettings -> App.ActionHandler Servant.NoContent
+provisionLayer :: (MonadIO.MonadIO m) => Text.Text -> Layer.LayerSettings -> App.ActionHandler m Servant.NoContent
 provisionLayer l settings =
   newLayer (\lastModifiedTime -> STMMap.insert (Layer.requestToLayer l settings lastModifiedTime) l)
 
-newLayer :: (MonadIO.MonadIO m, ReaderClass.MonadReader App.ServerState m) => (UTCTime -> STMMap.Map Text.Text Layer.Layer -> STM a) -> m Servant.NoContent
+newLayer :: (MonadIO.MonadIO m) => (UTCTime -> STMMap.Map Text.Text Layer.Layer -> STM a) -> App.ActionHandler m Servant.NoContent
 newLayer b = do
   r <- ReaderClass.ask
   MonadLogger.logDebugNS "web" "hello"
