@@ -17,29 +17,31 @@ module Hastile.Types.Config where
 
 import           Control.Lens                  (makeLenses)
 import qualified Data.Aeson                    as Aeson
-import qualified Data.Geometry.Types.Geography as DGTT
+import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
 import qualified Data.Map.Strict               as MapStrict
-import           Data.Maybe                    (catMaybes)
+import qualified Data.Maybe                    as Maybe
 import qualified Data.Time                     as Time
 import           Options.Generic
 
 import qualified Hastile.Types.Layer           as Layer
 
 data InputConfig = InputConfig
-  { _inputConfigPgConnection   :: Text
+  { _inputConfigEnvironment    :: Maybe Text
+  , _inputConfigPgConnection   :: Text
   , _inputConfigPgPoolSize     :: Maybe Int
   , _inputConfigPgTimeout      :: Maybe Time.NominalDiffTime
   , _inputConfigPort           :: Maybe Int
   , _inputConfigTokenCacheSize :: Maybe Int
   , _inputConfigLayers         :: MapStrict.Map Text Layer.LayerDetails
-  , _inputConfigTileBuffer     :: Maybe DGTT.Pixels
+  , _inputConfigTileBuffer     :: Maybe GeometryTypesGeography.Pixels
   } deriving (Show, Generic)
 
 makeLenses ''InputConfig
 
 instance Aeson.ToJSON InputConfig where
-  toJSON ic = Aeson.object $ catMaybes
-    [ ("db-connection" Aeson..=)        <$> Just (_inputConfigPgConnection ic)
+  toJSON ic = Aeson.object $ Maybe.catMaybes
+    [ ("environment"  Aeson..=)         <$> Just (_inputConfigPgConnection ic)
+    , ("db-connection" Aeson..=)        <$> Just (_inputConfigPgConnection ic)
     , ("db-pool-size" Aeson..=)         <$> _inputConfigPgPoolSize ic
     , ("db-timeout" Aeson..=)           <$> _inputConfigPgTimeout ic
     , ("port" Aeson..=)                 <$> _inputConfigPort ic
@@ -50,7 +52,8 @@ instance Aeson.ToJSON InputConfig where
 
 instance Aeson.FromJSON InputConfig where
   parseJSON = Aeson.withObject "Config" $ \o -> InputConfig
-    <$> o Aeson..:  "db-connection"
+    <$> o Aeson..:  "environment"
+    <*> o Aeson..:  "db-connection"
     <*> o Aeson..:? "db-pool-size"
     <*> o Aeson..:? "db-timeout"
     <*> o Aeson..:? "port"
@@ -59,23 +62,25 @@ instance Aeson.FromJSON InputConfig where
     <*> o Aeson..:? "tile-buffer"
 
 emptyInputConfig :: InputConfig
-emptyInputConfig = InputConfig "" Nothing Nothing Nothing Nothing (MapStrict.fromList []) Nothing
+emptyInputConfig = InputConfig Nothing "" Nothing Nothing Nothing Nothing (MapStrict.fromList []) Nothing
 
 data Config = Config
-  { _configPgConnection   :: Text
+  { _configEnvironment    :: Text
+  , _configPgConnection   :: Text
   , _configPgPoolSize     :: Int
   , _configPgTimeout      :: Time.NominalDiffTime
   , _configPort           :: Int
   , _configTokenCacheSize :: Int
   , _configLayers         :: MapStrict.Map Text Layer.LayerDetails
-  , _configTileBuffer     :: DGTT.Pixels
+  , _configTileBuffer     :: GeometryTypesGeography.Pixels
   } deriving (Show, Generic)
 
 makeLenses ''Config
 
 instance Aeson.ToJSON Config where
   toJSON c = Aeson.object
-    [ "db-connection"        Aeson..= _configPgConnection c
+    [ "environment"          Aeson..= _configEnvironment c
+    , "db-connection"       Aeson..= _configPgConnection c
     , "db-pool-size"         Aeson..= _configPgPoolSize c
     , "db-timeout"           Aeson..= _configPgTimeout c
     , "port"                 Aeson..= _configPort c
@@ -90,5 +95,5 @@ newtype CmdLine = CmdLine
 
 instance ParseRecord CmdLine
 
-defaultTileSize :: DGTT.Pixels
+defaultTileSize :: GeometryTypesGeography.Pixels
 defaultTileSize = 2048

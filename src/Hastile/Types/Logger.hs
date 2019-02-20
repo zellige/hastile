@@ -13,10 +13,10 @@ fromLevel Logger.LevelWarn      = Katip.WarningS
 fromLevel Logger.LevelError     = Katip.ErrorS
 fromLevel (Logger.LevelOther _) = Katip.NoticeS
 
-defaultLogEnv :: IO Katip.LogEnv
-defaultLogEnv = do
+defaultLogEnv :: Katip.Environment -> IO Katip.LogEnv
+defaultLogEnv environment = do
     handleScribe <- Katip.mkHandleScribe Katip.ColorIfTerminal IO.stdout (Katip.permitItem Katip.DebugS) Katip.V2
-    env <- Katip.initLogEnv "hastile" "production"
+    env <- Katip.initLogEnv "hastile" environment
     Katip.registerScribe "stdout" handleScribe Katip.defaultScribeSettings env
 
 adapt :: (FastLogger.ToLogStr msg, Applicative m, Katip.Katip m) => (Katip.Namespace -> Katip.Severity -> Katip.LogStr -> m ()) -> Logger.Loc -> Logger.LogSource -> Logger.LogLevel -> msg -> m ()

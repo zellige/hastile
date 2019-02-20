@@ -27,6 +27,7 @@ getConfig cfgFile = do
 addDefaults :: Config.InputConfig -> Config.Config
 addDefaults Config.InputConfig{..} =
   Config.Config
+    (DataMaybe.fromMaybe "development" _inputConfigEnvironment)
     _inputConfigPgConnection
     (DataMaybe.fromMaybe 10 _inputConfigPgPoolSize)
     (DataMaybe.fromMaybe 1 _inputConfigPgTimeout)

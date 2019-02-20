@@ -72,6 +72,7 @@ newLayer b = do
 
 serveLayer :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 serveLayer l z x stringY maybeToken maybeIfModified = do
+  MonadLogger.logDebugNS "web" "hello"
   layer <- getLayerOrThrow l
   pool <- ReaderClass.asks App._ssPool
   cache <- ReaderClass.asks App._ssTokenAuthorisationCache

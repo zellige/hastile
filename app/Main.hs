@@ -11,6 +11,7 @@ import qualified Data.Text.Encoding                as TextEncoding
 import           GHC.Conc
 import qualified Hasql.Pool                        as HasqlPool
 import qualified Hastile.Types.Logger              as Logger
+import qualified Katip
 import qualified Network.Wai                       as Wai
 import qualified Network.Wai.Handler.Warp          as WaiWarp
 import qualified Network.Wai.Middleware.Cors       as WaiCors
@@ -37,14 +38,21 @@ doIt cmdLine = do
 
 doItWithConfig :: FilePath -> Config.Config -> IO ()
 doItWithConfig cfgFile config@Config.Config{..} = do
-  logEnv <- Logger.defaultLogEnv
+  logEnv <- Logger.defaultLogEnv (Katip.Environment _configEnvironment)
   newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
   layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
   Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.Layer k v) k layers
+  let state p = App.ServerState p cfgFile config layers newTokenAuthorisationCache logEnv
   ControlException.bracket
     (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
-    HasqlPool.release
-    (\p -> getWarp _configPort (Server.runServer (App.ServerState p cfgFile config layers newTokenAuthorisationCache logEnv)))
+    (cleanup logEnv)
+    (getWarp _configPort . Server.runServer . state)
+  pure ()
+
+cleanup :: Katip.LogEnv -> HasqlPool.Pool -> IO ()
+cleanup logEnv pool = do
+  _ <- HasqlPool.release pool
+  _ <- Katip.closeScribes logEnv
   pure ()
 
 getWarp :: WaiWarp.Port -> Wai.Application -> IO ()
