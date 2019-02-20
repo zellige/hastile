@@ -15,7 +15,7 @@ fromLevel (Logger.LevelOther _) = Katip.NoticeS
 
 defaultLogEnv :: IO Katip.LogEnv
 defaultLogEnv = do
-    handleScribe <- Katip.mkHandleScribe Katip.ColorIfTerminal IO.stdout Katip.DebugS Katip.V2
+    handleScribe <- Katip.mkHandleScribe Katip.ColorIfTerminal IO.stdout (Katip.permitItem Katip.DebugS) Katip.V2
     env <- Katip.initLogEnv "hastile" "production"
     Katip.registerScribe "stdout" handleScribe Katip.defaultScribeSettings env
 
