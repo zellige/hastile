@@ -27,3 +27,4 @@ adapt f _ src lvl msg =
 
 logStr' :: (FastLogger.ToLogStr msg) => msg -> Katip.LogStr
 logStr' = Katip.logStr . FastLogger.fromLogStr . Logger.toLogStr
+

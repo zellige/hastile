@@ -57,6 +57,9 @@ instance (MonadIO.MonadIO m) => Katip.Katip (ActionHandler m) where
 instance (MonadIO.MonadIO m) => MonadLogger.MonadLogger (ActionHandler m) where
   monadLoggerLog = Logger.adapt Katip.logMsg
 
+instance (MonadIO.MonadIO m) => MonadLogger.MonadLogger (Katip.KatipT m) where
+  monadLoggerLog = Logger.adapt Katip.logMsg
+
 err204 :: Servant.ServantErr
 err204 = Servant.ServantErr
   { errHTTPCode = 204

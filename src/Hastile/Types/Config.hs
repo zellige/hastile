@@ -52,7 +52,7 @@ instance Aeson.ToJSON InputConfig where
 
 instance Aeson.FromJSON InputConfig where
   parseJSON = Aeson.withObject "Config" $ \o -> InputConfig
-    <$> o Aeson..:  "environment"
+    <$> o Aeson..:? "environment"
     <*> o Aeson..:  "db-connection"
     <*> o Aeson..:? "db-pool-size"
     <*> o Aeson..:? "db-timeout"
@@ -80,7 +80,7 @@ makeLenses ''Config
 instance Aeson.ToJSON Config where
   toJSON c = Aeson.object
     [ "environment"          Aeson..= _configEnvironment c
-    , "db-connection"       Aeson..= _configPgConnection c
+    , "db-connection"        Aeson..= _configPgConnection c
     , "db-pool-size"         Aeson..= _configPgPoolSize c
     , "db-timeout"           Aeson..= _configPgTimeout c
     , "port"                 Aeson..= _configPort c
