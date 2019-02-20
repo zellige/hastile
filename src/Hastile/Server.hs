@@ -21,5 +21,5 @@ createServer :: App.ServerState -> Server HastileApi
 createServer s = ServantServer.hoistServer hastileApi (toHandler s) hastileServer
 
 -- Natural Transformation of Types.ActionHandler.ActionHandler to Servant.Handler
-toHandler :: ServerState -> App.ActionHandler a -> Handler a
-toHandler s = flip MonadTransReader.runReaderT s . runActionHandler
+toHandler :: ServerState -> App.ActionHandler IO a -> Handler a
+toHandler s app = Servant.Handler $ MonadTransReader.runReaderT (runActionHandler app) s
