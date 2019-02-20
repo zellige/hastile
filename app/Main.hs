@@ -85,23 +85,9 @@ katipLogger env app req respond =
         mr = Maybe.maybe "-" show (Wai.requestHeaderReferer req)
         mua = Maybe.maybe "-" show (Wai.requestHeaderUserAgent req)
         finalStr =
-          sourceIp
-          <> " - - ["
-          <> formattedTime
-          <> "] "
-          <> requestMethod
-          <> " "
-          <> path
-          <> " "
-          <> httpVersion
-          <> " "
-          <> status
-          <> " "
-          <> contentLength
-          <> " "
-          <> mr
-          <> " "
-          <> mua
+          sourceIp    <> " - - ["    <> formattedTime <> "] " <> requestMethod <> " " <> path <> " " <>
+          httpVersion <> " "         <> status        <> " "  <> contentLength <> " " <> mr   <> " " <>
+          mua
     s <- respond res
     Katip.runKatipT env $
       Katip.logMsg "web" Katip.InfoS (Katip.logStr finalStr)
