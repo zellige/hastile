@@ -43,13 +43,14 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: 
-- wkt-geom-0.0.4
+- wkt-geom-0.0.8
 - geojson-3.0.4
 - hasql-cursor-query-0.4.4.2
 - hasql-cursor-transaction-0.6.3.1
 - prometheus-client-1.0.0
 - prometheus-metrics-ghc-1.0.0
 - wai-middleware-prometheus-1.0.0
+- katip-0.8.0.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}

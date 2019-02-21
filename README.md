@@ -30,7 +30,7 @@ To create a new layer:
 - ```curl -d '{ "layer_name": { "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
 
 To modify an existing layer:
-- ```curl -d '{ "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
+- ```curl -d '{ "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} }' -H "Content-Type: application/json" -X POST http://localhost:8080/layer_name```
 
 Token API
 ---------
@@ -111,7 +111,6 @@ You can configure other database, mapnik and HTTP port settings too:
 {
   "db-pool-size": 10,
   "db-timeout": 5,
-  "mapnik-input-plugins": "/usr/local/lib/mapnik/input"
   "port": 8080
 }
 ```

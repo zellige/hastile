@@ -12,7 +12,7 @@
 module Hastile.Types.Token where
 
 import qualified Control.Monad
-import           Data.Aeson                 as Aeson
+import qualified Data.Aeson                 as Aeson
 import qualified Data.Foldable              as Foldable
 import qualified Data.Functor.Contravariant as Contravariant
 import qualified Data.LruCache.IO           as LRUIO
@@ -35,14 +35,14 @@ type Layer = Text.Text
 type Cache = LRUIO.LruHandle Token Layers
 
 instance Aeson.FromJSON TokenAuthorisation where
-  parseJSON = withObject "TokenAuthorisation" $ \o -> TokenAuthorisation
-    <$> o .: "token"
-    <*> o .: "layers"
+  parseJSON = Aeson.withObject "TokenAuthorisation" $ \o -> TokenAuthorisation
+    <$> o Aeson..: "token"
+    <*> o Aeson..: "layers"
 
 instance Aeson.ToJSON TokenAuthorisation where
-  toJSON ls = object
-    [ "token"  .= _token ls
-    , "layers" .= _layers ls
+  toJSON ls = Aeson.object
+    [ "token"  Aeson..= _token ls
+    , "layers" Aeson..= _layers ls
     ]
 
 layersDecoder :: Hasql.Decoders.Row Layers

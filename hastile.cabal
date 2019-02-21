@@ -30,15 +30,18 @@ library
                      , Hastile.Types.Layer
                      , Hastile.Types.Layer.Format
                      , Hastile.Types.Layer.Security
+                     , Hastile.Types.Logger
                      , Hastile.Types.Mime
                      , Hastile.Types.Tile
+                     , Hastile.Types.Time
                      , Hastile.Types.Token
-  build-depends:       base >= 4.8 && < 5
+  build-depends:       base                        >= 4.8      && < 5.0
                      , aeson
                      , aeson-pretty
                      , bytestring
                      , containers
                      , contravariant
+                     , fast-logger
                      , foldl
                      , geojson
                      , hasql
@@ -48,9 +51,11 @@ library
                      , here
                      , http-types
                      , http-media
+                     , katip
                      , lens
                      , list-t
                      , lrucaching
+                     , monad-logger
                      , mtl
                      , optparse-generic
                      , prometheus-client
@@ -67,7 +72,7 @@ library
                      , wai
                      , wai-middleware-prometheus
                      , word8
-                     , wkt-geom >= 0.0.4
+                     , wkt-geom                    >= 0.0.8    && < 0.1.0
                      , unordered-containers
                      , zellige
   ghc-options:       -Wall -Werror -O2
@@ -82,17 +87,22 @@ executable hastile
                      , containers
                      , filepath
                      , hastile
+                     , hasql-pool
+                     , http-types
+                     , katip
+                     , lrucaching
                      , optparse-generic
                      , text
-                     , hasql-pool
-                     , lrucaching
                      , prometheus-client
                      , prometheus-metrics-ghc
                      , servant-server
                      , stm-containers
+                     , time
                      , transformers
                      , wai
+                     , wai-extra
                      , wai-cors
+                     , wai-logger
                      , wai-middleware-prometheus
                      , warp
   ghc-options:       -threaded -rtsopts -with-rtsopts=-N -Wall -Werror -O2
@@ -104,7 +114,7 @@ executable migrate
     ghc-options:            -Wall -fwarn-tabs -fwarn-incomplete-uni-patterns
     default-extensions:     OverloadedStrings, CPP, LambdaCase
     default-language:       Haskell2010
-    build-depends:          base                        >= 4.6      && < 5.0,
+    build-depends:          base                        >= 4.8      && < 5.0,
                             base64-bytestring           >= 1.0      && < 1.1,
                             bytestring                  >= 0.10     && < 0.11,
                             cryptohash                  >= 0.11     && < 0.12,

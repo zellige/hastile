@@ -6,10 +6,12 @@
 module Hastile.Controllers.Token where
 
 import           Control.Monad.Error.Class
+import qualified Control.Monad.IO.Class     as MonadIO
 import qualified Control.Monad.Reader.Class as MonadReaderClass
 import qualified Data.ByteString.Lazy.Char8 as LazyByteStringChar8
 import qualified Data.Text                  as Text
 import qualified Servant
+
 
 import qualified Hastile.DB.Token           as DBToken
 import qualified Hastile.Lib.Token          as LibToken
@@ -17,13 +19,13 @@ import qualified Hastile.Routes             as Routes
 import qualified Hastile.Types.App          as App
 import qualified Hastile.Types.Token        as Token
 
-tokenServer :: Servant.ServerT Routes.TokenApi App.ActionHandler
+tokenServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.TokenApi (App.ActionHandler m)
 tokenServer = getTokens
   Servant.:<|> getToken
   Servant.:<|> updateOrInsertToken
   Servant.:<|> deleteToken
 
-getTokens :: App.ActionHandler [Token.TokenAuthorisation]
+getTokens :: (MonadIO.MonadIO m) => App.ActionHandler m [Token.TokenAuthorisation]
 getTokens = do
   pool <- MonadReaderClass.asks App._ssPool
   er <- DBToken.getTokens pool
@@ -31,7 +33,7 @@ getTokens = do
     Left err     -> defaultErrorHandler err
     Right tokens -> return tokens
 
-getToken :: Text.Text -> App.ActionHandler Token.Layers
+getToken :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m Token.Layers
 getToken token = do
   pool <- MonadReaderClass.asks App._ssPool
   er <- DBToken.getToken pool token
@@ -39,7 +41,7 @@ getToken token = do
     Left err     -> defaultErrorHandler err
     Right layers -> return layers
 
-updateOrInsertToken :: Token.TokenAuthorisation -> App.ActionHandler Text.Text
+updateOrInsertToken :: (MonadIO.MonadIO m) => Token.TokenAuthorisation -> App.ActionHandler m Text.Text
 updateOrInsertToken tokenAuthorisation = do
   pool <- MonadReaderClass.asks App._ssPool
   cache <- MonadReaderClass.asks App._ssTokenAuthorisationCache
@@ -48,7 +50,7 @@ updateOrInsertToken tokenAuthorisation = do
     Left err     -> defaultErrorHandler err
     Right result -> return result
 
-deleteToken :: Text.Text -> App.ActionHandler Text.Text
+deleteToken :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m Text.Text
 deleteToken token = do
   pool <- MonadReaderClass.asks App._ssPool
   cache <- MonadReaderClass.asks App._ssTokenAuthorisationCache
@@ -57,5 +59,5 @@ deleteToken token = do
     Left err     -> defaultErrorHandler err
     Right result -> return result
 
-defaultErrorHandler :: MonadError Servant.ServantErr m => Text.Text -> m a
+defaultErrorHandler :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m a
 defaultErrorHandler e =  throwError $ Servant.err500 { Servant.errBody = LazyByteStringChar8.pack $ Text.unpack e }

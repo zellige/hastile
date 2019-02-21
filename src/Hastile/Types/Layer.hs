@@ -20,7 +20,6 @@ import qualified Data.Aeson.Types              as AesonTypes
 import qualified Data.Geometry.Types.Config    as TypesConfig
 import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
 import qualified Data.Map.Strict               as MapStrict
-import qualified Data.Monoid                   as Monoid
 import qualified Data.Sequence                 as Sequence
 import qualified Data.Text                     as Text
 import qualified Data.Time                     as Time
@@ -28,6 +27,7 @@ import           Options.Generic
 
 import qualified Hastile.Types.Layer.Format    as LayerFormat
 import qualified Hastile.Types.Layer.Security  as LayerSecurity
+import qualified Hastile.Types.Time            as LayerTime
 
 data LayerError = LayerNotFound
 
@@ -80,7 +80,7 @@ layerSettingsToPairs ls =
   ]
 
 requestToLayer :: Text -> LayerSettings -> Time.UTCTime -> Layer
-requestToLayer layerName layerSettings time = Layer layerName $ LayerDetails time layerSettings
+requestToLayer layerName layerSettings time = Layer layerName $ LayerDetails layerSettings time
 
 data Layer = Layer
   { _layerName    :: Text
@@ -88,14 +88,14 @@ data Layer = Layer
   } deriving (Show, Eq, Generic)
 
 data LayerDetails = LayerDetails
-  { _layerLastModified :: Time.UTCTime
-  , _layerSettings     :: LayerSettings
+  { _layerSettings     :: LayerSettings
+  , _layerLastModified :: Time.UTCTime
   } deriving (Show, Eq, Generic)
 
 instance Aeson.FromJSON LayerDetails where
   parseJSON = AesonTypes.withObject "LayerDetails" $ \o -> LayerDetails
-    <$> o AesonTypes..: "last-modified"
-    <*> AesonTypes.parseJSON (Aeson.Object o)
+    <$> AesonTypes.parseJSON (Aeson.Object o)
+    <*> o AesonTypes..: "last-modified"
 
 instance Aeson.ToJSON LayerDetails where
   toJSON l = AesonTypes.object $
@@ -112,9 +112,8 @@ getLayerSetting :: Layer -> (LayerSettings -> a) -> a
 getLayerSetting layer getter =
   getter $ _layerSettings $ _layerDetails layer
 
-lastModified :: Layer -> Text.Text
-lastModified layer = Text.dropEnd 3 (Text.pack rfc822Str) Monoid.<> "GMT"
-       where rfc822Str = Time.formatTime Time.defaultTimeLocale Time.rfc822DateFormat $ getLayerDetail layer _layerLastModified
+lastModifiedFromLayer :: Layer -> Text.Text
+lastModifiedFromLayer layer = LayerTime.lastModified $ getLayerDetail layer _layerLastModified
 
 parseIfModifiedSince :: Text.Text -> Maybe Time.UTCTime
 parseIfModifiedSince t = Time.parseTimeM True Time.defaultTimeLocale "%a, %e %b %Y %T GMT" $ Text.unpack t

@@ -27,10 +27,10 @@ getConfig cfgFile = do
 addDefaults :: Config.InputConfig -> Config.Config
 addDefaults Config.InputConfig{..} =
   Config.Config
+    (DataMaybe.fromMaybe "development" _inputConfigEnvironment)
     _inputConfigPgConnection
     (DataMaybe.fromMaybe 10 _inputConfigPgPoolSize)
     (DataMaybe.fromMaybe 1 _inputConfigPgTimeout)
-    (DataMaybe.fromMaybe "/usr/local/lib/mapnik/input" _inputConfigMapnikInputPlugins)
     (DataMaybe.fromMaybe 8080 _inputConfigPort)
     (DataMaybe.fromMaybe 1000 _inputConfigTokenCacheSize)
     _inputConfigLayers
