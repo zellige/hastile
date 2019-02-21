@@ -30,7 +30,7 @@ To create a new layer:
 - ```curl -d '{ "layer_name": { "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
 
 To modify an existing layer:
-- ```curl -d '{ "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/```
+- ```curl -d '{ "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} }' -H "Content-Type: application/json" -X POST http://localhost:8080/layer_name```
 
 Token API
 ---------

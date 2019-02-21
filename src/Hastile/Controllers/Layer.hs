@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Hastile.Controllers.Layer where
@@ -22,6 +23,7 @@ import qualified Data.Geometry.Types.Geography       as TypesGeography
 import qualified Data.Geometry.Types.MvtFeatures     as TypesMvtFeatures
 import qualified Data.Geospatial                     as Geospatial
 import qualified Data.Map                            as Map
+import           Data.Monoid                         ((<>))
 import qualified Data.Text                           as Text
 import qualified Data.Text.Encoding                  as TE
 import qualified Data.Text.Read                      as DTR
@@ -50,29 +52,30 @@ stmMapToList :: STMMap.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STMMap.stream
 
 createNewLayer :: (MonadIO.MonadIO m) => Layer.LayerRequestList -> App.ActionHandler m Servant.NoContent
-createNewLayer (Layer.LayerRequestList layerRequests) =
-  newLayer (\lastModifiedTime ls -> mapM_ (\lr -> STMMap.insert (Layer.requestToLayer (Layer._newLayerRequestName lr) (Layer._newLayerRequestSettings lr) lastModifiedTime) (Layer._newLayerRequestName lr) ls) layerRequests)
+createNewLayer (Layer.LayerRequestList layerRequests) = do
+  lastModifiedTime <- MonadIO.liftIO getCurrentTime
+  let layersToAdd = fmap (\l -> Layer.requestToLayer (Layer._newLayerRequestName l) (Layer._newLayerRequestSettings l) lastModifiedTime) layerRequests
+  mapM_ (\l -> MonadLogger.logInfoNS "web" ("Adding layer " <> Layer._layerName l)) layersToAdd
+  newLayer' layersToAdd
 
 provisionLayer :: (MonadIO.MonadIO m) => Text.Text -> Layer.LayerSettings -> App.ActionHandler m Servant.NoContent
-provisionLayer l settings =
-  newLayer (\lastModifiedTime -> STMMap.insert (Layer.requestToLayer l settings lastModifiedTime) l)
-
-newLayer :: (MonadIO.MonadIO m) => (UTCTime -> STMMap.Map Text.Text Layer.Layer -> STM a) -> App.ActionHandler m Servant.NoContent
-newLayer b = do
-  r <- ReaderClass.ask
-  MonadLogger.logDebugNS "web" "hello"
+provisionLayer l settings = do
   lastModifiedTime <- MonadIO.liftIO getCurrentTime
-  let (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
-  newLayers <- MonadIO.liftIO . atomically $ do
-    _ <- b lastModifiedTime ls
-    stmMapToList ls
-  let newNewLayers = fmap (\(k, v) -> (k, Layer.layerToLayerDetails v)) newLayers
-  MonadIO.liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {Config._configLayers = Map.fromList newNewLayers}))
+  let layerToModify = Layer.requestToLayer l settings lastModifiedTime
+  MonadLogger.logInfoNS "web" ("Modify layer " <> Layer._layerName layerToModify)
+  newLayer' [layerToModify]
+
+newLayer' :: (MonadIO.MonadIO m) => [Layer.Layer] -> App.ActionHandler m Servant.NoContent
+newLayer' layers = do
+  r <- ReaderClass.ask
+  let keyValueLayers = fmap (\l -> (Layer._layerName l, Layer._layerDetails l)) layers
+      (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
+  MonadIO.liftIO . atomically $ mapM_ (\l -> STMMap.insert l (Layer._layerName l) ls) layers
+  MonadIO.liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {Config._configLayers = Map.fromList keyValueLayers}))
   pure Servant.NoContent
 
 serveLayer :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 serveLayer l z x stringY maybeToken maybeIfModified = do
-  MonadLogger.logDebugNS "web" "hello"
   layer <- getLayerOrThrow l
   pool <- ReaderClass.asks App._ssPool
   cache <- ReaderClass.asks App._ssTokenAuthorisationCache

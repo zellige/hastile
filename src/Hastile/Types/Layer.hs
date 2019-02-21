@@ -80,7 +80,7 @@ layerSettingsToPairs ls =
   ]
 
 requestToLayer :: Text -> LayerSettings -> Time.UTCTime -> Layer
-requestToLayer layerName layerSettings time = Layer layerName $ LayerDetails time layerSettings
+requestToLayer layerName layerSettings time = Layer layerName $ LayerDetails layerSettings time
 
 data Layer = Layer
   { _layerName    :: Text
@@ -88,14 +88,14 @@ data Layer = Layer
   } deriving (Show, Eq, Generic)
 
 data LayerDetails = LayerDetails
-  { _layerLastModified :: Time.UTCTime
-  , _layerSettings     :: LayerSettings
+  { _layerSettings     :: LayerSettings
+  , _layerLastModified :: Time.UTCTime
   } deriving (Show, Eq, Generic)
 
 instance Aeson.FromJSON LayerDetails where
   parseJSON = AesonTypes.withObject "LayerDetails" $ \o -> LayerDetails
-    <$> o AesonTypes..: "last-modified"
-    <*> AesonTypes.parseJSON (Aeson.Object o)
+    <$> AesonTypes.parseJSON (Aeson.Object o)
+    <*> o AesonTypes..: "last-modified"
 
 instance Aeson.ToJSON LayerDetails where
   toJSON l = AesonTypes.object $
