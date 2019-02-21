@@ -57,6 +57,7 @@ createNewLayer (Layer.LayerRequestList layerRequests) = do
   let layersToAdd = fmap (\l -> Layer.requestToLayer (Layer._newLayerRequestName l) (Layer._newLayerRequestSettings l) lastModifiedTime) layerRequests
   mapM_ (\l -> MonadLogger.logInfoNS "web" ("Adding layer " <> Layer._layerName l)) layersToAdd
   newLayer layersToAdd
+  pure Servant.NoContent
 
 provisionLayer :: (MonadIO.MonadIO m) => Text.Text -> Layer.LayerSettings -> App.ActionHandler m Servant.NoContent
 provisionLayer l settings = do
@@ -64,15 +65,16 @@ provisionLayer l settings = do
   let layerToModify = Layer.requestToLayer l settings lastModifiedTime
   MonadLogger.logInfoNS "web" ("Modify layer " <> Layer._layerName layerToModify)
   newLayer [layerToModify]
+  pure Servant.NoContent
 
-newLayer :: (MonadIO.MonadIO m) => [Layer.Layer] -> App.ActionHandler m Servant.NoContent
+newLayer :: (MonadIO.MonadIO m) => [Layer.Layer] -> App.ActionHandler m ()
 newLayer layers = do
   r <- ReaderClass.ask
   let keyValueLayers = fmap (\l -> (Layer._layerName l, Layer._layerDetails l)) layers
       (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
   MonadIO.liftIO . atomically $ mapM_ (\l -> STMMap.insert l (Layer._layerName l) ls) layers
   MonadIO.liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {Config._configLayers = Map.fromList keyValueLayers}))
-  pure Servant.NoContent
+  pure ()
 
 serveLayer :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 serveLayer l z x stringY maybeToken maybeIfModified = do
