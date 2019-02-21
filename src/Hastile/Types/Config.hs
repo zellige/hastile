@@ -27,6 +27,8 @@ import qualified Hastile.Types.Layer           as Layer
 
 data InputConfig = InputConfig
   { _inputConfigEnvironment    :: Maybe Text
+  , _inputConfigAccessLog      :: Maybe Text
+  , _inputConfigAppLog         :: Maybe Text
   , _inputConfigPgConnection   :: Text
   , _inputConfigPgPoolSize     :: Maybe Int
   , _inputConfigPgTimeout      :: Maybe Time.NominalDiffTime
@@ -41,6 +43,8 @@ makeLenses ''InputConfig
 instance Aeson.ToJSON InputConfig where
   toJSON ic = Aeson.object $ Maybe.catMaybes
     [ ("environment"  Aeson..=)         <$> Just (_inputConfigPgConnection ic)
+    , ("access-log" Aeson..=)           <$> _inputConfigAccessLog ic
+    , ("app-log" Aeson..=)              <$> _inputConfigAppLog ic
     , ("db-connection" Aeson..=)        <$> Just (_inputConfigPgConnection ic)
     , ("db-pool-size" Aeson..=)         <$> _inputConfigPgPoolSize ic
     , ("db-timeout" Aeson..=)           <$> _inputConfigPgTimeout ic
@@ -53,6 +57,8 @@ instance Aeson.ToJSON InputConfig where
 instance Aeson.FromJSON InputConfig where
   parseJSON = Aeson.withObject "Config" $ \o -> InputConfig
     <$> o Aeson..:? "environment"
+    <*> o Aeson..:? "access-log"
+    <*> o Aeson..:? "app-log"
     <*> o Aeson..:  "db-connection"
     <*> o Aeson..:? "db-pool-size"
     <*> o Aeson..:? "db-timeout"
@@ -62,10 +68,12 @@ instance Aeson.FromJSON InputConfig where
     <*> o Aeson..:? "tile-buffer"
 
 emptyInputConfig :: InputConfig
-emptyInputConfig = InputConfig Nothing "" Nothing Nothing Nothing Nothing (MapStrict.fromList []) Nothing
+emptyInputConfig = InputConfig Nothing Nothing Nothing "" Nothing Nothing Nothing Nothing (MapStrict.fromList []) Nothing
 
 data Config = Config
   { _configEnvironment    :: Text
+  , _configAccessLog      :: Text
+  , _configAppLog         :: Text
   , _configPgConnection   :: Text
   , _configPgPoolSize     :: Int
   , _configPgTimeout      :: Time.NominalDiffTime
@@ -80,6 +88,8 @@ makeLenses ''Config
 instance Aeson.ToJSON Config where
   toJSON c = Aeson.object
     [ "environment"          Aeson..= _configEnvironment c
+    , "access-log"           Aeson..= _configAccessLog c
+    , "app-log"              Aeson..= _configAppLog c
     , "db-connection"        Aeson..= _configPgConnection c
     , "db-pool-size"         Aeson..= _configPgPoolSize c
     , "db-timeout"           Aeson..= _configPgTimeout c

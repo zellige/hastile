@@ -28,6 +28,8 @@ addDefaults :: Config.InputConfig -> Config.Config
 addDefaults Config.InputConfig{..} =
   Config.Config
     (DataMaybe.fromMaybe "development" _inputConfigEnvironment)
+    (DataMaybe.fromMaybe "stdout" _inputConfigAccessLog)
+    (DataMaybe.fromMaybe "stdout" _inputConfigAppLog)
     _inputConfigPgConnection
     (DataMaybe.fromMaybe 10 _inputConfigPgPoolSize)
     (DataMaybe.fromMaybe 1 _inputConfigPgTimeout)
