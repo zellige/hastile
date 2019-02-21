@@ -20,7 +20,6 @@ import qualified Data.Aeson.Types              as AesonTypes
 import qualified Data.Geometry.Types.Config    as TypesConfig
 import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
 import qualified Data.Map.Strict               as MapStrict
-import qualified Data.Monoid                   as Monoid
 import qualified Data.Sequence                 as Sequence
 import qualified Data.Text                     as Text
 import qualified Data.Time                     as Time
@@ -28,6 +27,7 @@ import           Options.Generic
 
 import qualified Hastile.Types.Layer.Format    as LayerFormat
 import qualified Hastile.Types.Layer.Security  as LayerSecurity
+import qualified Hastile.Types.Time            as LayerTime
 
 data LayerError = LayerNotFound
 
@@ -112,13 +112,8 @@ getLayerSetting :: Layer -> (LayerSettings -> a) -> a
 getLayerSetting layer getter =
   getter $ _layerSettings $ _layerDetails layer
 
-lastModified :: Time.UTCTime -> Text.Text
-lastModified utcTime = Text.dropEnd 3 (Text.pack rfc822Str) Monoid.<> "GMT"
-  where
-    rfc822Str = Time.formatTime Time.defaultTimeLocale Time.rfc822DateFormat utcTime
-
 lastModifiedFromLayer :: Layer -> Text.Text
-lastModifiedFromLayer layer = lastModified $ getLayerDetail layer _layerLastModified
+lastModifiedFromLayer layer = LayerTime.lastModified $ getLayerDetail layer _layerLastModified
 
 parseIfModifiedSince :: Text.Text -> Maybe Time.UTCTime
 parseIfModifiedSince t = Time.parseTimeM True Time.defaultTimeLocale "%a, %e %b %Y %T GMT" $ Text.unpack t

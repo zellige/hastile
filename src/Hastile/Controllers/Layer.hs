@@ -27,7 +27,7 @@ import           Data.Monoid                         ((<>))
 import qualified Data.Text                           as Text
 import qualified Data.Text.Encoding                  as TE
 import qualified Data.Text.Read                      as DTR
-import           Data.Time
+import qualified Data.Time                           as Time
 import           GHC.Conc
 import           ListT
 import           Network.HTTP.Types.Header           (hLastModified)
@@ -53,7 +53,7 @@ stmMapToList = ListT.fold (\l -> return . (:l)) [] . STMMap.stream
 
 createNewLayer :: (MonadIO.MonadIO m) => Layer.LayerRequestList -> App.ActionHandler m Servant.NoContent
 createNewLayer (Layer.LayerRequestList layerRequests) = do
-  lastModifiedTime <- MonadIO.liftIO getCurrentTime
+  lastModifiedTime <- MonadIO.liftIO Time.getCurrentTime
   let layersToAdd = fmap (\l -> Layer.requestToLayer (Layer._newLayerRequestName l) (Layer._newLayerRequestSettings l) lastModifiedTime) layerRequests
   mapM_ (\l -> MonadLogger.logInfoNS "web" ("Adding layer " <> Layer._layerName l)) layersToAdd
   newLayer layersToAdd
@@ -61,7 +61,7 @@ createNewLayer (Layer.LayerRequestList layerRequests) = do
 
 provisionLayer :: (MonadIO.MonadIO m) => Text.Text -> Layer.LayerSettings -> App.ActionHandler m Servant.NoContent
 provisionLayer l settings = do
-  lastModifiedTime <- MonadIO.liftIO getCurrentTime
+  lastModifiedTime <- MonadIO.liftIO Time.getCurrentTime
   let layerToModify = Layer.requestToLayer l settings lastModifiedTime
   MonadLogger.logInfoNS "web" ("Modify layer " <> Layer._layerName layerToModify)
   newLayer [layerToModify]

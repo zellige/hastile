@@ -97,3 +97,4 @@ instance ParseRecord CmdLine
 
 defaultTileSize :: GeometryTypesGeography.Pixels
 defaultTileSize = 2048
+
