@@ -4,6 +4,7 @@
 module Main where
 
 import qualified Control.Exception.Base            as ControlException
+import qualified Control.Monad.IO.Class            as MonadIO
 import qualified Data.ByteString                   as ByteString
 import qualified Data.Foldable                     as Foldable
 import qualified Data.LruCache.IO                  as LRU
@@ -11,6 +12,7 @@ import qualified Data.Map                          as Map
 import qualified Data.Maybe                        as Maybe
 import           Data.Monoid                       ((<>))
 import qualified Data.Text.Encoding                as TextEncoding
+import qualified Data.Time                         as Time
 import           GHC.Conc
 import qualified Hasql.Pool                        as HasqlPool
 import qualified Hastile.Types.Logger              as Logger
@@ -32,6 +34,7 @@ import qualified Hastile.Server                    as Server
 import qualified Hastile.Types.App                 as App
 import qualified Hastile.Types.Config              as Config
 import qualified Hastile.Types.Layer               as Layer
+import qualified Hastile.Types.Time                as Time
 
 main :: IO ()
 main = OptionsGeneric.getRecord "hastile" >>= doIt
@@ -73,10 +76,11 @@ getWarp logEnv port' app = do
 katipLogger :: Katip.LogEnv -> Wai.Middleware
 katipLogger env app req respond =
   app req $ \res -> do
+    currentTime <- MonadIO.liftIO Time.getCurrentTime
     let responseHeaders = Wai.responseHeaders res
         requestHeaders = Wai.requestHeaders req
         sourceIp = show $ TextEncoding.decodeUtf8 $ Maybe.fromMaybe "" (getSource requestHeaders)
-        formattedTime = ""
+        formattedTime = show $ Time.lastModified currentTime
         requestMethod = show $ Wai.requestMethod req
         path = show $ Wai.rawPathInfo req <> Wai.rawQueryString req
         httpVersion = show (Wai.httpVersion req)

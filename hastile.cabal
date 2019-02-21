@@ -33,6 +33,7 @@ library
                      , Hastile.Types.Logger
                      , Hastile.Types.Mime
                      , Hastile.Types.Tile
+                     , Hastile.Types.Time
                      , Hastile.Types.Token
   build-depends:       base                        >= 4.8      && < 5.0
                      , aeson
@@ -96,6 +97,7 @@ executable hastile
                      , prometheus-metrics-ghc
                      , servant-server
                      , stm-containers
+                     , time
                      , transformers
                      , wai
                      , wai-extra
