@@ -56,17 +56,17 @@ createNewLayer (Layer.LayerRequestList layerRequests) = do
   lastModifiedTime <- MonadIO.liftIO getCurrentTime
   let layersToAdd = fmap (\l -> Layer.requestToLayer (Layer._newLayerRequestName l) (Layer._newLayerRequestSettings l) lastModifiedTime) layerRequests
   mapM_ (\l -> MonadLogger.logInfoNS "web" ("Adding layer " <> Layer._layerName l)) layersToAdd
-  newLayer' layersToAdd
+  newLayer layersToAdd
 
 provisionLayer :: (MonadIO.MonadIO m) => Text.Text -> Layer.LayerSettings -> App.ActionHandler m Servant.NoContent
 provisionLayer l settings = do
   lastModifiedTime <- MonadIO.liftIO getCurrentTime
   let layerToModify = Layer.requestToLayer l settings lastModifiedTime
   MonadLogger.logInfoNS "web" ("Modify layer " <> Layer._layerName layerToModify)
-  newLayer' [layerToModify]
+  newLayer [layerToModify]
 
-newLayer' :: (MonadIO.MonadIO m) => [Layer.Layer] -> App.ActionHandler m Servant.NoContent
-newLayer' layers = do
+newLayer :: (MonadIO.MonadIO m) => [Layer.Layer] -> App.ActionHandler m Servant.NoContent
+newLayer layers = do
   r <- ReaderClass.ask
   let keyValueLayers = fmap (\l -> (Layer._layerName l, Layer._layerDetails l)) layers
       (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
