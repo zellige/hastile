@@ -70,10 +70,11 @@ provisionLayer l settings = do
 newLayer :: (MonadIO.MonadIO m) => [Layer.Layer] -> App.ActionHandler m ()
 newLayer layers = do
   r <- ReaderClass.ask
-  let keyValueLayers = fmap (\l -> (Layer._layerName l, Layer._layerDetails l)) layers
-      (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
+  let (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
   MonadIO.liftIO . atomically $ mapM_ (\l -> STMMap.insert l (Layer._layerName l) ls) layers
-  MonadIO.liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {Config._configLayers = Map.fromList keyValueLayers}))
+  newLayers <- MonadIO.liftIO . atomically $ stmMapToList ls
+  let newNewLayers = fmap (\(k, v) -> (k, Layer.layerToLayerDetails v)) newLayers
+  MonadIO.liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {Config._configLayers = Map.fromList newNewLayers}))
   pure ()
 
 serveLayer :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
@@ -125,11 +126,11 @@ getTile layer z xy = do
 
 checkEmpty :: (MonadIO.MonadIO m) => ByteString.ByteString -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 checkEmpty tile layer
-  | ByteString.null tile = throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TE.encodeUtf8 $ Layer.lastModified layer)] }
-  | otherwise = pure $ Servant.addHeader (Layer.lastModified layer) tile
+  | ByteString.null tile = throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TE.encodeUtf8 $ Layer.lastModifiedFromLayer layer)] }
+  | otherwise = pure $ Servant.addHeader (Layer.lastModifiedFromLayer layer) tile
 
 getJson :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) ->  App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
-getJson layer z xy = Servant.addHeader (Layer.lastModified layer) . ByteStringLazyChar8.toStrict . Aeson.encode <$> getGeoFeature layer z xy
+getJson layer z xy = Servant.addHeader (Layer.lastModifiedFromLayer layer) . ByteStringLazyChar8.toStrict . Aeson.encode <$> getGeoFeature layer z xy
 
 getGeoFeature :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m (Geospatial.GeoFeatureCollection Aeson.Value)
 getGeoFeature layer z xy = do

@@ -112,9 +112,13 @@ getLayerSetting :: Layer -> (LayerSettings -> a) -> a
 getLayerSetting layer getter =
   getter $ _layerSettings $ _layerDetails layer
 
-lastModified :: Layer -> Text.Text
-lastModified layer = Text.dropEnd 3 (Text.pack rfc822Str) Monoid.<> "GMT"
-       where rfc822Str = Time.formatTime Time.defaultTimeLocale Time.rfc822DateFormat $ getLayerDetail layer _layerLastModified
+lastModified :: Time.UTCTime -> Text.Text
+lastModified utcTime = Text.dropEnd 3 (Text.pack rfc822Str) Monoid.<> "GMT"
+  where
+    rfc822Str = Time.formatTime Time.defaultTimeLocale Time.rfc822DateFormat utcTime
+
+lastModifiedFromLayer :: Layer -> Text.Text
+lastModifiedFromLayer layer = lastModified $ getLayerDetail layer _layerLastModified
 
 parseIfModifiedSince :: Text.Text -> Maybe Time.UTCTime
 parseIfModifiedSince t = Time.parseTimeM True Time.defaultTimeLocale "%a, %e %b %Y %T GMT" $ Text.unpack t
