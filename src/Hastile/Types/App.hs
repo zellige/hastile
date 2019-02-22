@@ -24,6 +24,7 @@ import qualified Data.Geometry.Types.Geography as DataGeometryTypesGeography
 import qualified Data.Text                     as Text
 import qualified Hasql.Pool                    as HasqlPool
 import qualified Katip
+import qualified Prometheus
 import qualified Servant
 import qualified STMContainers.Map             as STMMap
 
@@ -39,6 +40,7 @@ data ServerState = ServerState
   , _ssStateLayers             :: STMMap.Map Text.Text Layer.Layer
   , _ssTokenAuthorisationCache :: Token.Cache
   , _ssLogEnv                  :: Katip.LogEnv
+  , _ssLayerMetric             :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
   }
 
 ControlLens.makeLenses ''ServerState

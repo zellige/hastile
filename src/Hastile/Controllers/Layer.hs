@@ -22,6 +22,7 @@ import qualified Data.Geometry.Types.Geography       as TypesGeography
 import qualified Data.Geometry.Types.MvtFeatures     as TypesMvtFeatures
 import qualified Data.Geospatial                     as Geospatial
 import qualified Data.Map                            as Map
+import qualified Data.Maybe                          as Maybe
 import           Data.Monoid                         ((<>))
 import qualified Data.Text                           as Text
 import qualified Data.Text.Encoding                  as TE
@@ -31,6 +32,7 @@ import           GHC.Conc
 import           ListT
 import           Network.HTTP.Types.Header           (hLastModified)
 import           Numeric.Natural                     (Natural)
+import qualified Prometheus
 import qualified Servant
 import qualified STMContainers.Map                   as STMMap
 
@@ -79,11 +81,14 @@ newLayer layers = do
 serveLayer :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 serveLayer l z x stringY maybeToken maybeIfModified = do
   layer <- getLayerOrThrow l
+  layerCount <- ReaderClass.asks App._ssLayerMetric
   pool <- ReaderClass.asks App._ssPool
   cache <- ReaderClass.asks App._ssTokenAuthorisationCache
   layerAuthorisation <- MonadIO.liftIO $ LayerLib.checkLayerAuthorisation pool cache layer maybeToken
   case layerAuthorisation of
-    LayerSecurity.Authorised ->
+    LayerSecurity.Authorised -> do
+      let token = Maybe.fromMaybe "" maybeToken
+      _ <- MonadIO.liftIO $ Prometheus.withLabel layerCount (token, Layer._layerName layer) Prometheus.incCounter
       getContent z x stringY maybeIfModified layer
     LayerSecurity.Unauthorised ->
       throwError layerNotFoundError
