@@ -134,7 +134,11 @@ Changing the configuration to:
 
 Running
 -------
-Start the server with `hastile --configFile FILEPATH`
+To start the server:
+`hastile --configFile FILEPATH`
+
+To run with GHC Metrics:
+`./hastile --configFile FILEPATH +RTS -T`
 
 Projections
 -----------
