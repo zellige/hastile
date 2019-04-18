@@ -47,7 +47,15 @@ import qualified Hastile.Types.Layer.Format          as LayerFormat
 import qualified Hastile.Types.Layer.Security        as LayerSecurity
 
 layerServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
-layerServer l = provisionLayer l Servant.:<|> serveLayer l
+layerServer l = provisionLayer l Servant.:<|> serveLayer l Servant.:<|> serveTileJson l
+
+serveTileJson :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m Layer.LayerDetails
+serveTileJson layerName
+  | ".json" `Text.isSuffixOf` layerName = do
+                    layer <- getLayerOrThrow layerName
+                    pure $ Layer.layerToLayerDetails layer
+  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TE.encodeUtf8 layerName) }
+
 
 stmMapToList :: STMMap.Map k v -> STM [(k, v)]
 stmMapToList = ListT.fold (\l -> return . (:l)) [] . STMMap.stream

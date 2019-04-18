@@ -40,6 +40,7 @@ type LayerApi =
     (
       ReqBody '[JSON] Layer.LayerSettings :> Post '[JSON] NoContent
       :<|> Z :> X :> HastileContentApi
+      :<|> Get '[JSON] Layer.LayerDetails
     )
 
 type HastileContentApi =
