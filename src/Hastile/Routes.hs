@@ -24,7 +24,6 @@ type Y = Capture "y" Text.Text
 type HastileApi =
   Get '[JSON] Config.InputConfig
   :<|> TokenApi
-  :<|> ReqBody '[JSON] Layer.LayerRequestList :> Post '[JSON] NoContent
   :<|> LayerApi
 
 type TokenApi =
@@ -36,12 +35,13 @@ type TokenApi =
   )
 
 type LayerApi =
-  LayerName :>
-    (
-      ReqBody '[JSON] Layer.LayerSettings :> Post '[JSON] NoContent
-      :<|> Z :> X :> HastileContentApi
-      :<|> Get '[JSON] Layer.LayerDetails
-    )
+  ReqBody '[JSON] Layer.LayerRequestList :> Post '[JSON] NoContent
+    :<|> (LayerName :>
+      (
+        ReqBody '[JSON] Layer.LayerSettings :> Post '[JSON] NoContent
+        :<|> Z :> X :> HastileContentApi
+        :<|> Get '[JSON] Layer.LayerDetails
+      ))
 
 type HastileContentApi =
   Y :> QueryParam "token" Text.Text :> Servant.Header "If-Modified-Since" Text.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" Text.Text] ByteString.ByteString)

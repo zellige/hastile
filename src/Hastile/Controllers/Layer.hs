@@ -12,7 +12,6 @@ import qualified Control.Monad.IO.Class              as MonadIO
 import qualified Control.Monad.Logger                as MonadLogger
 import qualified Control.Monad.Reader.Class          as ReaderClass
 import qualified Data.Aeson                          as Aeson
-import qualified Data.Aeson.Encode.Pretty            as AesonPretty
 import qualified Data.ByteString                     as ByteString
 import qualified Data.ByteString.Lazy.Char8          as ByteStringLazyChar8
 import qualified Data.Char                           as Char
@@ -21,7 +20,6 @@ import qualified Data.Geometry.Types.Config          as TypesConfig
 import qualified Data.Geometry.Types.Geography       as TypesGeography
 import qualified Data.Geometry.Types.MvtFeatures     as TypesMvtFeatures
 import qualified Data.Geospatial                     as Geospatial
-import qualified Data.Map                            as Map
 import qualified Data.Maybe                          as Maybe
 import           Data.Monoid                         ((<>))
 import qualified Data.Text                           as Text
@@ -29,7 +27,6 @@ import qualified Data.Text.Encoding                  as TE
 import qualified Data.Text.Read                      as DTR
 import qualified Data.Time                           as Time
 import           GHC.Conc
-import           ListT
 import           Network.HTTP.Types.Header           (hLastModified)
 import           Numeric.Natural                     (Natural)
 import qualified Prometheus
@@ -46,19 +43,10 @@ import qualified Hastile.Types.Layer                 as Layer
 import qualified Hastile.Types.Layer.Format          as LayerFormat
 import qualified Hastile.Types.Layer.Security        as LayerSecurity
 
+
 layerServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
-layerServer l = provisionLayer l Servant.:<|> serveLayer l Servant.:<|> serveTileJson l
-
-serveTileJson :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m Layer.LayerDetails
-serveTileJson layerName
-  | ".json" `Text.isSuffixOf` layerName = do
-                    layer <- getLayerOrThrow layerName
-                    pure $ Layer.layerToLayerDetails layer
-  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TE.encodeUtf8 layerName) }
-
-
-stmMapToList :: STMMap.Map k v -> STM [(k, v)]
-stmMapToList = ListT.fold (\l -> return . (:l)) [] . STMMap.stream
+layerServer = createNewLayer
+  Servant.:<|> (\l -> provisionLayer l Servant.:<|> serveLayer l Servant.:<|> serveTileJson l)
 
 createNewLayer :: (MonadIO.MonadIO m) => Layer.LayerRequestList -> App.ActionHandler m Servant.NoContent
 createNewLayer (Layer.LayerRequestList layerRequests) = do
@@ -76,16 +64,6 @@ provisionLayer l settings = do
   newLayer [layerToModify]
   pure Servant.NoContent
 
-newLayer :: (MonadIO.MonadIO m) => [Layer.Layer] -> App.ActionHandler m ()
-newLayer layers = do
-  r <- ReaderClass.ask
-  let (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
-  MonadIO.liftIO . atomically $ mapM_ (\l -> STMMap.insert l (Layer._layerName l) ls) layers
-  newLayers <- MonadIO.liftIO . atomically $ stmMapToList ls
-  let newNewLayers = fmap (\(k, v) -> (k, Layer.layerToLayerDetails v)) newLayers
-  MonadIO.liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {Config._configLayers = Map.fromList newNewLayers}))
-  pure ()
-
 serveLayer :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 serveLayer l z x stringY maybeToken maybeIfModified = do
   layer <- getLayerOrThrow l
@@ -100,6 +78,22 @@ serveLayer l z x stringY maybeToken maybeIfModified = do
       getContent z x stringY maybeIfModified layer
     LayerSecurity.Unauthorised ->
       throwError layerNotFoundError
+
+newLayer :: (MonadIO.MonadIO m) => [Layer.Layer] -> App.ActionHandler m ()
+newLayer layers = do
+  r <- ReaderClass.ask
+  let (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
+  newLayers <- Config.addLayers layers ls
+  Config.writeLayers newLayers originalCfg cfgFile
+  pure ()
+
+serveTileJson :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m Layer.LayerDetails
+serveTileJson layerName
+  | ".json" `Text.isSuffixOf` layerName = do
+                    layer <- getLayerOrThrow layerName
+                    pure $ Layer.layerToLayerDetails layer
+  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TE.encodeUtf8 layerName) }
+
 
 getContent :: (MonadIO.MonadIO m) => Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text] ByteString.ByteString)
 getContent z x stringY maybeIfModified layer =

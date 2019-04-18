@@ -16,14 +16,26 @@
 module Hastile.Types.Config where
 
 import           Control.Lens                  (makeLenses)
+import qualified Control.Monad.IO.Class        as MonadIO
 import qualified Data.Aeson                    as Aeson
+import qualified Data.Aeson.Encode.Pretty      as AesonPretty
+import qualified Data.ByteString.Lazy.Char8    as ByteStringLazyChar8
 import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
+import qualified Data.Map                      as Map
 import qualified Data.Map.Strict               as MapStrict
 import qualified Data.Maybe                    as Maybe
+import qualified Data.Text                     as Text
 import qualified Data.Time                     as Time
+import qualified GHC.Conc                      as GhcConc
+import qualified ListT                         as ListT
 import           Options.Generic
+import qualified STMContainers.Map             as STMMap
 
 import qualified Hastile.Types.Layer           as Layer
+
+defaultTileSize :: GeometryTypesGeography.Pixels
+defaultTileSize = 2048
+
 
 data InputConfig = InputConfig
   { _inputConfigEnvironment    :: Maybe Text
@@ -105,6 +117,17 @@ newtype CmdLine = CmdLine
 
 instance ParseRecord CmdLine
 
-defaultTileSize :: GeometryTypesGeography.Pixels
-defaultTileSize = 2048
+addLayers :: (MonadIO.MonadIO m) => [Layer.Layer] -> STMMap.Map Text.Text Layer.Layer -> m [(Text, Layer.LayerDetails)]
+addLayers layers ls = do
+  MonadIO.liftIO . GhcConc.atomically $ mapM_ (\l -> STMMap.insert l (Layer._layerName l) ls) layers
+  newLayers <- MonadIO.liftIO . GhcConc.atomically $ stmMapToList ls
+  pure $ fmap (\(k, v) -> (k, Layer.layerToLayerDetails v)) newLayers
+
+writeLayers :: MonadIO.MonadIO m => [(Text, Layer.LayerDetails)] -> Config -> FilePath -> m ()
+writeLayers newLayers originalCfg cfgFile =
+  MonadIO.liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {_configLayers = Map.fromList newLayers}))
+
+stmMapToList :: STMMap.Map k v -> GhcConc.STM [(k, v)]
+stmMapToList = ListT.fold (\l -> return . (:l)) [] . STMMap.stream
+
 
