@@ -27,7 +27,7 @@ import qualified Data.Maybe                    as Maybe
 import qualified Data.Text                     as Text
 import qualified Data.Time                     as Time
 import qualified GHC.Conc                      as GhcConc
-import qualified ListT                         as ListT
+import qualified ListT
 import           Options.Generic
 import qualified STMContainers.Map             as STMMap
 
