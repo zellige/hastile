@@ -33,6 +33,7 @@ import qualified Hasql.Statement                     as HasqlStatement
 import qualified Hasql.Transaction                   as HasqlTransaction
 import qualified Hasql.Transaction.Sessions          as HasqlTransactionSession
 
+import qualified Hastile.DB                          as DB
 import qualified Hastile.Lib.Tile                    as TileLib
 import qualified Hastile.Types.App                   as App
 import qualified Hastile.Types.Layer                 as Layer
@@ -102,7 +103,7 @@ layerQueryWhereClause =
 
 checkLayerExists :: (MonadIO m) => HasqlPool.Pool -> Text.Text -> m (Either Text.Text (Maybe Text.Text))
 checkLayerExists pool layerTableName =
-  runTransaction HasqlTransactionSession.Read pool action
+  DB.runTransaction HasqlTransactionSession.Read pool action
   where
     action = HasqlTransaction.statement layerTableName checkLayerExistsQuery
 
@@ -112,12 +113,3 @@ checkLayerExistsQuery =
   where
     sql = "SELECT to_regclass($1) :: VARCHAR;"
     decoder = HasqlDecoders.singleRow $ HasqlDecoders.nullableColumn HasqlDecoders.text
-
-runTransaction :: (MonadIO m) => HasqlTransactionSession.Mode -> HasqlPool.Pool -> HasqlTransaction.Transaction b -> m (Either Text.Text b)
-runTransaction mode hpool action  = do
-  p <- liftIO $ HasqlPool.use hpool session
-  case p of
-    Left e  -> pure . Left  $ Text.pack (show e)
-    Right r -> pure . Right $ r
-  where
-    session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted mode action
