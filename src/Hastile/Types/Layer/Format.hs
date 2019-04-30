@@ -5,6 +5,7 @@ module Hastile.Types.Layer.Format where
 
 import qualified Data.Aeson       as Aeson
 import qualified Data.Aeson.Types as AesonTypes
+import qualified Data.Text        as DataText
 
 data LayerFormat = WkbProperties | GeoJSON deriving (Eq)
 
@@ -19,7 +20,5 @@ instance Aeson.FromJSON LayerFormat where
     _                -> fail "Unknown layer format"
 
 instance Aeson.ToJSON LayerFormat where
-  toJSON algo =
-    Aeson.String $ case algo of
-      WkbProperties -> "wkb-properties"
-      GeoJSON       -> "geojson"
+  toJSON =
+    Aeson.String . DataText.pack . show
