@@ -11,7 +11,7 @@ import qualified Data.Int                   as Int
 import qualified Data.Text                  as Text
 import qualified Hasql.Decoders             as HasqlDecoders
 import qualified Hasql.Encoders             as HasqlEncoders
-import qualified Hasql.Pool                 as Pool
+import qualified Hasql.Pool                 as HasqlPool
 import qualified Hasql.Statement            as HasqlStatement
 import qualified Hasql.Transaction          as HasqlTransaction
 import qualified Hasql.Transaction.Sessions as HasqlTransactionSession
@@ -25,7 +25,7 @@ getTokensQuery =
   where
     sql = "SELECT token, layers FROM tokens;"
 
-getTokens :: MonadIO m => Pool.Pool -> m (Either Text.Text [Token.TokenAuthorisation])
+getTokens :: MonadIO m => HasqlPool.Pool -> m (Either Text.Text [Token.TokenAuthorisation])
 getTokens pool =
     DB.runTransaction HasqlTransactionSession.Read pool action
   where
@@ -37,7 +37,7 @@ getTokenQuery =
   where
     sql = "SELECT layers FROM tokens WHERE token LIKE $1;"
 
-getToken :: MonadIO m => Pool.Pool -> Text.Text -> m (Either Text.Text Token.Layers)
+getToken :: MonadIO m => HasqlPool.Pool -> Text.Text -> m (Either Text.Text Token.Layers)
 getToken pool token =
   DB.runTransaction HasqlTransactionSession.Read pool action
   where
@@ -49,7 +49,7 @@ updateOrInsertTokenQuery =
   where
     sql = "INSERT INTO tokens (token, layers) VALUES ($1, $2) ON CONFLICT (token) DO UPDATE SET layers = $2;"
 
-updateOrInsertToken :: MonadIO m => Pool.Pool -> Token.TokenAuthorisation -> m (Either Text.Text ())
+updateOrInsertToken :: MonadIO m => HasqlPool.Pool -> Token.TokenAuthorisation -> m (Either Text.Text ())
 updateOrInsertToken pool tokenAuthorisation =
   DB.runTransaction HasqlTransactionSession.Write pool action
   where
@@ -61,7 +61,7 @@ deleteTokenQuery =
   where
     sql = "DELETE FROM tokens WHERE token LIKE $1;"
 
-deleteToken :: MonadIO m => Pool.Pool -> Text.Text -> m (Either Text.Text Int.Int64)
+deleteToken :: MonadIO m => HasqlPool.Pool -> Text.Text -> m (Either Text.Text Int.Int64)
 deleteToken pool token =
   DB.runTransaction HasqlTransactionSession.Write pool action
   where
@@ -73,7 +73,7 @@ clearTokensQuery =
   where
     sql = "DELETE FROM tokens;"
 
-clearTokens :: MonadIO m => Pool.Pool -> m (Either Text.Text Int.Int64)
+clearTokens :: MonadIO m => HasqlPool.Pool -> m (Either Text.Text Int.Int64)
 clearTokens pool =
   DB.runTransaction HasqlTransactionSession.Write pool action
   where
