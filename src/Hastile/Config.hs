@@ -54,3 +54,4 @@ checkConfig cfgFile Config.Config{..} = do
     errs -> do
       putStrLn $ "In file: " <> cfgFile <> "\nError: "
       mapM_ (\err -> putStrLn $ "  " <> err) errs
+  HasqlPool.release pool
