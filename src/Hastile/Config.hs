@@ -10,9 +10,14 @@ module Hastile.Config where
 
 import qualified Data.Aeson                 as Aeson
 import qualified Data.ByteString.Lazy.Char8 as ByteStringLazyChar8
+import qualified Data.Either                as DataEither
+import qualified Data.Map.Strict            as DataMapStrict
 import qualified Data.Maybe                 as DataMaybe
+import qualified Data.Text.Encoding         as TextEncoding
+import qualified Hasql.Pool                 as HasqlPool
 import           System.Exit                as SystemExit
 
+import qualified Hastile.Lib.Layer          as LibLayer
 import qualified Hastile.Types.Config       as Config
 
 getConfig :: FilePath -> IO Config.Config
@@ -37,3 +42,15 @@ addDefaults Config.InputConfig{..} =
     (DataMaybe.fromMaybe 1000 _inputConfigTokenCacheSize)
     _inputConfigLayers
     (DataMaybe.fromMaybe 128 _inputConfigTileBuffer)
+
+checkConfig :: FilePath -> Config.Config -> IO ()
+checkConfig cfgFile Config.Config{..} = do
+  pool <- HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection)
+  let layers = DataMapStrict.elems _configLayers
+  result <- mapM (LibLayer.checkLayerExists pool) layers
+  case DataEither.lefts result of
+    [] ->
+      pure ()
+    errs -> do
+      putStrLn $ "In file: " <> cfgFile <> "\nError: "
+      mapM_ (\err -> putStrLn $ "  " <> err) errs
