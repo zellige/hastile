@@ -31,8 +31,14 @@ bboxEncoder =
   <> Contravariant.contramap _bboxUrx (HasqlEncoders.param metreValue)
   <> Contravariant.contramap _bboxUry (HasqlEncoders.param metreValue)
 
+
+
 data Tile = Tile
-  { _tileVersion     :: Text.Text
-  , _tileName        :: Text.Text
-  , _tileDescription :: Text.Text
+  { _tileStyleVersion :: Text.Text
+  , _tileName         :: Text.Text
+  , _tileDescription  :: Text.Text
+  , _tileVersion      :: Text.Text
+  , _tileAttribution  :: Text.Text
+  , _tileTemplate     :: Text.Text
+  , _tileLegend       :: Text.Text
   }
