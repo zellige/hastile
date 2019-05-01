@@ -21,7 +21,7 @@ POST   /token                  (application/json)                   - Post a tok
 DELETE /token/tokenid          (application/json)                   - Delete the given token from the token database.
 ```
 
-[TileJSON](https://github.com/mapbox/tilejson-spec/tree/master/2.2.0)
+* [TileJSON](https://github.com/mapbox/tilejson-spec/tree/master/2.2.0)
 
 Layer API
 ---------
