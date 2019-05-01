@@ -11,14 +11,14 @@ RESTful API
 GET    /                       (application/json)                   - Returns the current configuration.
 POST   /                       (application/json)                   - Add/overwite layername (e.g. {"layer": { "name" : "...", "query": "..." } ... }).
 POST   /layername              (application/json)                   - Add/overwrite the query setting for layername (e.g. {"query": "...", ... }).
-GET    /layername              (application/json)                   - Return TileJSON
+GET    /layername              (application/json)                   - Return TileJSON.
 GET    /layername/Z/X/Y/query  (text/plain)                         - Query for a given layername, Zoom, and (X,Y).
 GET    /layername/Z/X/Y.mvt    (application/vnd.mapbox-vector-tile) - Return Mapnick Vector Tile for given layername, Zoom, (X,Y).
 GET    /layername/Z/X/Y.json   (application/json)                   - Return GeoJSON for given layername, Zoom, (X,Y).
-GET    /token                  (application/json)                   - Returns tokens and authorised layers
-GET    /token/tokenid          (application/json)                   - Returns the authorised layers for the given token
-POST   /token                  (application/json)                   - Post a token and its authorised layers to insert/update the token database
-DELETE /token/tokenid          (application/json)                   - Delete the given token from the token database
+GET    /token                  (application/json)                   - Returns tokens and authorised layers.
+GET    /token/tokenid          (application/json)                   - Returns the authorised layers for the given token.
+POST   /token                  (application/json)                   - Post a token and its authorised layers to insert/update the token database.
+DELETE /token/tokenid          (application/json)                   - Delete the given token from the token database.
 ```
 
 [TileJSON](https://github.com/mapbox/tilejson-spec/tree/master/2.2.0)
