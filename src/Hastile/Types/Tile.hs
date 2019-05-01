@@ -5,10 +5,14 @@
 
 module Hastile.Types.Tile where
 
+import qualified Data.Aeson                    as Aeson
 import qualified Data.Functor.Contravariant    as Contravariant
 import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
+import qualified Data.Maybe                    as Maybe
 import           Data.Monoid                   ((<>))
+import qualified Data.Scientific               as Scientific
 import qualified Data.Text                     as Text
+import qualified Data.Vector                   as Vector
 import qualified Hasql.Encoders                as HasqlEncoders
 
 import qualified Hastile.Types.Config          as Config
@@ -36,15 +40,24 @@ bboxEncoder =
   <> Contravariant.contramap _bboxUrx (HasqlEncoders.param metreValue)
   <> Contravariant.contramap _bboxUry (HasqlEncoders.param metreValue)
 
-
 data TileScheme = TileSchemeXyz | TileSchemeTms
   deriving Show
+
+instance Aeson.ToJSON TileScheme where
+  toJSON TileSchemeXyz = Aeson.String "xyz"
+  toJSON TileSchemeTms = Aeson.String "tms"
 
 data TileCenter = TileCenter
    { _tileCenterLongitude :: Double
    , _tileCenterLatitude  :: Double
    , _tileCenterZoom      :: Int
    }
+
+instance Aeson.ToJSON TileCenter where
+  toJSON TileCenter{..} = Aeson.Array $ Vector.fromList [doubleToNumber _tileCenterLongitude, doubleToNumber _tileCenterLatitude, intToNumber _tileCenterZoom]
+    where
+      doubleToNumber = Aeson.Number . Scientific.fromFloatDigits
+      intToNumber i = Aeson.Number (fromInteger $ toInteger i :: Scientific.Scientific)
 
 data Tile = Tile
   { _tileStyleVersion :: Text.Text
@@ -55,7 +68,6 @@ data Tile = Tile
   , _tileTemplate     :: Maybe Text.Text
   , _tileLegend       :: Maybe Text.Text
   , _tileScheme       :: Maybe TileScheme
-  -- This is dumb
   , _tileTiles        :: [Text.Text]
   , _tileGrids        :: Maybe [Text.Text]
   , _tileData         :: Maybe [Text.Text]
@@ -64,6 +76,27 @@ data Tile = Tile
   , _tileBoundingBox  :: Maybe GeometryTypesGeography.BoundingBox
   , _tileCenter       :: Maybe TileCenter
   }
+
+instance Aeson.ToJSON Tile where
+  toJSON tile = Aeson.object $
+    [ "tilejson"  Aeson..= _tileStyleVersion tile
+    , "tiles" Aeson..= _tileTiles tile
+    ] ++
+   Maybe.catMaybes
+    [ ("name"  Aeson..=)           <$> _tileName tile
+    , ("description"  Aeson..=)    <$> _tileDescription tile
+    , ("version"  Aeson..=)        <$> _tileVersion tile
+    , ("attribution"  Aeson..=)    <$> _tileAttribution tile
+    , ("template"  Aeson..=)       <$> _tileTemplate tile
+    , ("legend"  Aeson..=)         <$> _tileLegend tile
+    , ("scheme"  Aeson..=)         <$> _tileScheme tile
+    , ("grids"  Aeson..=)          <$> _tileGrids tile
+    , ("data"  Aeson..=)           <$> _tileData tile
+    , ("minzoom"  Aeson..=)        <$> _tileMinZoom tile
+    , ("maxzoom"  Aeson..=)        <$> _tileMaxZoom tile
+    , ("bounds"  Aeson..=)         <$> _tileBoundingBox tile
+    , ("center"  Aeson..=)         <$> _tileCenter tile
+    ]
 
 fromConfig :: Config.Config -> Text.Text -> Tile
 fromConfig Config.Config{..} layerName =
