@@ -44,6 +44,7 @@ doItWithConfig :: FilePath -> Config.Config -> IO ()
 doItWithConfig cfgFile config@Config.Config{..} = do
   logEnv <- Logger.logHandler _configAppLog (Katip.Environment _configEnvironment)
   accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
+  Config.checkConfig logEnv cfgFile config
   layerMetric <- registerLayerMetric
   newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
   layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)

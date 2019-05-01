@@ -11,11 +11,12 @@ import qualified Data.Int                   as Int
 import qualified Data.Text                  as Text
 import qualified Hasql.Decoders             as HasqlDecoders
 import qualified Hasql.Encoders             as HasqlEncoders
-import qualified Hasql.Pool                 as Pool
+import qualified Hasql.Pool                 as HasqlPool
 import qualified Hasql.Statement            as HasqlStatement
 import qualified Hasql.Transaction          as HasqlTransaction
 import qualified Hasql.Transaction.Sessions as HasqlTransactionSession
 
+import qualified Hastile.DB                 as DB
 import qualified Hastile.Types.Token        as Token
 
 getTokensQuery :: HasqlStatement.Statement () [Token.TokenAuthorisation]
@@ -24,9 +25,9 @@ getTokensQuery =
   where
     sql = "SELECT token, layers FROM tokens;"
 
-getTokens :: MonadIO m => Pool.Pool -> m (Either Text.Text [Token.TokenAuthorisation])
+getTokens :: MonadIO m => HasqlPool.Pool -> m (Either Text.Text [Token.TokenAuthorisation])
 getTokens pool =
-    runReadTransaction pool action
+    DB.runTransaction HasqlTransactionSession.Read pool action
   where
     action = HasqlTransaction.statement () getTokensQuery
 
@@ -36,9 +37,9 @@ getTokenQuery =
   where
     sql = "SELECT layers FROM tokens WHERE token LIKE $1;"
 
-getToken :: MonadIO m => Pool.Pool -> Text.Text -> m (Either Text.Text Token.Layers)
+getToken :: MonadIO m => HasqlPool.Pool -> Text.Text -> m (Either Text.Text Token.Layers)
 getToken pool token =
-  runReadTransaction pool action
+  DB.runTransaction HasqlTransactionSession.Read pool action
   where
     action = HasqlTransaction.statement token getTokenQuery
 
@@ -48,9 +49,9 @@ updateOrInsertTokenQuery =
   where
     sql = "INSERT INTO tokens (token, layers) VALUES ($1, $2) ON CONFLICT (token) DO UPDATE SET layers = $2;"
 
-updateOrInsertToken :: MonadIO m => Pool.Pool -> Token.TokenAuthorisation -> m (Either Text.Text ())
+updateOrInsertToken :: MonadIO m => HasqlPool.Pool -> Token.TokenAuthorisation -> m (Either Text.Text ())
 updateOrInsertToken pool tokenAuthorisation =
-  runWriteTransaction pool action
+  DB.runTransaction HasqlTransactionSession.Write pool action
   where
     action = HasqlTransaction.statement tokenAuthorisation updateOrInsertTokenQuery
 
@@ -60,9 +61,9 @@ deleteTokenQuery =
   where
     sql = "DELETE FROM tokens WHERE token LIKE $1;"
 
-deleteToken :: MonadIO m => Pool.Pool -> Text.Text -> m (Either Text.Text Int.Int64)
+deleteToken :: MonadIO m => HasqlPool.Pool -> Text.Text -> m (Either Text.Text Int.Int64)
 deleteToken pool token =
-  runWriteTransaction pool action
+  DB.runTransaction HasqlTransactionSession.Write pool action
   where
     action = HasqlTransaction.statement token deleteTokenQuery
 
@@ -72,25 +73,8 @@ clearTokensQuery =
   where
     sql = "DELETE FROM tokens;"
 
-clearTokens :: MonadIO m => Pool.Pool -> m (Either Text.Text Int.Int64)
+clearTokens :: MonadIO m => HasqlPool.Pool -> m (Either Text.Text Int.Int64)
 clearTokens pool =
-  runWriteTransaction pool action
+  DB.runTransaction HasqlTransactionSession.Write pool action
   where
     action = HasqlTransaction.statement () clearTokensQuery
-
-runReadTransaction :: (MonadIO m) => Pool.Pool -> HasqlTransaction.Transaction b -> m (Either Text.Text b)
-runReadTransaction =
-  runTransaction HasqlTransactionSession.Read
-
-runWriteTransaction :: (MonadIO m) => Pool.Pool -> HasqlTransaction.Transaction b -> m (Either Text.Text b)
-runWriteTransaction =
-  runTransaction HasqlTransactionSession.Write
-
-runTransaction :: (MonadIO m) => HasqlTransactionSession.Mode -> Pool.Pool -> HasqlTransaction.Transaction b -> m (Either Text.Text b)
-runTransaction mode hpool action  = do
-  p <- liftIO $ Pool.use hpool session
-  case p of
-    Left e  -> pure . Left  $ Text.pack (show e)
-    Right r -> pure . Right $ r
-  where
-    session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted mode action

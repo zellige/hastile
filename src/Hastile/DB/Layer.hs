@@ -27,9 +27,13 @@ import qualified Data.Text.Encoding                  as TextEncoding
 import qualified Hasql.CursorQuery                   as HasqlCursorQuery
 import qualified Hasql.CursorQuery.Transactions      as HasqlCursorQueryTransactions
 import qualified Hasql.Decoders                      as HasqlDecoders
+import qualified Hasql.Encoders                      as HasqlEncoders
 import qualified Hasql.Pool                          as HasqlPool
+import qualified Hasql.Statement                     as HasqlStatement
+import qualified Hasql.Transaction                   as HasqlTransaction
 import qualified Hasql.Transaction.Sessions          as HasqlTransactionSession
 
+import qualified Hastile.DB                          as DB
 import qualified Hastile.Lib.Tile                    as TileLib
 import qualified Hastile.Types.App                   as App
 import qualified Hastile.Types.Layer                 as Layer
@@ -96,3 +100,16 @@ convertDecoder decoder =
 layerQueryWhereClause :: Text.Text
 layerQueryWhereClause =
   " WHERE ST_Intersects(wkb_geometry, ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint($1, $2), ST_MakePoint($3, $4)), 3857), 4326));"
+
+checkLayerExists :: (MonadIO m) => HasqlPool.Pool -> Text.Text -> m (Either Text.Text (Maybe Text.Text))
+checkLayerExists pool layerTableName =
+  DB.runTransaction HasqlTransactionSession.Read pool action
+  where
+    action = HasqlTransaction.statement layerTableName checkLayerExistsQuery
+
+checkLayerExistsQuery :: HasqlStatement.Statement Text.Text (Maybe Text.Text)
+checkLayerExistsQuery =
+  HasqlStatement.Statement sql (HasqlEncoders.param HasqlEncoders.text) decoder False
+  where
+    sql = "SELECT to_regclass($1) :: VARCHAR;"
+    decoder = HasqlDecoders.singleRow $ HasqlDecoders.nullableColumn HasqlDecoders.text

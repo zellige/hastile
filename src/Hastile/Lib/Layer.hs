@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Hastile.Lib.Layer where
@@ -10,6 +11,7 @@ import qualified Data.LruCache.IO             as LRU
 import qualified Data.Text                    as Text
 import qualified Hasql.Pool                   as Pool
 
+import qualified Hastile.DB.Layer             as DBLayer
 import qualified Hastile.DB.Token             as DBToken
 import qualified Hastile.Types.Layer          as Layer
 import qualified Hastile.Types.Layer.Security as LayerSecurity
@@ -40,3 +42,12 @@ fetchAuthorisedLayersForToken pool token = do
   case er of
     Left _            -> pure []
     Right foundLayers -> pure foundLayers
+
+checkLayerExists :: IOClass.MonadIO m => Pool.Pool -> Layer.LayerDetails -> m (Either String ())
+checkLayerExists pool Layer.LayerDetails{..} = do
+  let layerTableName = Layer._layerTableName _layerSettings
+  er <- DBLayer.checkLayerExists pool layerTableName
+  case er of
+    Left err      -> pure . Left $ Text.unpack err
+    Right Nothing -> pure . Left $ "Could not find table: \'" <> Text.unpack layerTableName <> "\'"
+    Right _       -> pure $ Right ()
