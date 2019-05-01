@@ -120,6 +120,8 @@ getTile layer z xy = do
       config = TypesConfig.mkConfig (Layer._layerName layer) z xy buffer Config.defaultTileSize (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm
       layerFormat = Layer.getLayerSetting layer Layer._layerFormat
   case layerFormat of
+    LayerFormat.Source ->
+      error "not implemented"
     LayerFormat.GeoJSON -> do
       geoFeature <- getGeoFeature layer z xy
       tile <- MonadIO.liftIO $ TileLib.mkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoFeature
