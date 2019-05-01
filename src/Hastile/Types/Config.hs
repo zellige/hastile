@@ -42,6 +42,7 @@ data InputConfig = InputConfig
   , _inputConfigPgConnection   :: Text.Text
   , _inputConfigPgPoolSize     :: Maybe Int
   , _inputConfigPgTimeout      :: Maybe Time.NominalDiffTime
+  , _inputConfigProtocolHost   :: Maybe Text.Text
   , _inputConfigPort           :: Maybe Int
   , _inputConfigTokenCacheSize :: Maybe Int
   , _inputConfigLayers         :: MapStrict.Map Text.Text Layer.LayerDetails
@@ -58,6 +59,7 @@ instance Aeson.ToJSON InputConfig where
     , ("db-connection" Aeson..=)        <$> Just (_inputConfigPgConnection ic)
     , ("db-pool-size" Aeson..=)         <$> _inputConfigPgPoolSize ic
     , ("db-timeout" Aeson..=)           <$> _inputConfigPgTimeout ic
+    , ("host" Aeson..=)                 <$> _inputConfigProtocolHost ic
     , ("port" Aeson..=)                 <$> _inputConfigPort ic
     , ("token-cache-size" Aeson..=)     <$> _inputConfigTokenCacheSize ic
     , ("layers" Aeson..=)               <$> Just (_inputConfigLayers ic)
@@ -72,13 +74,14 @@ instance Aeson.FromJSON InputConfig where
     <*> o Aeson..:  "db-connection"
     <*> o Aeson..:? "db-pool-size"
     <*> o Aeson..:? "db-timeout"
+    <*> o Aeson..:? "host"
     <*> o Aeson..:? "port"
     <*> o Aeson..:? "token-cache-size"
     <*> o Aeson..:  "layers"
     <*> o Aeson..:? "tile-buffer"
 
 emptyInputConfig :: InputConfig
-emptyInputConfig = InputConfig Nothing Nothing Nothing "" Nothing Nothing Nothing Nothing (MapStrict.fromList []) Nothing
+emptyInputConfig = InputConfig Nothing Nothing Nothing "" Nothing Nothing Nothing Nothing Nothing (MapStrict.fromList []) Nothing
 
 data Config = Config
   { _configEnvironment    :: Text.Text
@@ -87,6 +90,7 @@ data Config = Config
   , _configPgConnection   :: Text.Text
   , _configPgPoolSize     :: Int
   , _configPgTimeout      :: Time.NominalDiffTime
+  , _configProtocolHost   :: Text.Text
   , _configPort           :: Int
   , _configTokenCacheSize :: Int
   , _configLayers         :: MapStrict.Map Text.Text Layer.LayerDetails
@@ -103,6 +107,7 @@ instance Aeson.ToJSON Config where
     , "db-connection"        Aeson..= _configPgConnection c
     , "db-pool-size"         Aeson..= _configPgPoolSize c
     , "db-timeout"           Aeson..= _configPgTimeout c
+    , "host"                 Aeson..= _configProtocolHost c
     , "port"                 Aeson..= _configPort c
     , "token-cache-size"     Aeson..= _configTokenCacheSize c
     , "layers"               Aeson..= _configLayers c

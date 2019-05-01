@@ -6,7 +6,7 @@
 module Hastile.Routes where
 
 import qualified Data.ByteString               as ByteString
-import qualified Data.Geometry.Types.Geography as DGTT
+import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
 import qualified Data.Proxy                    as Proxy
 import qualified Data.Text                     as Text
 import           Servant
@@ -17,8 +17,8 @@ import qualified Hastile.Types.Mime            as Mime
 import qualified Hastile.Types.Token           as Token
 
 type LayerName = Capture "layer" Text.Text
-type Z = Capture "z" DGTT.ZoomLevel
-type X = Capture "x" DGTT.Pixels
+type Z = Capture "z" GeometryTypesGeography.ZoomLevel
+type X = Capture "x" GeometryTypesGeography.Pixels
 type Y = Capture "y" Text.Text
 
 type HastileApi =
