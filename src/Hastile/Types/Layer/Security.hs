@@ -5,6 +5,7 @@ module Hastile.Types.Layer.Security where
 
 import qualified Data.Aeson       as Aeson
 import qualified Data.Aeson.Types as AesonTypes
+import qualified Data.Text        as DataText
 
 data LayerSecurity = Public | Private deriving (Eq)
 
@@ -21,7 +22,5 @@ instance Aeson.FromJSON LayerSecurity where
     _         -> fail "Unknown layer security"
 
 instance Aeson.ToJSON LayerSecurity where
-  toJSON algo =
-    Aeson.String $ case algo of
-      Public  -> "public"
-      Private -> "private"
+  toJSON =
+    Aeson.String . DataText.pack . show
