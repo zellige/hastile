@@ -62,6 +62,17 @@ findFeaturesStreaming config layer z xy = do
       session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
   liftIO $ HasqlPool.use hpool session
 
+findSourceFeaturesStreaming :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError TypesMvtFeatures.StreamingLayer)
+findSourceFeaturesStreaming config layer z xy = do
+  buffer <- asks (^. App.ssBuffer)
+  hpool <- asks App._ssPool
+  let bbox = TileLib.getBbox buffer z xy
+      tableName = Layer.getLayerSetting layer Layer._layerTableName
+      query = sourceLayerQueryStreamingWkbProperties config tableName
+      action = HasqlCursorQueryTransactions.cursorQuery bbox query
+      session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
+  liftIO $ HasqlPool.use hpool session
+
 -- Helpers
 layerQueryGeoJSON :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value))
 layerQueryGeoJSON tableName =
@@ -74,6 +85,13 @@ geoJsonDecoder =
   HasqlDecoders.column $ HasqlDecoders.jsonBytes $ convertDecoder eitherDecode
   where
     eitherDecode = Aeson.eitherDecode :: LazyByteString.ByteString -> Either String (Geospatial.GeoFeature AesonTypes.Value)
+
+sourceLayerQueryStreamingWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) TypesMvtFeatures.StreamingLayer
+sourceLayerQueryStreamingWkbProperties config tableName =
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder (wkbPropertiesDecoder config) GeoJsonStreamingToMvt.foldStreamingLayer) HasqlCursorQuery.batchSize_10000
+  where
+    sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(row.wkb_geometry), (to_jsonb(row) - 'wkb_geometry') :: JSON FROM (SELECT * FROM "
+            <> tableName <> ") row " <> layerQueryWhereClause
 
 layerQueryStreamingWkbProperties :: TypesConfig.Config -> Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) TypesMvtFeatures.StreamingLayer
 layerQueryStreamingWkbProperties config tableName =
@@ -106,4 +124,17 @@ checkLayerExistsQuery =
   HasqlStatement.Statement sql (HasqlEncoders.param HasqlEncoders.text) decoder False
   where
     sql = "SELECT to_regclass($1) :: VARCHAR;"
+    decoder = HasqlDecoders.singleRow $ HasqlDecoders.nullableColumn HasqlDecoders.text
+
+getTableColumns :: (MonadIO m) => HasqlPool.Pool -> Text.Text -> m (Either Text.Text (Maybe Text.Text))
+getTableColumns pool layerTableName =
+  DB.runTransaction HasqlTransactionSession.Read pool action
+  where
+    action = HasqlTransaction.statement layerTableName getTableColumnsQuery
+
+getTableColumnsQuery :: HasqlStatement.Statement Text.Text (Maybe Text.Text)
+getTableColumnsQuery =
+  HasqlStatement.Statement sql (HasqlEncoders.param HasqlEncoders.text) decoder False
+  where
+    sql = "SELECT column_name, udt_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = $1 WHERE udt_name IN blah;"
     decoder = HasqlDecoders.singleRow $ HasqlDecoders.nullableColumn HasqlDecoders.text

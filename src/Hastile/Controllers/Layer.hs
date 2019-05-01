@@ -120,10 +120,11 @@ getTile layer z xy = do
       config = TypesConfig.mkConfig (Layer._layerName layer) z xy buffer Config.defaultTileSize (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm
       layerFormat = Layer.getLayerSetting layer Layer._layerFormat
   case layerFormat of
-    LayerFormat.Source ->
-      error "not implemented"
+    LayerFormat.Source -> do
+      geoFeature <- getStreamingLayerSource config layer z xy
+      checkEmpty (GeoJsonStreamingToMvt.vtToBytes config geoFeature) layer
     LayerFormat.GeoJSON -> do
-      geoFeature <- getGeoFeature layer z xy
+      geoFeature <- getGeoFeatureGeoJSON layer z xy
       tile <- MonadIO.liftIO $ TileLib.mkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoFeature
       checkEmpty tile layer
     LayerFormat.WkbProperties -> do
@@ -137,6 +138,13 @@ checkEmpty tile layer
 
 getJson :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) ->  App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 getJson layer z xy = Servant.addHeader (Layer.lastModifiedFromLayer layer) . ByteStringLazyChar8.toStrict . Aeson.encode <$> getGeoFeature layer z xy
+
+getStreamingLayerSource :: (MonadIO.MonadIO m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m TypesMvtFeatures.StreamingLayer
+getStreamingLayerSource config layer z xy = do
+  errorOrTfs <- DBLayer.findSourceFeaturesStreaming config layer z xy
+  case errorOrTfs of
+    Left e    -> throwError $ Servant.err500 { Servant.errBody = ByteStringLazyChar8.pack $ show e }
+    Right tfs -> pure tfs
 
 getGeoFeature :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m (Geospatial.GeoFeatureCollection Aeson.Value)
 getGeoFeature layer z xy = do
