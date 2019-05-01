@@ -126,16 +126,3 @@ checkLayerExistsQuery =
   where
     sql = "SELECT to_regclass($1) :: VARCHAR;"
     decoder = HasqlDecoders.singleRow $ HasqlDecoders.nullableColumn HasqlDecoders.text
-
-getTableColumns :: (MonadIO m) => HasqlPool.Pool -> Text.Text -> m (Either Text.Text (Maybe Text.Text))
-getTableColumns pool layerTableName =
-  DB.runTransaction HasqlTransactionSession.Read pool action
-  where
-    action = HasqlTransaction.statement layerTableName getTableColumnsQuery
-
-getTableColumnsQuery :: HasqlStatement.Statement Text.Text (Maybe Text.Text)
-getTableColumnsQuery =
-  HasqlStatement.Statement sql (HasqlEncoders.param HasqlEncoders.text) decoder False
-  where
-    sql = "SELECT column_name, udt_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = $1 WHERE udt_name IN blah;"
-    decoder = HasqlDecoders.singleRow $ HasqlDecoders.nullableColumn HasqlDecoders.text
