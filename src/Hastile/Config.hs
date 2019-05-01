@@ -63,6 +63,5 @@ checkConfig logEnv cfgFile Config.Config{..} = do
 logErrors :: FilePath -> [String] -> Katip.KatipContextT IO ()
 logErrors cfgFile errs =
   $(Katip.logTM) Katip.ErrorS $ Katip.logStr $
-    "Error in file: " <> cfgFile <> separator <>
-      DataList.concat (DataList.intersperse separator errs)
+    "Error in file: " <> cfgFile <> separator <> DataList.intercalate separator errs
   where separator = "\n  "
