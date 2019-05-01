@@ -11,6 +11,7 @@ RESTful API
 GET  /                         (application/json)         - Returns the current configuration.
 POST /                         (application/json)         - Add/overwite layername (e.g. {"layer": { "name" : "...", "query": "..." } ... }).
 POST /layername                (application/json)         - Add/overwrite the query setting for layername (e.g. {"query": "...", ... }).
+GET  /layername                (application/json)         - Return [TileJSON](https://github.com/mapbox/tilejson-spec/tree/master/2.2.0)
 GET  /layername/Z/X/Y/query    (text/plain)               - Query for a given layername, Zoom, and (X,Y).
 GET  /layername/Z/X/Y.mvt      (application/vnd.mapbox-vector-tile) - Return Mapnick Vector Tile for given layername, Zoom, (X,Y).
 GET  /layername/Z/X/Y.json     (application/json)         - Return GeoJSON for given layername, Zoom, (X,Y).

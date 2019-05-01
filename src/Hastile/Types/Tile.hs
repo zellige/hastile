@@ -5,6 +5,7 @@ module Hastile.Types.Tile where
 
 import qualified Data.Functor.Contravariant as Contravariant
 import           Data.Monoid                ((<>))
+import qualified Data.Text                  as Text
 import qualified Hasql.Encoders             as HasqlEncoders
 
 -- SW and NE points given as W,S,E,N
@@ -29,3 +30,9 @@ bboxEncoder =
   <> Contravariant.contramap _bboxLly (HasqlEncoders.param metreValue)
   <> Contravariant.contramap _bboxUrx (HasqlEncoders.param metreValue)
   <> Contravariant.contramap _bboxUry (HasqlEncoders.param metreValue)
+
+data Tile = Tile
+  { _tileVersion     :: Text.Text
+  , _tileName        :: Text.Text
+  , _tileDescription :: Text.Text
+  }

@@ -11,7 +11,6 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Hastile.Types.Config where
 
@@ -28,7 +27,7 @@ import qualified Data.Text                     as Text
 import qualified Data.Time                     as Time
 import qualified GHC.Conc                      as GhcConc
 import qualified ListT
-import           Options.Generic
+import           Options.Generic               (Generic, ParseRecord)
 import qualified STMContainers.Map             as STMMap
 
 import qualified Hastile.Types.Layer           as Layer
@@ -36,17 +35,16 @@ import qualified Hastile.Types.Layer           as Layer
 defaultTileSize :: GeometryTypesGeography.Pixels
 defaultTileSize = 2048
 
-
 data InputConfig = InputConfig
-  { _inputConfigEnvironment    :: Maybe Text
-  , _inputConfigAccessLog      :: Maybe Text
-  , _inputConfigAppLog         :: Maybe Text
-  , _inputConfigPgConnection   :: Text
+  { _inputConfigEnvironment    :: Maybe Text.Text
+  , _inputConfigAccessLog      :: Maybe Text.Text
+  , _inputConfigAppLog         :: Maybe Text.Text
+  , _inputConfigPgConnection   :: Text.Text
   , _inputConfigPgPoolSize     :: Maybe Int
   , _inputConfigPgTimeout      :: Maybe Time.NominalDiffTime
   , _inputConfigPort           :: Maybe Int
   , _inputConfigTokenCacheSize :: Maybe Int
-  , _inputConfigLayers         :: MapStrict.Map Text Layer.LayerDetails
+  , _inputConfigLayers         :: MapStrict.Map Text.Text Layer.LayerDetails
   , _inputConfigTileBuffer     :: Maybe GeometryTypesGeography.Pixels
   } deriving (Show, Generic)
 
@@ -83,15 +81,15 @@ emptyInputConfig :: InputConfig
 emptyInputConfig = InputConfig Nothing Nothing Nothing "" Nothing Nothing Nothing Nothing (MapStrict.fromList []) Nothing
 
 data Config = Config
-  { _configEnvironment    :: Text
-  , _configAccessLog      :: Text
-  , _configAppLog         :: Text
-  , _configPgConnection   :: Text
+  { _configEnvironment    :: Text.Text
+  , _configAccessLog      :: Text.Text
+  , _configAppLog         :: Text.Text
+  , _configPgConnection   :: Text.Text
   , _configPgPoolSize     :: Int
   , _configPgTimeout      :: Time.NominalDiffTime
   , _configPort           :: Int
   , _configTokenCacheSize :: Int
-  , _configLayers         :: MapStrict.Map Text Layer.LayerDetails
+  , _configLayers         :: MapStrict.Map Text.Text Layer.LayerDetails
   , _configTileBuffer     :: GeometryTypesGeography.Pixels
   } deriving (Show, Generic)
 
@@ -117,13 +115,13 @@ newtype CmdLine = CmdLine
 
 instance ParseRecord CmdLine
 
-addLayers :: (MonadIO.MonadIO m) => [Layer.Layer] -> STMMap.Map Text.Text Layer.Layer -> m [(Text, Layer.LayerDetails)]
+addLayers :: (MonadIO.MonadIO m) => [Layer.Layer] -> STMMap.Map Text.Text Layer.Layer -> m [(Text.Text, Layer.LayerDetails)]
 addLayers layers ls = do
   MonadIO.liftIO . GhcConc.atomically $ mapM_ (\l -> STMMap.insert l (Layer._layerName l) ls) layers
   newLayers <- MonadIO.liftIO . GhcConc.atomically $ stmMapToList ls
   pure $ fmap (\(k, v) -> (k, Layer.layerToLayerDetails v)) newLayers
 
-writeLayers :: MonadIO.MonadIO m => [(Text, Layer.LayerDetails)] -> Config -> FilePath -> m ()
+writeLayers :: MonadIO.MonadIO m => [(Text.Text, Layer.LayerDetails)] -> Config -> FilePath -> m ()
 writeLayers newLayers originalCfg cfgFile =
   MonadIO.liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {_configLayers = Map.fromList newLayers}))
 

@@ -5,7 +5,10 @@
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Hastile.Controllers.Token where
+module Hastile.Controllers.Token
+  ( tokenServer
+  ) where
+
 
 import           Control.Monad.Error.Class
 import qualified Control.Monad.IO.Class     as MonadIO

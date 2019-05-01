@@ -4,7 +4,9 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Hastile.Controllers.Layer where
+module Hastile.Controllers.Layer
+  ( createNewLayer
+  , layerServer) where
 
 import           Control.Lens                        ((^.))
 import           Control.Monad.Error.Class
@@ -23,8 +25,8 @@ import qualified Data.Geospatial                     as Geospatial
 import qualified Data.Maybe                          as Maybe
 import           Data.Monoid                         ((<>))
 import qualified Data.Text                           as Text
-import qualified Data.Text.Encoding                  as TE
-import qualified Data.Text.Read                      as DTR
+import qualified Data.Text.Encoding                  as TextEncoding
+import qualified Data.Text.Read                      as TextRead
 import qualified Data.Time                           as Time
 import           GHC.Conc
 import           Network.HTTP.Types.Header           (hLastModified)
@@ -45,8 +47,8 @@ import qualified Hastile.Types.Layer.Security        as LayerSecurity
 
 
 layerServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
-layerServer = createNewLayer
-  Servant.:<|> (\l -> provisionLayer l Servant.:<|> serveLayer l Servant.:<|> serveTileJson l)
+layerServer = createNewLayer Servant.:<|>
+  (\l -> provisionLayer l Servant.:<|> serveLayer l Servant.:<|> serveTileJson l)
 
 createNewLayer :: (MonadIO.MonadIO m) => Layer.LayerRequestList -> App.ActionHandler m Servant.NoContent
 createNewLayer (Layer.LayerRequestList layerRequests) = do
@@ -92,7 +94,7 @@ serveTileJson layerName
   | ".json" `Text.isSuffixOf` layerName = do
                     layer <- getLayerOrThrow layerName
                     pure $ Layer.layerToLayerDetails layer
-  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TE.encodeUtf8 layerName) }
+  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TextEncoding.encodeUtf8 layerName) }
 
 
 getContent :: (MonadIO.MonadIO m) => Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text] ByteString.ByteString)
@@ -105,7 +107,7 @@ getContent' :: (MonadIO.MonadIO m) => Layer.Layer -> Natural -> Natural -> Text.
 getContent' l z x stringY
   | (".mvt" `Text.isSuffixOf` stringY) || (".pbf" `Text.isSuffixOf` stringY) || (".vector.pbf" `Text.isSuffixOf` stringY) = getAnything getTile l z x stringY
   | ".json" `Text.isSuffixOf` stringY = getAnything getJson l z x stringY
-  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TE.encodeUtf8 stringY) }
+  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TextEncoding.encodeUtf8 stringY) }
 
 getAnything :: (MonadIO.MonadIO m) => (t -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m a) -> t -> TypesGeography.ZoomLevel -> TypesGeography.Pixels -> Text.Text -> App.ActionHandler m a
 getAnything f layer z x stringY =
@@ -113,7 +115,7 @@ getAnything f layer z x stringY =
     Left e       -> fail $ show e
     Right (y, _) -> f layer z (x, y)
   where
-    getY s = DTR.decimal $ Text.takeWhile Char.isNumber s
+    getY s = TextRead.decimal $ Text.takeWhile Char.isNumber s
 
 getTile :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 getTile layer z xy = do
@@ -132,7 +134,7 @@ getTile layer z xy = do
 
 checkEmpty :: (MonadIO.MonadIO m) => ByteString.ByteString -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 checkEmpty tile layer
-  | ByteString.null tile = throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TE.encodeUtf8 $ Layer.lastModifiedFromLayer layer)] }
+  | ByteString.null tile = throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TextEncoding.encodeUtf8 $ Layer.lastModifiedFromLayer layer)] }
   | otherwise = pure $ Servant.addHeader (Layer.lastModifiedFromLayer layer) tile
 
 getJson :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) ->  App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
