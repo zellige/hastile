@@ -91,17 +91,13 @@ newLayer layers = do
   pure ()
 
 serveTileJson :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m Tiles.Tile
-serveTileJson layerName
-  | ".json" `Text.isSuffixOf` layerName =
-    case Text.stripSuffix ".json" layerName of
-      Nothing -> throwError layerNotFoundError
-      Just newLayerName -> do
-        errorOrLayer <- getLayer newLayerName
-        config <- ReaderClass.asks App._ssOriginalConfig
-        case errorOrLayer of
-          Left Layer.LayerNotFound -> throwError layerNotFoundError
-          Right _ -> pure $ Tiles.fromConfig config newLayerName
-  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TextEncoding.encodeUtf8 layerName) }
+serveTileJson layerName = do
+  let newLayerName = Maybe.fromMaybe layerName (Text.stripSuffix ".json" layerName)
+  errorOrLayer <- getLayer newLayerName
+  config <- ReaderClass.asks App._ssOriginalConfig
+  case errorOrLayer of
+    Left Layer.LayerNotFound -> throwError layerNotFoundError
+    Right _                  -> pure $ Tiles.fromConfig config newLayerName
 
 
 getContent :: (MonadIO.MonadIO m) => Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text] ByteString.ByteString)

@@ -1,32 +1,29 @@
-hastile
-=======
+# hastile
 
 A Haskell tile server that produces GeoJSON or MVT (Mapbox Vector Tiles) from a PostGIS database.
 
 ![Build Status](https://circleci.com/gh/indicatrix/hastile/tree/master.png?circle-token=151e6cea2b027041b06878de8694bbfdaf2b6aba)
 
-RESTful API
------------
+## RESTful API
+
 ```
-GET    /                       (application/json)                   - Returns the current configuration.
-POST   /                       (application/json)                   - Add/overwite layername (e.g. {"layer": { "name" : "...", "query": "..." } ... }).
-POST   /layername              (application/json)                   - Add/overwrite the query setting for layername (e.g. {"query": "...", ... }).
-GET    /layername              (application/json)                   - Return TileJSON.
-GET    /layername/Z/X/Y/query  (text/plain)                         - Query for a given layername, Zoom, and (X,Y).
-GET    /layername/Z/X/Y.mvt    (application/vnd.mapbox-vector-tile) - Return Mapnick Vector Tile for given layername, Zoom, (X,Y).
-GET    /layername/Z/X/Y.json   (application/json)                   - Return GeoJSON for given layername, Zoom, (X,Y).
-GET    /token                  (application/json)                   - Returns tokens and authorised layers.
-GET    /token/tokenid          (application/json)                   - Returns the authorised layers for the given token.
-POST   /token                  (application/json)                   - Post a token and its authorised layers to insert/update the token database.
-DELETE /token/tokenid          (application/json)                   - Delete the given token from the token database.
+GET    /                          (application/json)                   - Returns the current configuration.
+POST   /                          (application/json)                   - Add/overwite many layer configurations.
+POST   /layername                 (application/json)                   - Add/overwrite a single layer configuration.
+GET    /layername[.json]          (application/json)                   - Return TileJSON for a tile layer.
+GET    /layername/Z/X/Y.<mvt|pbf> (application/vnd.mapbox-vector-tile) - Return Mapnik Vector Tile for given layername, Zoom, (X,Y).
+GET    /layername/Z/X/Y.json      (application/json)                   - Return GeoJSON for given layername, Zoom, (X,Y).
+GET    /token                     (application/json)                   - Returns tokens and authorised layers.
+GET    /token/tokenid             (application/json)                   - Returns the authorised layers for the given token.
+POST   /token                     (application/json)                   - A token and authorised layers to upsert the token database.
+DELETE /token/tokenid             (application/json)                   - Delete the given token from the token database.
 ```
 
 * [TileJSON](https://github.com/mapbox/tilejson-spec/tree/master/2.2.0)
 
-Layer API
----------
+## Layer API
 
-The ```POST /``` with a layer configuration or ```POST /layername``` with a layer settings allows you to change the layers that Hastile serves up 
+The ```POST /``` with multiple layer configuration or ```POST /layername``` with a layer configuration allows you to change the layers that Hastile serves up 
 and will save the configuration file to disk.
 
 To create a new layer:
@@ -35,8 +32,24 @@ To create a new layer:
 To modify an existing layer:
 - ```curl -d '{ "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} }' -H "Content-Type: application/json" -X POST http://localhost:8080/layer_name```
 
-Token API
----------
+### Payload
+
+#### Layer
+* "layer-name": { layer configuration }
+
+#### Layer Configuration
+* "table-name" : "..."
+* "format" : "source" | "wkb-properties" | "geojson"
+* "quantize" : 1..(probably at most 10)
+* "simplify" : { simplify settings }
+
+#### Simplify Settings
+* "zoom-level (1..20)" : "simplification algorithm"
+
+#### Simplification Alogirthm
+* " name " : "douglas-peucker" (no others yet supported)
+
+## Token API
 
 To insert or update a token:
 - ```curl -d '{ "token": "abcd", "layers": ["layer1", "layer2"] }' -H "Content-Type: application/json" -X POST http://localhost:8080/token```
@@ -45,8 +58,7 @@ To delete a token:
 - ```curl -H "Content-Type: application/json" -X DELETE http://localhost:8080/token/abcd```
 
 
-Building
---------
+## Building
 
 ### PostgreSQL
 
@@ -56,8 +68,7 @@ Building:
  - `stack build`
  - `stack test`
 
-Set up tokens database
-----------------------
+## Set up tokens database
 
 * Create a postgres database to store the tokens table:
   `createdb -O sa db_name`
@@ -71,8 +82,7 @@ If you don't have the `createdb` utility then use the `migration` tool :
   `./db/migration --help`  
 
 
-Configuration
--------------
+## Configuration
 
 The file contains settings for the database connection and layer configuration, for example:
 ```javascript
@@ -135,21 +145,19 @@ Changing the configuration to:
   }
 ```
 
-Running
--------
+## Running
+
 To start the server:
 `hastile --configFile FILEPATH`
 
 To run with GHC Metrics:
 `./hastile --configFile FILEPATH +RTS -T`
 
-Projections
------------
+## Projections
 
 We assume tiles are requested in the spherical mercator (EPSG 3857 AKA EPSG 900913 AKA Webby McWebcator). Furthermore, map data is assumed to be stored in EPSG 4326.
 
-Helpful links
--------------
+## Helpful links
 
 - [Mapbox Vector Tile Specification] (https://www.mapbox.com/vector-tiles/specification/)
 - [Tiles a la Google Maps](http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/)
