@@ -113,11 +113,11 @@ getLayerSetting layer _default getter =
   DataMaybe.fromMaybe _default $ getter . _layerSettings $ _layerDetails layer
 
 layerSecurity :: Layer -> LayerSecurity.LayerSecurity
-layerSecurity layer@Layer{..} =
+layerSecurity layer =
   getLayerSetting layer LayerSecurity.Private _layerSecurity
 
 layerFormat :: Layer -> LayerFormat.LayerFormat
-layerFormat layer@Layer{..} =
+layerFormat layer =
   getLayerSetting layer LayerFormat.Source _layerFormat
 
 layerTableName :: Layer -> Text.Text
@@ -125,11 +125,11 @@ layerTableName layer@Layer{..} =
   getLayerSetting layer _layerName _layerTableName
 
 layerQuantize :: Layer -> GeometryTypesGeography.Pixels
-layerQuantize layer@Layer{..} =
+layerQuantize layer =
   getLayerSetting layer 1 _layerQuantize
 
 layerAlgorithms :: Layer -> Algorithms
-layerAlgorithms layer@Layer{..} =
+layerAlgorithms layer =
   getLayerSetting layer MapStrict.empty _layerAlgorithms
 
 lastModifiedFromLayer :: Layer -> Text.Text
