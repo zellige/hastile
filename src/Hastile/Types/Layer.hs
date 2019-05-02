@@ -50,11 +50,12 @@ instance Aeson.FromJSON LayerRequestList where
   parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . MapStrict.toList) Control.Applicative.<$> AesonTypes.parseJSON v
 
 data LayerSettings = LayerSettings
-  { _layerSecurity   :: Maybe LayerSecurity.LayerSecurity
-  , _layerFormat     :: Maybe LayerFormat.LayerFormat
-  , _layerTableName  :: Maybe Text.Text
-  , _layerQuantize   :: Maybe GeometryTypesGeography.Pixels
-  , _layerAlgorithms :: Maybe Algorithms
+  { _layerSecurity     :: Maybe LayerSecurity.LayerSecurity
+  , _layerFormat       :: Maybe LayerFormat.LayerFormat
+  , _layerTableName    :: Maybe Text.Text
+  , _layerQuantize     :: Maybe GeometryTypesGeography.Pixels
+  , _layerAlgorithms   :: Maybe Algorithms
+  , _layerLastModified :: Maybe Time.UTCTime
   } deriving (Show, Eq)
 
 instance Aeson.FromJSON LayerSettings where
@@ -64,44 +65,29 @@ instance Aeson.FromJSON LayerSettings where
     <*> o AesonTypes..:? "table-name"
     <*> o AesonTypes..:? "quantize"
     <*> o AesonTypes..:? "simplify"
+    <*> o AesonTypes..:? "last-modified"
 
 instance Aeson.ToJSON LayerSettings where
   toJSON ls = AesonTypes.object $ layerSettingsToPairs ls
 
 layerSettingsToPairs :: LayerSettings -> [AesonTypes.Pair]
 layerSettingsToPairs ls =
-  [ "security"   AesonTypes..= _layerSecurity ls
-  , "format"     AesonTypes..= _layerFormat ls
-  , "table-name" AesonTypes..= _layerTableName ls
-  , "quantize"   AesonTypes..= _layerQuantize ls
-  , "simplify"   AesonTypes..= _layerAlgorithms ls
+  [ "security"      AesonTypes..= _layerSecurity ls
+  , "format"        AesonTypes..= _layerFormat ls
+  , "table-name"    AesonTypes..= _layerTableName ls
+  , "quantize"      AesonTypes..= _layerQuantize ls
+  , "simplify"      AesonTypes..= _layerAlgorithms ls
+  , "last-modified" AesonTypes..= _layerLastModified ls
   ]
 
-requestToLayer :: Text -> LayerSettings -> Time.UTCTime -> Layer
-requestToLayer layerName layerSettings time = Layer layerName $ LayerDetails layerSettings (Just time)
-
 data Layer = Layer
-  { _layerName    :: Text
-  , _layerDetails :: LayerDetails
+  { _layerName     :: Text
+  , _layerSettings :: LayerSettings
   } deriving (Show, Eq, Generic)
-
-data LayerDetails = LayerDetails
-  { _layerSettings     :: LayerSettings
-  , _layerLastModified :: Maybe Time.UTCTime
-  } deriving (Show, Eq, Generic)
-
-instance Aeson.FromJSON LayerDetails where
-  parseJSON = AesonTypes.withObject "LayerDetails" $ \o -> LayerDetails
-    <$> AesonTypes.parseJSON (Aeson.Object o)
-    <*> o AesonTypes..:? "last-modified"
-
-instance Aeson.ToJSON LayerDetails where
-  toJSON l = AesonTypes.object $
-    "last-modified" AesonTypes..= _layerLastModified l : layerSettingsToPairs (_layerSettings l)
 
 getLayerSetting :: a -> (LayerSettings -> Maybe a) -> Layer -> a
 getLayerSetting _default getter layer =
-  DataMaybe.fromMaybe _default $ getter . _layerSettings $ _layerDetails layer
+  DataMaybe.fromMaybe _default . getter $ _layerSettings  layer
 
 layerSecurity :: Layer -> LayerSecurity.LayerSecurity
 layerSecurity =
@@ -125,7 +111,7 @@ layerAlgorithms =
 
 layerLastModified :: Time.UTCTime -> Layer -> Time.UTCTime
 layerLastModified serverStartTime Layer{..} =
-  DataMaybe.fromMaybe serverStartTime $ _layerLastModified _layerDetails
+  DataMaybe.fromMaybe serverStartTime $ _layerLastModified _layerSettings
 
 lastModifiedFromLayer :: Time.UTCTime -> Layer -> Text.Text
 lastModifiedFromLayer serverStartTime layer =

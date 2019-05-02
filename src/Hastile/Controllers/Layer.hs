@@ -54,7 +54,7 @@ layerServer = createNewLayer Servant.:<|>
 createNewLayer :: (MonadIO.MonadIO m) => Layer.LayerRequestList -> App.ActionHandler m Servant.NoContent
 createNewLayer (Layer.LayerRequestList layerRequests) = do
   lastModifiedTime <- MonadIO.liftIO Time.getCurrentTime
-  let layersToAdd = fmap (\l -> Layer.requestToLayer (Layer._newLayerRequestName l) (Layer._newLayerRequestSettings l) lastModifiedTime) layerRequests
+  let layersToAdd = fmap (\l -> LayerLib.requestToLayer (Layer._newLayerRequestName l) (Layer._newLayerRequestSettings l) lastModifiedTime) layerRequests
   mapM_ (\l -> MonadLogger.logInfoNS "web" ("Adding layer " <> Layer._layerName l)) layersToAdd
   newLayer layersToAdd
   pure Servant.NoContent
@@ -62,7 +62,7 @@ createNewLayer (Layer.LayerRequestList layerRequests) = do
 provisionLayer :: (MonadIO.MonadIO m) => Text.Text -> Layer.LayerSettings -> App.ActionHandler m Servant.NoContent
 provisionLayer l settings = do
   lastModifiedTime <- MonadIO.liftIO Time.getCurrentTime
-  let layerToModify = Layer.requestToLayer l settings lastModifiedTime
+  let layerToModify = LayerLib.requestToLayer l settings lastModifiedTime
   MonadLogger.logInfoNS "web" ("Modify layer " <> Layer._layerName layerToModify)
   newLayer [layerToModify]
   pure Servant.NoContent

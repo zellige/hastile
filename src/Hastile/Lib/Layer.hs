@@ -3,11 +3,16 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Hastile.Lib.Layer where
+module Hastile.Lib.Layer
+  ( checkLayerAuthorisation
+  , checkPrivateLayerAuthorisation
+  , fetchAuthorisedLayersForToken
+  , requestToLayer ) where
 
 import qualified Control.Monad.IO.Class       as IOClass
 import qualified Data.LruCache.IO             as LRU
 import qualified Data.Text                    as Text
+import qualified Data.Time                    as Time
 import qualified Hasql.Pool                   as Pool
 
 import qualified Hastile.DB.Token             as DBToken
@@ -40,3 +45,7 @@ fetchAuthorisedLayersForToken pool token = do
   case er of
     Left _            -> pure []
     Right foundLayers -> pure foundLayers
+
+requestToLayer :: Text.Text -> Layer.LayerSettings -> Time.UTCTime -> Layer.Layer
+requestToLayer layerName layerSettings time =
+  Layer.Layer layerName $ layerSettings { Layer._layerLastModified = Just time }
