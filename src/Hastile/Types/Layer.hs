@@ -65,8 +65,8 @@ data LayerSettings = LayerSettings
   , _layerTableName    :: Maybe Text.Text
   , _layerQuantize     :: Maybe GeometryTypesGeography.Pixels
   , _layerAlgorithms   :: Maybe Algorithms
-  , _layerMinZoom      :: Maybe Int
-  , _layerMaxZoom      :: Maybe Int
+  , _layerMinZoom      :: Maybe GeometryTypesGeography.ZoomLevel
+  , _layerMaxZoom      :: Maybe GeometryTypesGeography.ZoomLevel
   , _layerLastModified :: Maybe Time.UTCTime
   } deriving (Show, Eq)
 
@@ -124,11 +124,11 @@ layerAlgorithms :: Layer -> Algorithms
 layerAlgorithms =
   getLayerSetting MapStrict.empty _layerAlgorithms
 
-layerMinZoom :: Layer -> Int
+layerMinZoom :: Layer -> GeometryTypesGeography.ZoomLevel
 layerMinZoom =
   getLayerSetting 1 _layerMinZoom
 
-layerMaxZoom :: Layer -> Int
+layerMaxZoom :: Layer -> GeometryTypesGeography.ZoomLevel
 layerMaxZoom =
   getLayerSetting 20 _layerMaxZoom
 
