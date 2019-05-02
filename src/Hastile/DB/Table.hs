@@ -42,6 +42,13 @@ checkConfig logEnv cfgFile Config.Config{..} = do
         Katip.runKatipContextT le (mempty :: Katip.LogContexts) mempty (LibLog.logErrors cfgFile errs)
   HasqlPool.release pool
 
+getTables :: Config.Config -> IO (Either Text.Text [Text.Text])
+getTables Config.Config{..} = do
+  pool <- HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection)
+  errOrList <- wkbGeometryTables pool
+  HasqlPool.release pool
+  pure errOrList
+
 checkLayerExists :: MonadIO.MonadIO m => HasqlPool.Pool -> Layer.Layer -> m (Either String ())
 checkLayerExists pool layer = do
   let layerTableName = Layer.layerTableName layer
@@ -65,12 +72,6 @@ checkLayerExistsQuery =
       SELECT to_regclass($1) :: VARCHAR;
     |]
     decoder = HasqlDecoders.singleRow $ HasqlDecoders.nullableColumn HasqlDecoders.text
-
-    -- HasqlStatement.Statement sql HasqlEncoders.unit (HasqlDecoders.rowList Token.tokenDecoder) False
-    -- (HasqlDecoders.rowList Token.tokenDecoder)
-    -- DB.runTransaction HasqlTransactionSession.Read pool action
-    -- where
-    --   action = HasqlTransaction.statement () getTokensQuery
 
 wkbGeometryTables :: MonadIO.MonadIO m => HasqlPool.Pool -> m (Either Text.Text [Text.Text])
 wkbGeometryTables pool =
