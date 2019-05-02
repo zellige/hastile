@@ -108,29 +108,29 @@ getLayerDetail :: Layer -> (LayerDetails -> a) -> a
 getLayerDetail layer getter =
   getter $ _layerDetails layer
 
-getLayerSetting :: Layer -> a -> (LayerSettings -> Maybe a) -> a
-getLayerSetting layer _default getter =
+getLayerSetting :: a -> (LayerSettings -> Maybe a) -> Layer -> a
+getLayerSetting _default getter layer =
   DataMaybe.fromMaybe _default $ getter . _layerSettings $ _layerDetails layer
 
 layerSecurity :: Layer -> LayerSecurity.LayerSecurity
-layerSecurity layer =
-  getLayerSetting layer LayerSecurity.Private _layerSecurity
+layerSecurity =
+  getLayerSetting LayerSecurity.Private _layerSecurity
 
 layerFormat :: Layer -> LayerFormat.LayerFormat
-layerFormat layer =
-  getLayerSetting layer LayerFormat.Source _layerFormat
+layerFormat =
+  getLayerSetting LayerFormat.Source _layerFormat
 
 layerTableName :: Layer -> Text.Text
 layerTableName layer@Layer{..} =
-  getLayerSetting layer _layerName _layerTableName
+  getLayerSetting _layerName _layerTableName layer
 
 layerQuantize :: Layer -> GeometryTypesGeography.Pixels
-layerQuantize layer =
-  getLayerSetting layer 1 _layerQuantize
+layerQuantize =
+  getLayerSetting 1 _layerQuantize
 
 layerAlgorithms :: Layer -> Algorithms
-layerAlgorithms layer =
-  getLayerSetting layer MapStrict.empty _layerAlgorithms
+layerAlgorithms =
+  getLayerSetting MapStrict.empty _layerAlgorithms
 
 lastModifiedFromLayer :: Layer -> Text.Text
 lastModifiedFromLayer layer = LayerTime.lastModified $ getLayerDetail layer _layerLastModified
