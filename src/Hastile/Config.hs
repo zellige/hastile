@@ -23,6 +23,7 @@ import qualified System.Exit                as SystemExit
 
 import qualified Hastile.Lib.Layer          as LibLayer
 import qualified Hastile.Types.Config       as Config
+import qualified Hastile.Types.Layer        as Layer
 
 getConfig :: FilePath -> IO Config.Config
 getConfig cfgFile = do
@@ -51,7 +52,7 @@ addDefaults Config.InputConfig{..} =
 checkConfig :: Katip.LogEnv -> FilePath -> Config.Config -> IO ()
 checkConfig logEnv cfgFile Config.Config{..} = do
   pool <- HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection)
-  let layers = DataMapStrict.elems _configLayers
+  let layers = map (uncurry Layer.Layer) $ DataMapStrict.toList _configLayers
   result <- mapM (LibLayer.checkLayerExists pool) layers
   case DataEither.lefts result of
     [] ->

@@ -5,7 +5,6 @@ module Hastile.Lib.LayerSpec where
 import qualified Control.Monad.IO.Class       as IOClass
 import qualified Data.ByteString.Char8        as ByteString
 import qualified Data.LruCache.IO             as LRUIO
-import qualified Data.Map.Strict              as Map
 import qualified Data.Time                    as Time
 import qualified Hasql.Pool                   as Pool
 import           Test.Hspec                   (Spec, before, describe, it,
@@ -15,7 +14,6 @@ import qualified Hastile.DB.Token             as TokenDB
 import qualified Hastile.Lib.Layer            as LayerLib
 import qualified Hastile.Lib.Token            as TokenLib
 import qualified Hastile.Types.Layer          as Layer
-import qualified Hastile.Types.Layer.Format   as LayerFormat
 import qualified Hastile.Types.Layer.Security as LayerSecurity
 import qualified Hastile.Types.Token          as Token
 
@@ -118,11 +116,11 @@ publicLayer =
           { Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
           , Layer._layerSettings =
               Layer.LayerSettings
-                { Layer._layerSecurity     = LayerSecurity.Public
-                , Layer._layerFormat       = LayerFormat.GeoJSON
-                , Layer._layerTableName    = "public_layer"
-                , Layer._layerQuantize     = 4
-                , Layer._layerAlgorithms   = Map.empty
+                { Layer._layerSecurity     = Just LayerSecurity.Public
+                , Layer._layerFormat       = Nothing
+                , Layer._layerTableName    = Nothing
+                , Layer._layerQuantize     = Nothing
+                , Layer._layerAlgorithms   = Nothing
                 }
           }
     }
@@ -136,11 +134,11 @@ privateLayer =
           { Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
           , Layer._layerSettings =
               Layer.LayerSettings
-                { Layer._layerSecurity     = LayerSecurity.Private
-                , Layer._layerFormat       = LayerFormat.GeoJSON
-                , Layer._layerTableName    = "private_layer"
-                , Layer._layerQuantize     = 4
-                , Layer._layerAlgorithms   = Map.empty
+                { Layer._layerSecurity     = Just LayerSecurity.Private
+                , Layer._layerFormat       = Nothing
+                , Layer._layerTableName    = Nothing
+                , Layer._layerQuantize     = Nothing
+                , Layer._layerAlgorithms   = Nothing
                 }
           }
     }

@@ -124,15 +124,14 @@ getTile :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (Ty
 getTile layer z xy = do
   buffer  <- ReaderClass.asks (^. App.ssBuffer)
   let simplificationAlgorithm = Layer.getAlgorithm z layer
-      config = TypesConfig.mkConfig (Layer._layerName layer) z xy buffer Config.defaultTileSize (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm
-      layerFormat = Layer.getLayerSetting layer Layer._layerFormat
-  case layerFormat of
+      config = TypesConfig.mkConfig (Layer._layerName layer) z xy buffer Config.defaultTileSize (Layer.layerQuantize layer) simplificationAlgorithm
+  case Layer.layerFormat layer of
     LayerFormat.Source -> do
       geoFeature <- getStreamingLayerSource config layer z xy
       checkEmpty (GeoJsonStreamingToMvt.vtToBytes config geoFeature) layer
     LayerFormat.GeoJSON -> do
       geoFeature <- getGeoFeature layer z xy
-      tile <- MonadIO.liftIO $ TileLib.mkTile (Layer._layerName layer) z xy buffer (Layer.getLayerSetting layer Layer._layerQuantize) simplificationAlgorithm geoFeature
+      tile <- MonadIO.liftIO $ TileLib.mkTile (Layer._layerName layer) z xy buffer (Layer.layerQuantize layer) simplificationAlgorithm geoFeature
       checkEmpty tile layer
     LayerFormat.WkbProperties -> do
       geoFeature <- getStreamingLayerWkbProperties config layer z xy

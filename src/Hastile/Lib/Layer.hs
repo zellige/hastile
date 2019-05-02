@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Hastile.Lib.Layer where
@@ -19,7 +18,7 @@ import qualified Hastile.Types.Token          as Token
 
 checkLayerAuthorisation :: IOClass.MonadIO m => Pool.Pool -> Token.Cache -> Layer.Layer -> Maybe Text.Text -> m LayerSecurity.LayerAuthorisation
 checkLayerAuthorisation pool cache layer maybeToken =
-  case Layer.getLayerSetting layer Layer._layerSecurity of
+  case Layer.layerSecurity layer of
     LayerSecurity.Public ->
       pure LayerSecurity.Authorised
     LayerSecurity.Private ->
@@ -43,9 +42,9 @@ fetchAuthorisedLayersForToken pool token = do
     Left _            -> pure []
     Right foundLayers -> pure foundLayers
 
-checkLayerExists :: IOClass.MonadIO m => Pool.Pool -> Layer.LayerDetails -> m (Either String ())
-checkLayerExists pool Layer.LayerDetails{..} = do
-  let layerTableName = Layer._layerTableName _layerSettings
+checkLayerExists :: IOClass.MonadIO m => Pool.Pool -> Layer.Layer -> m (Either String ())
+checkLayerExists pool layer = do
+  let layerTableName = Layer.layerTableName layer
   er <- DBLayer.checkLayerExists pool layerTableName
   case er of
     Left err      -> pure . Left $ Text.unpack err

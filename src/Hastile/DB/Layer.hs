@@ -43,22 +43,19 @@ import qualified Hastile.Types.Tile                  as Tile
 findSourceFeaturesStreaming :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError TypesMvtFeatures.StreamingLayer)
 findSourceFeaturesStreaming config layer z xy =
   findFeaturesStreaming z xy query
-  where query = layerQueryStreamingSource config tableName
-        tableName = Layer.getLayerSetting layer Layer._layerTableName
+  where query = layerQueryStreamingSource config $ Layer.layerTableName layer
 
 findWkbPropertiesFeaturesStreaming :: (MonadIO m, MonadReader App.ServerState m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError TypesMvtFeatures.StreamingLayer)
 findWkbPropertiesFeaturesStreaming config layer z xy =
   findFeaturesStreaming z xy query
-  where query = layerQueryStreamingWkbProperties config tableName
-        tableName = Layer.getLayerSetting layer Layer._layerTableName
+  where query = layerQueryStreamingWkbProperties config $ Layer.layerTableName layer
 
 findFeatures :: (MonadIO m, MonadReader App.ServerState m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> m (Either HasqlPool.UsageError (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value)))
 findFeatures layer z xy = do
   buffer <- asks (^. App.ssBuffer)
   hpool <- asks App._ssPool
   let bbox = TileLib.getBbox buffer z xy
-      tableName = Layer.getLayerSetting layer Layer._layerTableName
-      query = layerQueryGeoJSON tableName
+      query = layerQueryGeoJSON $ Layer.layerTableName layer
       action = HasqlCursorQueryTransactions.cursorQuery bbox query
       session = HasqlTransactionSession.transaction HasqlTransactionSession.ReadCommitted HasqlTransactionSession.Read action
   liftIO $ HasqlPool.use hpool session

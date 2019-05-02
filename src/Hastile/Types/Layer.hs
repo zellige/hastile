@@ -20,6 +20,7 @@ import qualified Data.Aeson.Types              as AesonTypes
 import qualified Data.Geometry.Types.Config    as TypesConfig
 import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
 import qualified Data.Map.Strict               as MapStrict
+import qualified Data.Maybe                    as DataMaybe
 import qualified Data.Sequence                 as Sequence
 import qualified Data.Text                     as Text
 import qualified Data.Time                     as Time
@@ -38,7 +39,6 @@ data NewLayerRequest = NewLayerRequest
 
 newtype LayerRequestList = LayerRequestList [NewLayerRequest]
 
-
 foldSeq :: Foldl.Fold a (Sequence.Seq a)
 foldSeq = Foldl.Fold step begin done
   where
@@ -52,20 +52,20 @@ instance Aeson.FromJSON LayerRequestList where
   parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . MapStrict.toList) Control.Applicative.<$> AesonTypes.parseJSON v
 
 data LayerSettings = LayerSettings
-  { _layerSecurity   :: LayerSecurity.LayerSecurity
-  , _layerFormat     :: LayerFormat.LayerFormat
-  , _layerTableName  :: Text
-  , _layerQuantize   :: GeometryTypesGeography.Pixels
-  , _layerAlgorithms :: Algorithms
+  { _layerSecurity   :: Maybe LayerSecurity.LayerSecurity
+  , _layerFormat     :: Maybe LayerFormat.LayerFormat
+  , _layerTableName  :: Maybe Text.Text
+  , _layerQuantize   :: Maybe GeometryTypesGeography.Pixels
+  , _layerAlgorithms :: Maybe Algorithms
   } deriving (Show, Eq)
 
 instance Aeson.FromJSON LayerSettings where
   parseJSON = AesonTypes.withObject "LayerSettings" $ \o -> LayerSettings
-    <$> o AesonTypes..:? "security" AesonTypes..!= LayerSecurity.Private
-    <*> o AesonTypes..:  "format"
-    <*> o AesonTypes..:  "table-name"
-    <*> o AesonTypes..:  "quantize"
-    <*> o AesonTypes..:  "simplify"
+    <$> o AesonTypes..:? "security"
+    <*> o AesonTypes..:? "format"
+    <*> o AesonTypes..:? "table-name"
+    <*> o AesonTypes..:? "quantize"
+    <*> o AesonTypes..:? "simplify"
 
 instance Aeson.ToJSON LayerSettings where
   toJSON ls = AesonTypes.object $ layerSettingsToPairs ls
@@ -108,9 +108,29 @@ getLayerDetail :: Layer -> (LayerDetails -> a) -> a
 getLayerDetail layer getter =
   getter $ _layerDetails layer
 
-getLayerSetting :: Layer -> (LayerSettings -> a) -> a
-getLayerSetting layer getter =
-  getter $ _layerSettings $ _layerDetails layer
+getLayerSetting :: Layer -> a -> (LayerSettings -> Maybe a) -> a
+getLayerSetting layer _default getter =
+  DataMaybe.fromMaybe _default $ getter . _layerSettings $ _layerDetails layer
+
+layerSecurity :: Layer -> LayerSecurity.LayerSecurity
+layerSecurity layer@Layer{..} =
+  getLayerSetting layer LayerSecurity.Private _layerSecurity
+
+layerFormat :: Layer -> LayerFormat.LayerFormat
+layerFormat layer@Layer{..} =
+  getLayerSetting layer LayerFormat.Source _layerFormat
+
+layerTableName :: Layer -> Text.Text
+layerTableName layer@Layer{..} =
+  getLayerSetting layer _layerName _layerTableName
+
+layerQuantize :: Layer -> GeometryTypesGeography.Pixels
+layerQuantize layer@Layer{..} =
+  getLayerSetting layer 1 _layerQuantize
+
+layerAlgorithms :: Layer -> Algorithms
+layerAlgorithms layer@Layer{..} =
+  getLayerSetting layer MapStrict.empty _layerAlgorithms
 
 lastModifiedFromLayer :: Layer -> Text.Text
 lastModifiedFromLayer layer = LayerTime.lastModified $ getLayerDetail layer _layerLastModified
@@ -137,7 +157,7 @@ isModified layer mText =
 type Algorithms = MapStrict.Map GeometryTypesGeography.ZoomLevel TypesConfig.SimplificationAlgorithm
 
 getAlgorithm :: GeometryTypesGeography.ZoomLevel -> Layer -> TypesConfig.SimplificationAlgorithm
-getAlgorithm z layer = getAlgorithm' z $ getLayerSetting layer _layerAlgorithms
+getAlgorithm z layer = getAlgorithm' z $ layerAlgorithms layer
 
 getAlgorithm' :: GeometryTypesGeography.ZoomLevel -> Algorithms -> TypesConfig.SimplificationAlgorithm
 getAlgorithm' z algos = case MapStrict.lookupGE z algos of
