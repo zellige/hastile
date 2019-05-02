@@ -36,10 +36,12 @@ main :: IO ()
 main = OptionsGeneric.getRecord "hastile" >>= doIt
 
 doIt :: Config.CmdLine -> IO ()
-doIt cmdLine = do
-  let cfgFile = Config.configFile cmdLine
-  config <- Config.getConfig cfgFile
-  doItWithConfig cfgFile config
+doIt cmdLine =
+  case cmdLine of
+    Config.Starter _ _ _ -> undefined
+    Config.Server cfgFilePath -> do
+      config <- Config.getConfig cfgFilePath
+      doItWithConfig cfgFilePath config
 
 doItWithConfig :: FilePath -> Config.Config -> IO ()
 doItWithConfig cfgFile config@Config.Config{..} = do

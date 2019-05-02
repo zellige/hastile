@@ -117,7 +117,7 @@ instance Aeson.ToJSON Config where
 data CmdLine =
   Starter { dbConnection :: String, host :: String, port :: Int }
   | Server { configFile :: FilePath }
-  deriving (Show, Generic)
+  deriving (Generic)
 
 instance ParseRecord CmdLine
 
