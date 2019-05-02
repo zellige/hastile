@@ -45,7 +45,7 @@ data InputConfig = InputConfig
   , _inputConfigProtocolHost   :: Maybe Text.Text
   , _inputConfigPort           :: Maybe Int
   , _inputConfigTokenCacheSize :: Maybe Int
-  , _inputConfigLayers         :: MapStrict.Map Text.Text Layer.LayerDetails
+  , _inputConfigLayers         :: MapStrict.Map Text.Text Layer.LayerSettings
   , _inputConfigTileBuffer     :: Maybe GeometryTypesGeography.Pixels
   } deriving (Show, Generic)
 
@@ -93,7 +93,7 @@ data Config = Config
   , _configProtocolHost   :: Text.Text
   , _configPort           :: Int
   , _configTokenCacheSize :: Int
-  , _configLayers         :: MapStrict.Map Text.Text Layer.LayerDetails
+  , _configLayers         :: MapStrict.Map Text.Text Layer.LayerSettings
   , _configTileBuffer     :: GeometryTypesGeography.Pixels
   } deriving (Show, Generic)
 
@@ -120,13 +120,13 @@ newtype CmdLine = CmdLine
 
 instance ParseRecord CmdLine
 
-addLayers :: (MonadIO.MonadIO m) => [Layer.Layer] -> STMMap.Map Text.Text Layer.Layer -> m [(Text.Text, Layer.LayerDetails)]
+addLayers :: (MonadIO.MonadIO m) => [Layer.Layer] -> STMMap.Map Text.Text Layer.Layer -> m [(Text.Text, Layer.LayerSettings)]
 addLayers layers ls = do
   MonadIO.liftIO . GhcConc.atomically $ mapM_ (\l -> STMMap.insert l (Layer._layerName l) ls) layers
   newLayers <- MonadIO.liftIO . GhcConc.atomically $ stmMapToList ls
-  pure $ fmap (\(k, v) -> (k, Layer._layerDetails v)) newLayers
+  pure $ fmap (\(k, v) -> (k, Layer._layerSettings v)) newLayers
 
-writeLayers :: MonadIO.MonadIO m => [(Text.Text, Layer.LayerDetails)] -> Config -> FilePath -> m ()
+writeLayers :: MonadIO.MonadIO m => [(Text.Text, Layer.LayerSettings)] -> Config -> FilePath -> m ()
 writeLayers newLayers originalCfg cfgFile =
   MonadIO.liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {_configLayers = Map.fromList newLayers}))
 

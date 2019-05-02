@@ -6,6 +6,7 @@
 
 module Hastile.DB.Layer where
 
+import qualified Control.Foldl                       as Foldl
 import           Control.Lens                        ((^.))
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
@@ -68,7 +69,7 @@ findFeaturesStreaming z xy query = do
 
 layerQueryGeoJSON :: Text.Text -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) (Sequence.Seq (Geospatial.GeoFeature AesonTypes.Value))
 layerQueryGeoJSON tableName =
-  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder geoJsonDecoder Layer.foldSeq) HasqlCursorQuery.batchSize_10000
+  HasqlCursorQuery.cursorQuery sql Tile.bboxEncoder (HasqlCursorQuery.reducingDecoder geoJsonDecoder foldSeq) HasqlCursorQuery.batchSize_10000
   where
     sql = TextEncoding.encodeUtf8 $ "SELECT geojson FROM " <> tableName <> layerQueryWhereClause
 
@@ -107,3 +108,9 @@ layerQueryWhereClause :: Text.Text
 layerQueryWhereClause =
   " WHERE ST_Intersects(wkb_geometry, ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint($1, $2), ST_MakePoint($3, $4)), 3857), 4326));"
 
+foldSeq :: Foldl.Fold a (Sequence.Seq a)
+foldSeq = Foldl.Fold step begin done
+  where
+    begin = Sequence.empty
+    step x a = x <> Sequence.singleton a
+    done = id

@@ -11,20 +11,34 @@
 {-# LANGUAGE TypeOperators             #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Hastile.Types.Layer where
+module Hastile.Types.Layer
+  ( Algorithms
+  , Layer(..)
+  , LayerError(..)
+  , LayerRequestList(..)
+  , LayerSettings(..)
+  , NewLayerRequest(..)
+  , layerSecurity
+  , layerFormat
+  , layerTableName
+  , layerQuantize
+  , layerAlgorithms
+  , layerLastModified
+  , lastModifiedFromLayer
+  , isModified
+  , getAlgorithm
+  ) where
 
-import           Control.Applicative
-import qualified Control.Foldl                 as Foldl
+import           Control.Applicative           ((<$>))
 import qualified Data.Aeson                    as Aeson
 import qualified Data.Aeson.Types              as AesonTypes
 import qualified Data.Geometry.Types.Config    as TypesConfig
 import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
 import qualified Data.Map.Strict               as MapStrict
 import qualified Data.Maybe                    as DataMaybe
-import qualified Data.Sequence                 as Sequence
 import qualified Data.Text                     as Text
 import qualified Data.Time                     as Time
-import           Options.Generic
+import           Options.Generic               (Generic)
 
 import qualified Hastile.Types.Layer.Format    as LayerFormat
 import qualified Hastile.Types.Layer.Security  as LayerSecurity
@@ -39,22 +53,16 @@ data NewLayerRequest = NewLayerRequest
 
 newtype LayerRequestList = LayerRequestList [NewLayerRequest]
 
-foldSeq :: Foldl.Fold a (Sequence.Seq a)
-foldSeq = Foldl.Fold step begin done
-  where
-    begin = Sequence.empty
-    step x a = x <> Sequence.singleton a
-    done = id
-
 instance Aeson.FromJSON LayerRequestList where
-  parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . MapStrict.toList) Control.Applicative.<$> AesonTypes.parseJSON v
+  parseJSON v = LayerRequestList . fmap (uncurry NewLayerRequest) . MapStrict.toList <$> AesonTypes.parseJSON v
 
 data LayerSettings = LayerSettings
-  { _layerSecurity   :: Maybe LayerSecurity.LayerSecurity
-  , _layerFormat     :: Maybe LayerFormat.LayerFormat
-  , _layerTableName  :: Maybe Text.Text
-  , _layerQuantize   :: Maybe GeometryTypesGeography.Pixels
-  , _layerAlgorithms :: Maybe Algorithms
+  { _layerSecurity     :: Maybe LayerSecurity.LayerSecurity
+  , _layerFormat       :: Maybe LayerFormat.LayerFormat
+  , _layerTableName    :: Maybe Text.Text
+  , _layerQuantize     :: Maybe GeometryTypesGeography.Pixels
+  , _layerAlgorithms   :: Maybe Algorithms
+  , _layerLastModified :: Maybe Time.UTCTime
   } deriving (Show, Eq)
 
 instance Aeson.FromJSON LayerSettings where
@@ -64,44 +72,25 @@ instance Aeson.FromJSON LayerSettings where
     <*> o AesonTypes..:? "table-name"
     <*> o AesonTypes..:? "quantize"
     <*> o AesonTypes..:? "simplify"
+    <*> o AesonTypes..:? "last-modified"
 
 instance Aeson.ToJSON LayerSettings where
   toJSON ls = AesonTypes.object $ layerSettingsToPairs ls
 
 layerSettingsToPairs :: LayerSettings -> [AesonTypes.Pair]
 layerSettingsToPairs ls =
-  [ "security"   AesonTypes..= _layerSecurity ls
-  , "format"     AesonTypes..= _layerFormat ls
-  , "table-name" AesonTypes..= _layerTableName ls
-  , "quantize"   AesonTypes..= _layerQuantize ls
-  , "simplify"   AesonTypes..= _layerAlgorithms ls
+  [ "security"      AesonTypes..= _layerSecurity ls
+  , "format"        AesonTypes..= _layerFormat ls
+  , "table-name"    AesonTypes..= _layerTableName ls
+  , "quantize"      AesonTypes..= _layerQuantize ls
+  , "simplify"      AesonTypes..= _layerAlgorithms ls
+  , "last-modified" AesonTypes..= _layerLastModified ls
   ]
 
-requestToLayer :: Text -> LayerSettings -> Time.UTCTime -> Layer
-requestToLayer layerName layerSettings time = Layer layerName $ LayerDetails layerSettings (Just time)
-
 data Layer = Layer
-  { _layerName    :: Text
-  , _layerDetails :: LayerDetails
+  { _layerName     :: Text.Text
+  , _layerSettings :: LayerSettings
   } deriving (Show, Eq, Generic)
-
-data LayerDetails = LayerDetails
-  { _layerSettings     :: LayerSettings
-  , _layerLastModified :: Maybe Time.UTCTime
-  } deriving (Show, Eq, Generic)
-
-instance Aeson.FromJSON LayerDetails where
-  parseJSON = AesonTypes.withObject "LayerDetails" $ \o -> LayerDetails
-    <$> AesonTypes.parseJSON (Aeson.Object o)
-    <*> o AesonTypes..:? "last-modified"
-
-instance Aeson.ToJSON LayerDetails where
-  toJSON l = AesonTypes.object $
-    "last-modified" AesonTypes..= _layerLastModified l : layerSettingsToPairs (_layerSettings l)
-
-getLayerSetting :: a -> (LayerSettings -> Maybe a) -> Layer -> a
-getLayerSetting _default getter layer =
-  DataMaybe.fromMaybe _default $ getter . _layerSettings $ _layerDetails layer
 
 layerSecurity :: Layer -> LayerSecurity.LayerSecurity
 layerSecurity =
@@ -125,23 +114,17 @@ layerAlgorithms =
 
 layerLastModified :: Time.UTCTime -> Layer -> Time.UTCTime
 layerLastModified serverStartTime Layer{..} =
-  DataMaybe.fromMaybe serverStartTime $ _layerLastModified _layerDetails
+  DataMaybe.fromMaybe serverStartTime $ _layerLastModified _layerSettings
 
 lastModifiedFromLayer :: Time.UTCTime -> Layer -> Text.Text
 lastModifiedFromLayer serverStartTime layer =
   LayerTime.lastModified $ layerLastModified serverStartTime layer
 
-isModifiedTime :: Time.UTCTime -> Layer -> Maybe Time.UTCTime -> Bool
-isModifiedTime serverStartTime layer mTime =
-  case mTime of
-    Nothing   -> True
-    Just time -> layerLastModified serverStartTime layer > time
-
 isModified :: Time.UTCTime -> Layer -> Maybe Text.Text -> Bool
-isModified serverStartTime layer mText =
-  case mText of
+isModified serverStartTime layer maybeTimeText =
+  case maybeTimeText of
     Nothing   -> True
-    Just text -> isModifiedTime serverStartTime layer $ parseTime text
+    Just textTime -> isModifiedTime serverStartTime layer $ parseTime textTime
   where parseTime = Time.parseTimeM True Time.defaultTimeLocale isModifiedTimeFormat . Text.unpack
         isModifiedTimeFormat = "%a, %e %b %Y %T GMT"
 
@@ -158,3 +141,16 @@ getAlgorithm' :: GeometryTypesGeography.ZoomLevel -> Algorithms -> TypesConfig.S
 getAlgorithm' z algos = case MapStrict.lookupGE z algos of
   Nothing        -> TypesConfig.NoAlgorithm
   Just (_, algo) -> algo
+
+
+-- Helpers
+
+getLayerSetting :: a -> (LayerSettings -> Maybe a) -> Layer -> a
+getLayerSetting _default getter layer =
+  DataMaybe.fromMaybe _default . getter $ _layerSettings  layer
+
+isModifiedTime :: Time.UTCTime -> Layer -> Maybe Time.UTCTime -> Bool
+isModifiedTime serverStartTime layer mTime =
+  case mTime of
+    Nothing   -> True
+    Just time -> layerLastModified serverStartTime layer > time
