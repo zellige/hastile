@@ -25,6 +25,7 @@ import qualified Prometheus.Metric.GHC             as PrometheusGhc
 import qualified STMContainers.Map                 as StmMap
 
 import qualified Hastile.Config                    as Config
+import qualified Hastile.DB.Table                  as Table
 import qualified Hastile.Server                    as Server
 import qualified Hastile.Types.App                 as App
 import qualified Hastile.Types.Config              as Config
@@ -44,7 +45,7 @@ doItWithConfig :: FilePath -> Config.Config -> IO ()
 doItWithConfig cfgFile config@Config.Config{..} = do
   logEnv <- Logger.logHandler _configAppLog (Katip.Environment _configEnvironment)
   accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
-  Config.checkConfig logEnv cfgFile config
+  Table.checkConfig logEnv cfgFile config
   layerMetric <- registerLayerMetric
   newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
   layers <- initLayers config
