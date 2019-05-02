@@ -47,8 +47,8 @@ import qualified Hastile.Types.Time            as LayerTime
 data LayerError = LayerNotFound
 
 data NewLayerRequest = NewLayerRequest
-  {  _newLayerRequestName     :: Text.Text
-  ,  _newLayerRequestSettings :: LayerSettings
+  { _newLayerRequestName     :: Text.Text
+  , _newLayerRequestSettings :: LayerSettings
   } deriving (Show, Eq)
 
 newtype LayerRequestList = LayerRequestList [NewLayerRequest]
