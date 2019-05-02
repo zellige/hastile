@@ -111,14 +111,7 @@ publicLayer =
   Layer.Layer
     { Layer._layerName    = "public_layer"
     , Layer._layerSettings =
-        Layer.LayerSettings
-          { Layer._layerSecurity     = Just LayerSecurity.Public
-          , Layer._layerFormat       = Nothing
-          , Layer._layerTableName    = Nothing
-          , Layer._layerQuantize     = Nothing
-          , Layer._layerAlgorithms   = Nothing
-          , Layer._layerLastModified = Nothing
-          }
+        Layer.defaultLayerSettings { Layer._layerSecurity = Just LayerSecurity.Public }
     }
 
 privateLayer :: Layer.Layer
@@ -126,12 +119,5 @@ privateLayer =
   Layer.Layer
     { Layer._layerName    = "private_layer"
     , Layer._layerSettings =
-        Layer.LayerSettings
-          { Layer._layerSecurity     = Just LayerSecurity.Private
-          , Layer._layerFormat       = Nothing
-          , Layer._layerTableName    = Nothing
-          , Layer._layerQuantize     = Nothing
-          , Layer._layerAlgorithms   = Nothing
-          , Layer._layerLastModified = Nothing
-          }
+        Layer.defaultLayerSettings { Layer._layerSecurity = Just LayerSecurity.Private }
     }

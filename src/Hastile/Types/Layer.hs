@@ -24,6 +24,8 @@ module Hastile.Types.Layer
   , layerTableName
   , layerQuantize
   , layerAlgorithms
+  , layerMinZoom
+  , layerMaxZoom
   , layerLastModified
   , lastModifiedFromLayer
   , isModified
@@ -63,11 +65,13 @@ data LayerSettings = LayerSettings
   , _layerTableName    :: Maybe Text.Text
   , _layerQuantize     :: Maybe GeometryTypesGeography.Pixels
   , _layerAlgorithms   :: Maybe Algorithms
+  , _layerMinZoom      :: Maybe Int
+  , _layerMaxZoom      :: Maybe Int
   , _layerLastModified :: Maybe Time.UTCTime
   } deriving (Show, Eq)
 
 defaultLayerSettings :: LayerSettings
-defaultLayerSettings = LayerSettings Nothing Nothing Nothing Nothing Nothing Nothing
+defaultLayerSettings = LayerSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 instance Aeson.FromJSON LayerSettings where
   parseJSON = AesonTypes.withObject "LayerSettings" $ \o -> LayerSettings
@@ -76,6 +80,8 @@ instance Aeson.FromJSON LayerSettings where
     <*> o AesonTypes..:? "table-name"
     <*> o AesonTypes..:? "quantize"
     <*> o AesonTypes..:? "simplify"
+    <*> o AesonTypes..:? "minzoom"
+    <*> o AesonTypes..:? "maxzoom"
     <*> o AesonTypes..:? "last-modified"
 
 instance Aeson.ToJSON LayerSettings where
@@ -88,6 +94,8 @@ layerSettingsToPairs ls =
   , "table-name"    AesonTypes..= _layerTableName ls
   , "quantize"      AesonTypes..= _layerQuantize ls
   , "simplify"      AesonTypes..= _layerAlgorithms ls
+  , "minzoom"       AesonTypes..= _layerMinZoom ls
+  , "maxzoom"       AesonTypes..= _layerMaxZoom ls
   , "last-modified" AesonTypes..= _layerLastModified ls
   ]
 
@@ -115,6 +123,14 @@ layerQuantize =
 layerAlgorithms :: Layer -> Algorithms
 layerAlgorithms =
   getLayerSetting MapStrict.empty _layerAlgorithms
+
+layerMinZoom :: Layer -> Int
+layerMinZoom =
+  getLayerSetting 1 _layerMinZoom
+
+layerMaxZoom :: Layer -> Int
+layerMaxZoom =
+  getLayerSetting 20 _layerMaxZoom
 
 layerLastModified :: Time.UTCTime -> Layer -> Time.UTCTime
 layerLastModified serverStartTime =
