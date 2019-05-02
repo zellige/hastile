@@ -44,6 +44,7 @@ import qualified Hastile.Types.Config                as Config
 import qualified Hastile.Types.Layer                 as Layer
 import qualified Hastile.Types.Layer.Format          as LayerFormat
 import qualified Hastile.Types.Layer.Security        as LayerSecurity
+import qualified Hastile.Types.Tile                  as Tiles
 
 
 layerServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
@@ -89,11 +90,17 @@ newLayer layers = do
   Config.writeLayers newLayers originalCfg cfgFile
   pure ()
 
-serveTileJson :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m Layer.LayerDetails
+serveTileJson :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m Tiles.Tile
 serveTileJson layerName
-  | ".json" `Text.isSuffixOf` layerName = do
-                    layer <- getLayerOrThrow layerName
-                    pure $ Layer.layerToLayerDetails layer
+  | ".json" `Text.isSuffixOf` layerName =
+    case Text.stripSuffix ".json" layerName of
+      Nothing -> throwError layerNotFoundError
+      Just newLayerName -> do
+        errorOrLayer <- getLayer newLayerName
+        config <- ReaderClass.asks App._ssOriginalConfig
+        case errorOrLayer of
+          Left Layer.LayerNotFound -> throwError layerNotFoundError
+          Right _ -> pure $ Tiles.fromConfig config newLayerName
   | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TextEncoding.encodeUtf8 layerName) }
 
 

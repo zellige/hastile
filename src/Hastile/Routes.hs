@@ -14,6 +14,7 @@ import           Servant
 import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
 import qualified Hastile.Types.Mime            as Mime
+import qualified Hastile.Types.Tile            as Tile
 import qualified Hastile.Types.Token           as Token
 
 type LayerName = Capture "layer" Text.Text
@@ -40,7 +41,7 @@ type LayerApi =
       (
         ReqBody '[JSON] Layer.LayerSettings :> Post '[JSON] NoContent
         :<|> Z :> X :> HastileContentApi
-        :<|> Get '[JSON] Layer.LayerDetails
+        :<|> Get '[JSON] Tile.Tile
       ))
 
 type HastileContentApi =
