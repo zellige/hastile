@@ -22,6 +22,7 @@ import qualified Control.Monad.Logger          as MonadLogger
 import qualified Control.Monad.Reader          as ControlMonadReader
 import qualified Data.Geometry.Types.Geography as DataGeometryTypesGeography
 import qualified Data.Text                     as Text
+import qualified Data.Time                     as Time
 import qualified Hasql.Pool                    as HasqlPool
 import qualified Katip
 import qualified Prometheus
@@ -41,6 +42,7 @@ data ServerState = ServerState
   , _ssTokenAuthorisationCache :: Token.Cache
   , _ssLogEnv                  :: Katip.LogEnv
   , _ssLayerMetric             :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
+  , _ssStartTime               :: Time.UTCTime
   }
 
 ControlLens.makeLenses ''ServerState

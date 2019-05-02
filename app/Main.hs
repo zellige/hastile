@@ -43,13 +43,14 @@ doIt cmdLine = do
 
 doItWithConfig :: FilePath -> Config.Config -> IO ()
 doItWithConfig cfgFile config@Config.Config{..} = do
+  startTime <- Time.getCurrentTime
   logEnv <- Logger.logHandler _configAppLog (Katip.Environment _configEnvironment)
   accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
   Table.checkConfig logEnv cfgFile config
   layerMetric <- registerLayerMetric
   newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
   layers <- initLayers config
-  let state p = App.ServerState p cfgFile config layers newTokenAuthorisationCache logEnv layerMetric
+  let state p = App.ServerState p cfgFile config layers newTokenAuthorisationCache logEnv layerMetric startTime
   ControlException.bracket
     (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
     (cleanup [logEnv, accessLogEnv])
