@@ -113,8 +113,8 @@ layerAlgorithms =
   getLayerSetting MapStrict.empty _layerAlgorithms
 
 layerLastModified :: Time.UTCTime -> Layer -> Time.UTCTime
-layerLastModified serverStartTime Layer{..} =
-  DataMaybe.fromMaybe serverStartTime $ _layerLastModified _layerSettings
+layerLastModified serverStartTime =
+  getLayerSetting serverStartTime _layerLastModified
 
 lastModifiedFromLayer :: Time.UTCTime -> Layer -> Text.Text
 lastModifiedFromLayer serverStartTime layer =
