@@ -43,9 +43,7 @@ foldSeq :: Foldl.Fold a (Sequence.Seq a)
 foldSeq = Foldl.Fold step begin done
   where
     begin = Sequence.empty
-
     step x a = x <> Sequence.singleton a
-
     done = id
 
 instance Aeson.FromJSON LayerRequestList where
@@ -80,7 +78,7 @@ layerSettingsToPairs ls =
   ]
 
 requestToLayer :: Text -> LayerSettings -> Time.UTCTime -> Layer
-requestToLayer layerName layerSettings time = Layer layerName $ LayerDetails layerSettings time
+requestToLayer layerName layerSettings time = Layer layerName $ LayerDetails layerSettings (Just time)
 
 data Layer = Layer
   { _layerName    :: Text
@@ -89,13 +87,13 @@ data Layer = Layer
 
 data LayerDetails = LayerDetails
   { _layerSettings     :: LayerSettings
-  , _layerLastModified :: Time.UTCTime
+  , _layerLastModified :: Maybe Time.UTCTime
   } deriving (Show, Eq, Generic)
 
 instance Aeson.FromJSON LayerDetails where
   parseJSON = AesonTypes.withObject "LayerDetails" $ \o -> LayerDetails
     <$> AesonTypes.parseJSON (Aeson.Object o)
-    <*> o AesonTypes..: "last-modified"
+    <*> o AesonTypes..:? "last-modified"
 
 instance Aeson.ToJSON LayerDetails where
   toJSON l = AesonTypes.object $
@@ -103,10 +101,6 @@ instance Aeson.ToJSON LayerDetails where
 
 layerToLayerDetails :: Layer -> LayerDetails
 layerToLayerDetails Layer{..} = _layerDetails
-
-getLayerDetail :: Layer -> (LayerDetails -> a) -> a
-getLayerDetail layer getter =
-  getter $ _layerDetails layer
 
 getLayerSetting :: a -> (LayerSettings -> Maybe a) -> Layer -> a
 getLayerSetting _default getter layer =
@@ -132,23 +126,27 @@ layerAlgorithms :: Layer -> Algorithms
 layerAlgorithms =
   getLayerSetting MapStrict.empty _layerAlgorithms
 
-lastModifiedFromLayer :: Layer -> Text.Text
-lastModifiedFromLayer layer = LayerTime.lastModified $ getLayerDetail layer _layerLastModified
+layerLastModified :: Time.UTCTime -> Layer -> Time.UTCTime
+layerLastModified serverStartTime Layer{..} =
+  DataMaybe.fromMaybe serverStartTime $ _layerLastModified _layerDetails
 
-parseIfModifiedSince :: Text.Text -> Maybe Time.UTCTime
-parseIfModifiedSince t = Time.parseTimeM True Time.defaultTimeLocale "%a, %e %b %Y %T GMT" $ Text.unpack t
+lastModifiedFromLayer :: Time.UTCTime -> Layer -> Text.Text
+lastModifiedFromLayer serverStartTime layer =
+  LayerTime.lastModified $ layerLastModified serverStartTime layer
 
-isModifiedTime :: Layer -> Maybe Time.UTCTime -> Bool
-isModifiedTime layer mTime =
+isModifiedTime :: Time.UTCTime -> Layer -> Maybe Time.UTCTime -> Bool
+isModifiedTime serverStartTime layer mTime =
   case mTime of
     Nothing   -> True
-    Just time -> getLayerDetail layer _layerLastModified > time
+    Just time -> layerLastModified serverStartTime layer > time
 
-isModified :: Layer -> Maybe Text.Text -> Bool
-isModified layer mText =
+isModified :: Time.UTCTime -> Layer -> Maybe Text.Text -> Bool
+isModified serverStartTime layer mText =
   case mText of
     Nothing   -> True
-    Just text -> isModifiedTime layer $ parseIfModifiedSince text
+    Just text -> isModifiedTime serverStartTime layer $ parseTime text
+  where parseTime = Time.parseTimeM True Time.defaultTimeLocale isModifiedTimeFormat . Text.unpack
+        isModifiedTimeFormat = "%a, %e %b %Y %T GMT"
 
 -- Zoom dependant simplification algorithms
 

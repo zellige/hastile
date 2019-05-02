@@ -5,7 +5,6 @@ module Hastile.Lib.LayerSpec where
 import qualified Control.Monad.IO.Class       as IOClass
 import qualified Data.ByteString.Char8        as ByteString
 import qualified Data.LruCache.IO             as LRUIO
-import qualified Data.Time                    as Time
 import qualified Hasql.Pool                   as Pool
 import           Test.Hspec                   (Spec, before, describe, it,
                                                runIO, shouldBe)
@@ -113,7 +112,7 @@ publicLayer =
     { Layer._layerName    = "public_layer"
     , Layer._layerDetails =
         Layer.LayerDetails
-          { Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
+          { Layer._layerLastModified = Nothing
           , Layer._layerSettings =
               Layer.LayerSettings
                 { Layer._layerSecurity     = Just LayerSecurity.Public
@@ -131,7 +130,7 @@ privateLayer =
     { Layer._layerName    = "private_layer"
     , Layer._layerDetails =
         Layer.LayerDetails
-          { Layer._layerLastModified = Time.parseTimeOrError True Time.defaultTimeLocale (Time.iso8601DateFormat Nothing) "2018-01-01" :: Time.UTCTime
+          { Layer._layerLastModified = Nothing
           , Layer._layerSettings =
               Layer.LayerSettings
                 { Layer._layerSecurity     = Just LayerSecurity.Private

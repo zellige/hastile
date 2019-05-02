@@ -42,7 +42,7 @@ data ServerState = ServerState
   , _ssTokenAuthorisationCache :: Token.Cache
   , _ssLogEnv                  :: Katip.LogEnv
   , _ssLayerMetric             :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
-  , _ssStartTime               :: Time.UTCTime
+  , _ssServerserverStartTime   :: Time.UTCTime
   }
 
 ControlLens.makeLenses ''ServerState

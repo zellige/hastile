@@ -101,8 +101,9 @@ serveTileJson layerName = do
 
 
 getContent :: (MonadIO.MonadIO m) => Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text] ByteString.ByteString)
-getContent z x stringY maybeIfModified layer =
-  if Layer.isModified layer maybeIfModified
+getContent z x stringY maybeIfModified layer = do
+  serverStartTime <- ReaderClass.asks App._ssServerserverStartTime
+  if Layer.isModified serverStartTime layer maybeIfModified
       then getContent' layer z x stringY
       else throwError Servant.err304
 
@@ -138,12 +139,16 @@ getTile layer z xy = do
       checkEmpty (GeoJsonStreamingToMvt.vtToBytes config geoFeature) layer
 
 checkEmpty :: (MonadIO.MonadIO m) => ByteString.ByteString -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
-checkEmpty tile layer
-  | ByteString.null tile = throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TextEncoding.encodeUtf8 $ Layer.lastModifiedFromLayer layer)] }
-  | otherwise = pure $ Servant.addHeader (Layer.lastModifiedFromLayer layer) tile
+checkEmpty tile layer = do
+  serverStartTime <- ReaderClass.asks App._ssServerserverStartTime
+  if ByteString.null tile
+    then throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TextEncoding.encodeUtf8 $ Layer.lastModifiedFromLayer serverStartTime layer)] }
+    else pure $ Servant.addHeader (Layer.lastModifiedFromLayer serverStartTime layer) tile
 
 getJson :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) ->  App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
-getJson layer z xy = Servant.addHeader (Layer.lastModifiedFromLayer layer) . ByteStringLazyChar8.toStrict . Aeson.encode <$> getGeoFeature layer z xy
+getJson layer z xy = do
+  serverStartTime <- ReaderClass.asks App._ssServerserverStartTime
+  Servant.addHeader (Layer.lastModifiedFromLayer serverStartTime layer) . ByteStringLazyChar8.toStrict . Aeson.encode <$> getGeoFeature layer z xy
 
 getStreamingLayerSource :: (MonadIO.MonadIO m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m TypesMvtFeatures.StreamingLayer
 getStreamingLayerSource config layer z xy = do
