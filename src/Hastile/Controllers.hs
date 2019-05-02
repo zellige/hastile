@@ -3,7 +3,10 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Hastile.Controllers where
+module Hastile.Controllers
+  ( publicHastileServer
+  , authenticatedHastileServer
+  ) where
 
 import           Control.Monad.Error.Class
 import qualified Control.Monad.IO.Class     as MonadIO

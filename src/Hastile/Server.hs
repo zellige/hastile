@@ -3,7 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Hastile.Server where
+module Hastile.Server ( runServer ) where
 
 import qualified Control.Monad.Trans.Reader as MonadTransReader
 import qualified Network.Wai                as Wai
