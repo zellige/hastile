@@ -22,7 +22,11 @@ type Z = Capture "z" GeometryTypesGeography.ZoomLevel
 type X = Capture "x" GeometryTypesGeography.Pixels
 type Y = Capture "y" Text.Text
 
-type HastileApi =
+type PublicHastileApi =
+  Get '[JSON] Config.InputConfig
+  :<|> LayerApi
+
+type AuthenticatedHastileApi =
   Get '[JSON] Config.InputConfig
   :<|> TokenApi
   :<|> LayerApi
@@ -47,5 +51,8 @@ type LayerApi =
 type HastileContentApi =
   Y :> QueryParam "token" Text.Text :> Servant.Header "If-Modified-Since" Text.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" Text.Text] ByteString.ByteString)
 
-hastileApi :: Proxy.Proxy HastileApi
-hastileApi = Proxy.Proxy
+publicHastileApi :: Proxy.Proxy PublicHastileApi
+publicHastileApi = Proxy.Proxy
+
+authenticatedHastileApi :: Proxy.Proxy AuthenticatedHastileApi
+authenticatedHastileApi = Proxy.Proxy

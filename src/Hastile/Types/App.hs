@@ -43,7 +43,10 @@ data ServerState = ServerState
   , _ssLogEnv                  :: Katip.LogEnv
   , _ssLayerMetric             :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
   , _ssServerserverStartTime   :: Time.UTCTime
+  , _ssMode                    :: AppMode
   }
+
+data AppMode = Public | Authenticated
 
 ControlLens.makeLenses ''ServerState
 
