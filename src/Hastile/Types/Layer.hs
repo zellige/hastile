@@ -11,20 +11,34 @@
 {-# LANGUAGE TypeOperators             #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Hastile.Types.Layer where
+module Hastile.Types.Layer
+  ( Algorithms
+  , Layer(..)
+  , LayerError(..)
+  , LayerRequestList(..)
+  , LayerSettings(..)
+  , NewLayerRequest(..)
+  , layerSecurity
+  , layerFormat
+  , layerTableName
+  , layerQuantize
+  , layerAlgorithms
+  , layerLastModified
+  , lastModifiedFromLayer
+  , isModified
+  , getAlgorithm
+  ) where
 
-import           Control.Applicative
-import qualified Control.Foldl                 as Foldl
+import           Control.Applicative           ((<$>))
 import qualified Data.Aeson                    as Aeson
 import qualified Data.Aeson.Types              as AesonTypes
 import qualified Data.Geometry.Types.Config    as TypesConfig
 import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
 import qualified Data.Map.Strict               as MapStrict
 import qualified Data.Maybe                    as DataMaybe
-import qualified Data.Sequence                 as Sequence
 import qualified Data.Text                     as Text
 import qualified Data.Time                     as Time
-import           Options.Generic
+import           Options.Generic               (Generic)
 
 import qualified Hastile.Types.Layer.Format    as LayerFormat
 import qualified Hastile.Types.Layer.Security  as LayerSecurity
@@ -39,15 +53,8 @@ data NewLayerRequest = NewLayerRequest
 
 newtype LayerRequestList = LayerRequestList [NewLayerRequest]
 
-foldSeq :: Foldl.Fold a (Sequence.Seq a)
-foldSeq = Foldl.Fold step begin done
-  where
-    begin = Sequence.empty
-    step x a = x <> Sequence.singleton a
-    done = id
-
 instance Aeson.FromJSON LayerRequestList where
-  parseJSON v = (LayerRequestList . fmap (uncurry NewLayerRequest) . MapStrict.toList) Control.Applicative.<$> AesonTypes.parseJSON v
+  parseJSON v = LayerRequestList . fmap (uncurry NewLayerRequest) . MapStrict.toList <$> AesonTypes.parseJSON v
 
 data LayerSettings = LayerSettings
   { _layerSecurity     :: Maybe LayerSecurity.LayerSecurity
@@ -81,13 +88,9 @@ layerSettingsToPairs ls =
   ]
 
 data Layer = Layer
-  { _layerName     :: Text
+  { _layerName     :: Text.Text
   , _layerSettings :: LayerSettings
   } deriving (Show, Eq, Generic)
-
-getLayerSetting :: a -> (LayerSettings -> Maybe a) -> Layer -> a
-getLayerSetting _default getter layer =
-  DataMaybe.fromMaybe _default . getter $ _layerSettings  layer
 
 layerSecurity :: Layer -> LayerSecurity.LayerSecurity
 layerSecurity =
@@ -117,17 +120,11 @@ lastModifiedFromLayer :: Time.UTCTime -> Layer -> Text.Text
 lastModifiedFromLayer serverStartTime layer =
   LayerTime.lastModified $ layerLastModified serverStartTime layer
 
-isModifiedTime :: Time.UTCTime -> Layer -> Maybe Time.UTCTime -> Bool
-isModifiedTime serverStartTime layer mTime =
-  case mTime of
-    Nothing   -> True
-    Just time -> layerLastModified serverStartTime layer > time
-
 isModified :: Time.UTCTime -> Layer -> Maybe Text.Text -> Bool
-isModified serverStartTime layer mText =
-  case mText of
+isModified serverStartTime layer maybeTimeText =
+  case maybeTimeText of
     Nothing   -> True
-    Just text -> isModifiedTime serverStartTime layer $ parseTime text
+    Just textTime -> isModifiedTime serverStartTime layer $ parseTime textTime
   where parseTime = Time.parseTimeM True Time.defaultTimeLocale isModifiedTimeFormat . Text.unpack
         isModifiedTimeFormat = "%a, %e %b %Y %T GMT"
 
@@ -144,3 +141,16 @@ getAlgorithm' :: GeometryTypesGeography.ZoomLevel -> Algorithms -> TypesConfig.S
 getAlgorithm' z algos = case MapStrict.lookupGE z algos of
   Nothing        -> TypesConfig.NoAlgorithm
   Just (_, algo) -> algo
+
+
+-- Helpers
+
+getLayerSetting :: a -> (LayerSettings -> Maybe a) -> Layer -> a
+getLayerSetting _default getter layer =
+  DataMaybe.fromMaybe _default . getter $ _layerSettings  layer
+
+isModifiedTime :: Time.UTCTime -> Layer -> Maybe Time.UTCTime -> Bool
+isModifiedTime serverStartTime layer mTime =
+  case mTime of
+    Nothing   -> True
+    Just time -> layerLastModified serverStartTime layer > time
