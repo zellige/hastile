@@ -4,7 +4,9 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Hastile.Controllers.Layer where
+module Hastile.Controllers.Layer
+  ( createNewLayer
+  , layerServer) where
 
 import           Control.Lens                        ((^.))
 import           Control.Monad.Error.Class
@@ -12,7 +14,6 @@ import qualified Control.Monad.IO.Class              as MonadIO
 import qualified Control.Monad.Logger                as MonadLogger
 import qualified Control.Monad.Reader.Class          as ReaderClass
 import qualified Data.Aeson                          as Aeson
-import qualified Data.Aeson.Encode.Pretty            as AesonPretty
 import qualified Data.ByteString                     as ByteString
 import qualified Data.ByteString.Lazy.Char8          as ByteStringLazyChar8
 import qualified Data.Char                           as Char
@@ -21,15 +22,13 @@ import qualified Data.Geometry.Types.Config          as TypesConfig
 import qualified Data.Geometry.Types.Geography       as TypesGeography
 import qualified Data.Geometry.Types.MvtFeatures     as TypesMvtFeatures
 import qualified Data.Geospatial                     as Geospatial
-import qualified Data.Map                            as Map
 import qualified Data.Maybe                          as Maybe
 import           Data.Monoid                         ((<>))
 import qualified Data.Text                           as Text
-import qualified Data.Text.Encoding                  as TE
-import qualified Data.Text.Read                      as DTR
+import qualified Data.Text.Encoding                  as TextEncoding
+import qualified Data.Text.Read                      as TextRead
 import qualified Data.Time                           as Time
 import           GHC.Conc
-import           ListT
 import           Network.HTTP.Types.Header           (hLastModified)
 import           Numeric.Natural                     (Natural)
 import qualified Prometheus
@@ -45,12 +44,12 @@ import qualified Hastile.Types.Config                as Config
 import qualified Hastile.Types.Layer                 as Layer
 import qualified Hastile.Types.Layer.Format          as LayerFormat
 import qualified Hastile.Types.Layer.Security        as LayerSecurity
+import qualified Hastile.Types.Tile                  as Tiles
+
 
 layerServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
-layerServer l = provisionLayer l Servant.:<|> serveLayer l
-
-stmMapToList :: STMMap.Map k v -> STM [(k, v)]
-stmMapToList = ListT.fold (\l -> return . (:l)) [] . STMMap.stream
+layerServer = createNewLayer Servant.:<|>
+  (\l -> provisionLayer l Servant.:<|> serveLayer l Servant.:<|> serveTileJson l)
 
 createNewLayer :: (MonadIO.MonadIO m) => Layer.LayerRequestList -> App.ActionHandler m Servant.NoContent
 createNewLayer (Layer.LayerRequestList layerRequests) = do
@@ -68,16 +67,6 @@ provisionLayer l settings = do
   newLayer [layerToModify]
   pure Servant.NoContent
 
-newLayer :: (MonadIO.MonadIO m) => [Layer.Layer] -> App.ActionHandler m ()
-newLayer layers = do
-  r <- ReaderClass.ask
-  let (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
-  MonadIO.liftIO . atomically $ mapM_ (\l -> STMMap.insert l (Layer._layerName l) ls) layers
-  newLayers <- MonadIO.liftIO . atomically $ stmMapToList ls
-  let newNewLayers = fmap (\(k, v) -> (k, Layer.layerToLayerDetails v)) newLayers
-  MonadIO.liftIO $ ByteStringLazyChar8.writeFile cfgFile (AesonPretty.encodePretty (originalCfg {Config._configLayers = Map.fromList newNewLayers}))
-  pure ()
-
 serveLayer :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 serveLayer l z x stringY maybeToken maybeIfModified = do
   layer <- getLayerOrThrow l
@@ -93,6 +82,24 @@ serveLayer l z x stringY maybeToken maybeIfModified = do
     LayerSecurity.Unauthorised ->
       throwError layerNotFoundError
 
+newLayer :: (MonadIO.MonadIO m) => [Layer.Layer] -> App.ActionHandler m ()
+newLayer layers = do
+  r <- ReaderClass.ask
+  let (ls, cfgFile, originalCfg) = (,,) <$> App._ssStateLayers <*> App._ssConfigFile <*> App._ssOriginalConfig $ r
+  newLayers <- Config.addLayers layers ls
+  Config.writeLayers newLayers originalCfg cfgFile
+  pure ()
+
+serveTileJson :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m Tiles.Tile
+serveTileJson layerName = do
+  let newLayerName = Maybe.fromMaybe layerName (Text.stripSuffix ".json" layerName)
+  errorOrLayer <- getLayer newLayerName
+  config <- ReaderClass.asks App._ssOriginalConfig
+  case errorOrLayer of
+    Left Layer.LayerNotFound -> throwError layerNotFoundError
+    Right _                  -> pure $ Tiles.fromConfig config newLayerName
+
+
 getContent :: (MonadIO.MonadIO m) => Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text] ByteString.ByteString)
 getContent z x stringY maybeIfModified layer =
   if Layer.isModified layer maybeIfModified
@@ -103,7 +110,7 @@ getContent' :: (MonadIO.MonadIO m) => Layer.Layer -> Natural -> Natural -> Text.
 getContent' l z x stringY
   | (".mvt" `Text.isSuffixOf` stringY) || (".pbf" `Text.isSuffixOf` stringY) || (".vector.pbf" `Text.isSuffixOf` stringY) = getAnything getTile l z x stringY
   | ".json" `Text.isSuffixOf` stringY = getAnything getJson l z x stringY
-  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TE.encodeUtf8 stringY) }
+  | otherwise = throwError $ Servant.err400 { Servant.errBody = "Unknown request: " <> ByteStringLazyChar8.fromStrict (TextEncoding.encodeUtf8 stringY) }
 
 getAnything :: (MonadIO.MonadIO m) => (t -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m a) -> t -> TypesGeography.ZoomLevel -> TypesGeography.Pixels -> Text.Text -> App.ActionHandler m a
 getAnything f layer z x stringY =
@@ -111,7 +118,7 @@ getAnything f layer z x stringY =
     Left e       -> fail $ show e
     Right (y, _) -> f layer z (x, y)
   where
-    getY s = DTR.decimal $ Text.takeWhile Char.isNumber s
+    getY s = TextRead.decimal $ Text.takeWhile Char.isNumber s
 
 getTile :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 getTile layer z xy = do
@@ -133,7 +140,7 @@ getTile layer z xy = do
 
 checkEmpty :: (MonadIO.MonadIO m) => ByteString.ByteString -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 checkEmpty tile layer
-  | ByteString.null tile = throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TE.encodeUtf8 $ Layer.lastModifiedFromLayer layer)] }
+  | ByteString.null tile = throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TextEncoding.encodeUtf8 $ Layer.lastModifiedFromLayer layer)] }
   | otherwise = pure $ Servant.addHeader (Layer.lastModifiedFromLayer layer) tile
 
 getJson :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) ->  App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)

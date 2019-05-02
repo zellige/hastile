@@ -42,6 +42,7 @@ addDefaults Config.InputConfig{..} =
     _inputConfigPgConnection
     (DataMaybe.fromMaybe 10 _inputConfigPgPoolSize)
     (DataMaybe.fromMaybe 1 _inputConfigPgTimeout)
+    (DataMaybe.fromMaybe "http://localhost" _inputConfigProtocolHost)
     (DataMaybe.fromMaybe 8080 _inputConfigPort)
     (DataMaybe.fromMaybe 1000 _inputConfigTokenCacheSize)
     _inputConfigLayers

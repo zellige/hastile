@@ -21,7 +21,6 @@ import qualified Hastile.Types.Config       as Config
 hastileServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.HastileApi (App.ActionHandler m)
 hastileServer = returnConfiguration
   Servant.:<|> Token.tokenServer
-  Servant.:<|> Layer.createNewLayer
   Servant.:<|> Layer.layerServer
 
 returnConfiguration :: (MonadIO.MonadIO m) => (App.ActionHandler m) Config.InputConfig
