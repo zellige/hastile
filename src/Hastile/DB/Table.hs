@@ -32,7 +32,7 @@ import qualified Hastile.Types.Layer           as Layer
 checkConfig :: Katip.LogEnv -> FilePath -> Config.Config -> IO ()
 checkConfig logEnv cfgFile Config.Config{..} = do
   pool <- HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection)
-  let layers = map (uncurry Layer.Layer) $ DataMapStrict.toList _configLayers
+  let layers = uncurry Layer.Layer <$> DataMapStrict.toList _configLayers
   result <- mapM (checkLayerExists pool) layers
   case DataEither.lefts result of
     [] ->

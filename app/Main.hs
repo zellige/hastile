@@ -38,7 +38,7 @@ main = OptionsGeneric.getRecord "hastile" >>= doIt
 doIt :: Config.CmdLine -> IO ()
 doIt cmdLine =
   case cmdLine of
-    Config.Starter _ _ _ -> undefined
+    Config.Starter connection host port -> doItWithCommandLine connection host port
     Config.Server cfgFilePath -> do
       config <- Config.getConfig cfgFilePath
       doItWithConfig cfgFilePath config
@@ -51,7 +51,7 @@ doItWithConfig cfgFile config@Config.Config{..} = do
   Table.checkConfig logEnv cfgFile config
   layerMetric <- registerLayerMetric
   newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
-  layers <- initLayers config
+  layers <- initConfigLayers config
   let state p = App.ServerState p cfgFile config layers newTokenAuthorisationCache logEnv layerMetric serverStartTime App.Authenticated
   ControlException.bracket
     (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
@@ -59,10 +59,34 @@ doItWithConfig cfgFile config@Config.Config{..} = do
     (getWarp accessLogEnv _configPort . Server.runServer . state)
   pure ()
 
-initLayers :: Config.Config -> IO (StmMap.Map Text.Text Layer.Layer)
-initLayers Config.Config{..} = do
+doItWithCommandLine :: Text.Text -> Text.Text -> Int -> IO ()
+doItWithCommandLine connection host port = do
+  -- serverStartTime <- Time.getCurrentTime
+  let inputConfig = Config.emptyInputConfig { Config._inputConfigPgConnection = connection, Config._inputConfigProtocolHost = Just host, Config._inputConfigPort = Just port }
+      config = Config.addDefaults inputConfig
+  getTables <- Table.getTables config
+  case getTables of
+    Left _ -> undefined
+    Right textLayers -> do
+      _ <- initCmdLayers textLayers config
+      -- let state p = App.ServerState p "config.json" config layers newTokenAuthorisationCache logEnv layerMetric serverStartTime App.Authenticated
+      -- ControlException.bracket
+      --   (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
+      --   (cleanup [logEnv, accessLogEnv])
+      --   (getWarp accessLogEnv _configPort . Server.runServer . state)
+      pure ()
+
+initConfigLayers :: Config.Config -> IO (StmMap.Map Text.Text Layer.Layer)
+initConfigLayers Config.Config{..} = do
   layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
   Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.Layer k v) k layers
+  pure layers
+
+initCmdLayers :: [Text.Text] -> Config.Config -> IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
+initCmdLayers newLayers Config.Config{..} = do
+  layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
+--   let layers = map (uncurry Layer.Layer) $ DataMapStrict.toList _configLayers
+  Foldable.forM_ (fmap (\t -> (t, Layer.defaultLayerSettings)) newLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.Layer k v) k layers
   pure layers
 
 cleanup :: [Katip.LogEnv] -> HasqlPool.Pool -> IO ()

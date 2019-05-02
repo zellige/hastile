@@ -18,6 +18,7 @@ module Hastile.Types.Layer
   , LayerRequestList(..)
   , LayerSettings(..)
   , NewLayerRequest(..)
+  , defaultLayerSettings
   , layerSecurity
   , layerFormat
   , layerTableName
@@ -64,6 +65,9 @@ data LayerSettings = LayerSettings
   , _layerAlgorithms   :: Maybe Algorithms
   , _layerLastModified :: Maybe Time.UTCTime
   } deriving (Show, Eq)
+
+defaultLayerSettings :: LayerSettings
+defaultLayerSettings = LayerSettings Nothing Nothing Nothing Nothing Nothing Nothing
 
 instance Aeson.FromJSON LayerSettings where
   parseJSON = AesonTypes.withObject "LayerSettings" $ \o -> LayerSettings

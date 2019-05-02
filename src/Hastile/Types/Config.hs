@@ -115,7 +115,7 @@ instance Aeson.ToJSON Config where
     ]
 
 data CmdLine =
-  Starter { dbConnection :: String, host :: String, port :: Int }
+  Starter { dbConnection :: Text.Text, host :: Text.Text, port :: Int }
   | Server { configFile :: FilePath }
   deriving (Generic)
 
