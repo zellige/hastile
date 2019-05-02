@@ -18,8 +18,12 @@ import qualified Hastile.Routes             as Routes
 import qualified Hastile.Types.App          as App
 import qualified Hastile.Types.Config       as Config
 
-hastileServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.HastileApi (App.ActionHandler m)
-hastileServer = returnConfiguration
+publicHastileServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.PublicHastileApi (App.ActionHandler m)
+publicHastileServer = returnConfiguration
+  Servant.:<|> Layer.layerServer
+
+authenticatedHastileServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.AuthenticatedHastileApi (App.ActionHandler m)
+authenticatedHastileServer = returnConfiguration
   Servant.:<|> Token.tokenServer
   Servant.:<|> Layer.layerServer
 
