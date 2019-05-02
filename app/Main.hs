@@ -47,14 +47,19 @@ doItWithConfig cfgFile config@Config.Config{..} = do
   Config.checkConfig logEnv cfgFile config
   layerMetric <- registerLayerMetric
   newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
-  layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
-  Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.Layer k v) k layers
+  layers <- initLayers config
   let state p = App.ServerState p cfgFile config layers newTokenAuthorisationCache logEnv layerMetric
   ControlException.bracket
     (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
     (cleanup [logEnv, accessLogEnv])
     (getWarp accessLogEnv _configPort . Server.runServer . state)
   pure ()
+
+initLayers :: Config.Config -> IO (StmMap.Map Text.Text Layer.Layer)
+initLayers Config.Config{..} = do
+  layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
+  Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.Layer k v) k layers
+  pure layers
 
 cleanup :: [Katip.LogEnv] -> HasqlPool.Pool -> IO ()
 cleanup logEnvs pool = do
