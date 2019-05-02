@@ -114,9 +114,10 @@ instance Aeson.ToJSON Config where
     , "tile-buffer"          Aeson..= _configTileBuffer c
     ]
 
-newtype CmdLine = CmdLine
-  { configFile :: FilePath
-  } deriving Generic
+data CmdLine =
+    ConfigFile { configFile :: FilePath }
+  | OnlyCommandLine { dbConnection :: String, host :: String, port :: Int }
+  deriving (Show, Generic)
 
 instance ParseRecord CmdLine
 
