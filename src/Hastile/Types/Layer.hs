@@ -99,9 +99,6 @@ instance Aeson.ToJSON LayerDetails where
   toJSON l = AesonTypes.object $
     "last-modified" AesonTypes..= _layerLastModified l : layerSettingsToPairs (_layerSettings l)
 
-layerToLayerDetails :: Layer -> LayerDetails
-layerToLayerDetails Layer{..} = _layerDetails
-
 getLayerSetting :: a -> (LayerSettings -> Maybe a) -> Layer -> a
 getLayerSetting _default getter layer =
   DataMaybe.fromMaybe _default $ getter . _layerSettings $ _layerDetails layer

@@ -124,7 +124,7 @@ addLayers :: (MonadIO.MonadIO m) => [Layer.Layer] -> STMMap.Map Text.Text Layer.
 addLayers layers ls = do
   MonadIO.liftIO . GhcConc.atomically $ mapM_ (\l -> STMMap.insert l (Layer._layerName l) ls) layers
   newLayers <- MonadIO.liftIO . GhcConc.atomically $ stmMapToList ls
-  pure $ fmap (\(k, v) -> (k, Layer.layerToLayerDetails v)) newLayers
+  pure $ fmap (\(k, v) -> (k, Layer._layerDetails v)) newLayers
 
 writeLayers :: MonadIO.MonadIO m => [(Text.Text, Layer.LayerDetails)] -> Config -> FilePath -> m ()
 writeLayers newLayers originalCfg cfgFile =
