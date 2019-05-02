@@ -71,6 +71,16 @@ serveLayer :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Tex
 serveLayer l z x stringY maybeToken maybeIfModified = do
   layer <- getLayerOrThrow l
   layerCount <- ReaderClass.asks App._ssLayerMetric
+  mode <- ReaderClass.asks App._ssMode
+  case mode of
+    App.Public -> do
+      _ <- MonadIO.liftIO $ Prometheus.withLabel layerCount ("public", Layer._layerName layer) Prometheus.incCounter
+      getContent z x stringY maybeIfModified layer
+    App.Authenticated ->
+      serveLayerAuthenticated layer z x stringY maybeToken maybeIfModified layerCount
+
+serveLayerAuthenticated :: (MonadIO.MonadIO m) => Layer.Layer -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
+serveLayerAuthenticated layer z x stringY maybeToken maybeIfModified layerCount = do
   pool <- ReaderClass.asks App._ssPool
   cache <- ReaderClass.asks App._ssTokenAuthorisationCache
   layerAuthorisation <- MonadIO.liftIO $ LayerLib.checkLayerAuthorisation pool cache layer maybeToken

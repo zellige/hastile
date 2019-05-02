@@ -52,7 +52,7 @@ doItWithConfig cfgFile config@Config.Config{..} = do
   layerMetric <- registerLayerMetric
   newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
   layers <- initLayers config
-  let state p = App.ServerState p cfgFile config layers newTokenAuthorisationCache logEnv layerMetric serverStartTime
+  let state p = App.ServerState p cfgFile config layers newTokenAuthorisationCache logEnv layerMetric serverStartTime App.Authenticated
   ControlException.bracket
     (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
     (cleanup [logEnv, accessLogEnv])
