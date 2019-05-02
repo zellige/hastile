@@ -130,18 +130,13 @@ isModified serverStartTime layer maybeTimeText =
 
 -- Zoom dependant simplification algorithms
 
--- TODO use map Strict
-
 type Algorithms = MapStrict.Map GeometryTypesGeography.ZoomLevel TypesConfig.SimplificationAlgorithm
 
 getAlgorithm :: GeometryTypesGeography.ZoomLevel -> Layer -> TypesConfig.SimplificationAlgorithm
-getAlgorithm z layer = getAlgorithm' z $ layerAlgorithms layer
-
-getAlgorithm' :: GeometryTypesGeography.ZoomLevel -> Algorithms -> TypesConfig.SimplificationAlgorithm
-getAlgorithm' z algos = case MapStrict.lookupGE z algos of
-  Nothing        -> TypesConfig.NoAlgorithm
-  Just (_, algo) -> algo
-
+getAlgorithm z layer =
+  case MapStrict.lookupGE z $ layerAlgorithms layer of
+    Nothing        -> TypesConfig.NoAlgorithm
+    Just (_, algo) -> algo
 
 -- Helpers
 
