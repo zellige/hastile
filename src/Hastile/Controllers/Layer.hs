@@ -6,7 +6,9 @@
 
 module Hastile.Controllers.Layer
   ( createNewLayer
-  , layerServer) where
+  , layerServerAuthenticated
+  , layerServerPublic
+  ) where
 
 import           Control.Lens                        ((^.))
 import           Control.Monad.Error.Class
@@ -46,10 +48,13 @@ import qualified Hastile.Types.Layer.Format          as LayerFormat
 import qualified Hastile.Types.Layer.Security        as LayerSecurity
 import qualified Hastile.Types.Tile                  as Tiles
 
+layerServerAuthenticated :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
+layerServerAuthenticated = createNewLayer Servant.:<|>
+  (\l -> provisionLayer l Servant.:<|> serveLayerAuthenticated l Servant.:<|> serveTileJson l)
 
-layerServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
-layerServer = createNewLayer Servant.:<|>
-  (\l -> provisionLayer l Servant.:<|> serveLayer l Servant.:<|> serveTileJson l)
+layerServerPublic :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
+layerServerPublic = createNewLayer Servant.:<|>
+  (\l -> provisionLayer l Servant.:<|> serveLayerPublic l Servant.:<|> serveTileJson l)
 
 createNewLayer :: (MonadIO.MonadIO m) => Layer.LayerRequestList -> App.ActionHandler m Servant.NoContent
 createNewLayer (Layer.LayerRequestList layerRequests) = do
@@ -67,20 +72,17 @@ provisionLayer l settings = do
   newLayer [layerToModify]
   pure Servant.NoContent
 
-serveLayer :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
-serveLayer l z x stringY maybeToken maybeIfModified = do
+serveLayerPublic :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
+serveLayerPublic l z x stringY _ maybeIfModified = do
   layer <- getLayerOrThrow l
   layerCount <- ReaderClass.asks App._ssLayerMetric
-  mode <- ReaderClass.asks App._ssMode
-  case mode of
-    App.Public -> do
-      _ <- MonadIO.liftIO $ Prometheus.withLabel layerCount ("public", Layer._layerName layer) Prometheus.incCounter
-      getContent z x stringY maybeIfModified layer
-    App.Authenticated ->
-      serveLayerAuthenticated layer z x stringY maybeToken maybeIfModified layerCount
+  _ <- MonadIO.liftIO $ Prometheus.withLabel layerCount ("public", Layer._layerName layer) Prometheus.incCounter
+  getContent z x stringY maybeIfModified layer
 
-serveLayerAuthenticated :: (MonadIO.MonadIO m) => Layer.Layer -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
-serveLayerAuthenticated layer z x stringY maybeToken maybeIfModified layerCount = do
+serveLayerAuthenticated :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
+serveLayerAuthenticated l z x stringY maybeToken maybeIfModified = do
+  layer <- getLayerOrThrow l
+  layerCount <- ReaderClass.asks App._ssLayerMetric
   pool <- ReaderClass.asks App._ssPool
   cache <- ReaderClass.asks App._ssTokenAuthorisationCache
   layerAuthorisation <- MonadIO.liftIO $ LayerLib.checkLayerAuthorisation pool cache layer maybeToken

@@ -23,12 +23,12 @@ import qualified Hastile.Types.Config       as Config
 
 publicHastileServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.PublicHastileApi (App.ActionHandler m)
 publicHastileServer = returnConfiguration
-  Servant.:<|> Layer.layerServer
+  Servant.:<|> Layer.layerServerPublic
 
 authenticatedHastileServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.AuthenticatedHastileApi (App.ActionHandler m)
 authenticatedHastileServer = returnConfiguration
   Servant.:<|> Token.tokenServer
-  Servant.:<|> Layer.layerServer
+  Servant.:<|> Layer.layerServerAuthenticated
 
 returnConfiguration :: (MonadIO.MonadIO m) => (App.ActionHandler m) Config.InputConfig
 returnConfiguration = do
