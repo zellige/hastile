@@ -89,6 +89,7 @@ executable hastile
                      , base
                      , bytestring
                      , containers
+                     , directory
                      , filepath
                      , hastile
                      , hasql-pool

@@ -9,6 +9,7 @@ import qualified Control.Monad.IO.Class            as MonadIO
 import qualified Data.Foldable                     as Foldable
 import qualified Data.LruCache.IO                  as LRU
 import qualified Data.Map                          as Map
+import qualified Data.Maybe                        as Maybe
 import qualified Data.Text                         as Text
 import qualified Data.Text.Encoding                as TextEncoding
 import qualified Data.Time                         as Time
@@ -23,6 +24,7 @@ import qualified Options.Generic                   as OptionsGeneric
 import qualified Prometheus
 import qualified Prometheus.Metric.GHC             as PrometheusGhc
 import qualified STMContainers.Map                 as StmMap
+import qualified System.Directory                  as SystemDirectory
 
 import qualified Hastile.Config                    as Config
 import qualified Hastile.DB.Table                  as Table
@@ -38,7 +40,10 @@ main = OptionsGeneric.getRecord "hastile" >>= doIt
 doIt :: Config.CmdLine -> IO ()
 doIt cmdLine =
   case cmdLine of
-    Config.Starter connection host port -> doItWithCommandLine connection host port
+    Config.Starter cfgFilePath dbConnection host port -> do
+      let newCfgFilePath = Maybe.fromMaybe "config.json" cfgFilePath
+      newConfig <- setupLayersConfiguration newCfgFilePath dbConnection host port
+      doItWithCommandLine newCfgFilePath newConfig
     Config.Server cfgFilePath -> do
       config <- Config.getConfig cfgFilePath
       doItWithConfig cfgFilePath config
@@ -59,28 +64,39 @@ doItWithConfig cfgFile config@Config.Config{..} = do
     (getWarp accessLogEnv _configPort . Server.runServer App.Authenticated . state)
   pure ()
 
-doItWithCommandLine :: Text.Text -> Text.Text -> Int -> IO ()
-doItWithCommandLine connection host port = do
+setupLayersConfiguration :: FilePath -> Text.Text -> Text.Text -> Int -> IO Config.Config
+setupLayersConfiguration cfgFile dbConnection host port = do
+  fileExists <- SystemDirectory.doesFileExist cfgFile
+  if fileExists then
+    Config.getConfig cfgFile
+  else do
+    let config = createConfig dbConnection host port
+    getTables <- Table.getTables config
+    case getTables of
+      Left _ -> pure config
+      Right textLayers -> do
+        let listLayers = fmap (\t -> (t, Layer.defaultLayerSettings)) textLayers
+        Config.writeLayers listLayers config cfgFile
+        Config.getConfig cfgFile
+
+createConfig :: Text.Text -> Text.Text -> Int -> Config.Config
+createConfig dbConnection host port = Config.addDefaults inputConfig
+  where
+    inputConfig = Config.emptyInputConfig { Config._inputConfigPgConnection = dbConnection, Config._inputConfigProtocolHost = Just host, Config._inputConfigPort = Just port }
+
+doItWithCommandLine :: FilePath -> Config.Config -> IO ()
+doItWithCommandLine cfgFile config@Config.Config{..} = do
   serverStartTime <- Time.getCurrentTime
-  let inputConfig = Config.emptyInputConfig { Config._inputConfigPgConnection = connection, Config._inputConfigProtocolHost = Just host, Config._inputConfigPort = Just port }
-      config@Config.Config{..} = Config.addDefaults inputConfig
-      cfgFile = "config.json"
-  getTables <- Table.getTables config
   logEnv <- Logger.logHandler _configAppLog (Katip.Environment _configEnvironment)
   accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
   layerMetric <- registerLayerMetric
-  case getTables of
-    Left _ -> undefined
-    Right textLayers -> do
-      let listLayers = fmap (\t -> (t, Layer.defaultLayerSettings)) textLayers
-      layers <- initCmdLayers listLayers config
-      Config.writeLayers listLayers config cfgFile
-      let state p = App.ServerServerState p cfgFile config layers logEnv layerMetric serverStartTime
-      ControlException.bracket
-         (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
-         (cleanup [accessLogEnv])
-         (getWarp accessLogEnv _configPort . Server.runServer App.Public . state)
-      pure ()
+  layers <- initConfigLayers config
+  let state p = App.ServerServerState p cfgFile config layers logEnv layerMetric serverStartTime
+  ControlException.bracket
+      (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
+      (cleanup [accessLogEnv])
+      (getWarp accessLogEnv _configPort . Server.runServer App.Public . state)
+  pure ()
 
 initConfigLayers :: Config.Config -> IO (StmMap.Map Text.Text Layer.Layer)
 initConfigLayers Config.Config{..} = do
