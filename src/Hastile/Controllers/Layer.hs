@@ -105,12 +105,9 @@ newLayer layers = do
 serveTileJson :: (MonadIO.MonadIO m) => Text.Text -> App.ActionHandler m Tiles.Tile
 serveTileJson layerName = do
   let newLayerName = Maybe.fromMaybe layerName (Text.stripSuffix ".json" layerName)
-  errorOrLayer <- getLayer newLayerName
+  layer <- getLayerOrThrow newLayerName
   config <- ReaderClass.asks App._ssOriginalConfig
-  case errorOrLayer of
-    Left Layer.LayerNotFound -> throwError layerNotFoundError
-    Right _                  -> pure $ Tiles.fromConfig config newLayerName
-
+  pure $ Tiles.fromConfig config layer
 
 getContent :: (MonadIO.MonadIO m) => Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text] ByteString.ByteString)
 getContent z x stringY maybeIfModified layer = do

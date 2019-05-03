@@ -16,6 +16,7 @@ import qualified Data.Vector                   as Vector
 import qualified Hasql.Encoders                as HasqlEncoders
 
 import qualified Hastile.Types.Config          as Config
+import qualified Hastile.Types.Layer           as Layer
 
 -- SW and NE points given as W,S,E,N
 data BBox a = BBox
@@ -98,8 +99,24 @@ instance Aeson.ToJSON Tile where
     , ("center"  Aeson..=)         <$> _tileCenter tile
     ]
 
-fromConfig :: Config.Config -> Text.Text -> Tile
-fromConfig Config.Config{..} layerName =
-  Tile "2.2.0" (Just layerName) Nothing (Just "1.0.0") Nothing Nothing Nothing (Just TileSchemeXyz) [tileUrl] Nothing Nothing Nothing Nothing Nothing Nothing
+fromConfig :: Config.Config -> Layer.Layer -> Tile
+fromConfig Config.Config{..} layer@Layer.Layer{..} =
+  Tile
+    { _tileStyleVersion = "2.2.0"
+    , _tileName         = Just _layerName
+    , _tileDescription  = Nothing
+    , _tileVersion      = Just "1.0.0"
+    , _tileAttribution  = Nothing
+    , _tileTemplate     = Nothing
+    , _tileLegend       = Nothing
+    , _tileScheme       = Just TileSchemeXyz
+    , _tileTiles        = [tileUrl]
+    , _tileGrids        = Nothing
+    , _tileData         = Nothing
+    , _tileMinZoom      = Just $ Layer.layerMinZoom layer
+    , _tileMaxZoom      = Just $ Layer.layerMaxZoom layer
+    , _tileBoundingBox  = Nothing
+    , _tileCenter       = Nothing
+    }
   where
-    tileUrl = _configProtocolHost <> ":" <> Text.pack (show _configPort) <> "/" <> layerName <> "/{z}/{x}/{y}.mvt"
+    tileUrl = _configProtocolHost <> ":" <> Text.pack (show _configPort) <> "/" <> _layerName <> "/{z}/{x}/{y}.mvt"
