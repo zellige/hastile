@@ -34,7 +34,7 @@ import qualified Hastile.Types.Layer           as Layer
 import qualified Hastile.Types.Logger          as Logger
 import qualified Hastile.Types.Token           as Token
 
-data ServerState = ServerState
+data ServerState = StarterServerState
   { _ssPool                    :: HasqlPool.Pool
   , _ssConfigFile              :: FilePath
   , _ssOriginalConfig          :: Config.Config
@@ -43,9 +43,16 @@ data ServerState = ServerState
   , _ssLogEnv                  :: Katip.LogEnv
   , _ssLayerMetric             :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
   , _ssServerserverStartTime   :: Time.UTCTime
+  } | ServerServerState
+  { _ssPool                  :: HasqlPool.Pool
+  , _ssConfigFile            :: FilePath
+  , _ssOriginalConfig        :: Config.Config
+  , _ssStateLayers           :: STMMap.Map Text.Text Layer.Layer
+  , _ssServerserverStartTime :: Time.UTCTime
   }
 
 data AppMode = Public | Authenticated
+
 
 ControlLens.makeLenses ''ServerState
 

@@ -52,7 +52,7 @@ doItWithConfig cfgFile config@Config.Config{..} = do
   layerMetric <- registerLayerMetric
   newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
   layers <- initConfigLayers config
-  let state p = App.ServerState p cfgFile config layers newTokenAuthorisationCache logEnv layerMetric serverStartTime
+  let state p = App.StarterServerState p cfgFile config layers newTokenAuthorisationCache logEnv layerMetric serverStartTime
   ControlException.bracket
     (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
     (cleanup [logEnv, accessLogEnv])
@@ -61,19 +61,20 @@ doItWithConfig cfgFile config@Config.Config{..} = do
 
 doItWithCommandLine :: Text.Text -> Text.Text -> Int -> IO ()
 doItWithCommandLine connection host port = do
-  -- serverStartTime <- Time.getCurrentTime
+  serverStartTime <- Time.getCurrentTime
   let inputConfig = Config.emptyInputConfig { Config._inputConfigPgConnection = connection, Config._inputConfigProtocolHost = Just host, Config._inputConfigPort = Just port }
-      config = Config.addDefaults inputConfig
+      config@Config.Config{..} = Config.addDefaults inputConfig
   getTables <- Table.getTables config
+  accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
   case getTables of
     Left _ -> undefined
     Right textLayers -> do
-      _ <- initCmdLayers textLayers config
-      -- let state p = App.ServerState p "config.json" config layers newTokenAuthorisationCache logEnv layerMetric serverStartTime App.Authenticated
-      -- ControlException.bracket
-      --   (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
-      --   (cleanup [logEnv, accessLogEnv])
-      --   (getWarp accessLogEnv _configPort . Server.runServer . state)
+      layers <- initCmdLayers textLayers config
+      let state p = App.ServerServerState p "config.json" config layers serverStartTime
+      ControlException.bracket
+         (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
+         (cleanup [accessLogEnv])
+         (getWarp accessLogEnv _configPort . Server.runServer App.Public . state)
       pure ()
 
 initConfigLayers :: Config.Config -> IO (StmMap.Map Text.Text Layer.Layer)
@@ -85,7 +86,6 @@ initConfigLayers Config.Config{..} = do
 initCmdLayers :: [Text.Text] -> Config.Config -> IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
 initCmdLayers newLayers Config.Config{..} = do
   layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
---   let layers = map (uncurry Layer.Layer) $ DataMapStrict.toList _configLayers
   Foldable.forM_ (fmap (\t -> (t, Layer.defaultLayerSettings)) newLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.Layer k v) k layers
   pure layers
 
