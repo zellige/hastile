@@ -64,13 +64,16 @@ doItWithCommandLine connection host port = do
   serverStartTime <- Time.getCurrentTime
   let inputConfig = Config.emptyInputConfig { Config._inputConfigPgConnection = connection, Config._inputConfigProtocolHost = Just host, Config._inputConfigPort = Just port }
       config@Config.Config{..} = Config.addDefaults inputConfig
+      cfgFile = "config.json"
   getTables <- Table.getTables config
   accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
   case getTables of
     Left _ -> undefined
     Right textLayers -> do
-      layers <- initCmdLayers textLayers config
-      let state p = App.ServerServerState p "config.json" config layers serverStartTime
+      let listLayers = fmap (\t -> (t, Layer.defaultLayerSettings)) textLayers
+      layers <- initCmdLayers listLayers config
+      Config.writeLayers listLayers originalCfg cfgFile
+      let state p = App.ServerServerState p cfgFile config layers serverStartTime
       ControlException.bracket
          (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
          (cleanup [accessLogEnv])
@@ -83,10 +86,10 @@ initConfigLayers Config.Config{..} = do
   Foldable.forM_ (Map.toList _configLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.Layer k v) k layers
   pure layers
 
-initCmdLayers :: [Text.Text] -> Config.Config -> IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
+initCmdLayers :: [(Text.Text, Layer.LayerSettings)] -> Config.Config -> IO (StmMap.Map Text.Text Layer.Layer)
 initCmdLayers newLayers Config.Config{..} = do
   layers <- atomically StmMap.new :: IO (StmMap.Map OptionsGeneric.Text Layer.Layer)
-  Foldable.forM_ (fmap (\t -> (t, Layer.defaultLayerSettings)) newLayers) $ \(k, v) -> atomically $ StmMap.insert (Layer.Layer k v) k layers
+  Foldable.forM_ newLayers $ \(k, v) -> atomically $ StmMap.insert (Layer.Layer k v) k layers
   pure layers
 
 cleanup :: [Katip.LogEnv] -> HasqlPool.Pool -> IO ()
