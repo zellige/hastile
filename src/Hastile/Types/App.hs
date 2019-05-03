@@ -48,6 +48,8 @@ data ServerState = StarterServerState
   , _ssConfigFile            :: FilePath
   , _ssOriginalConfig        :: Config.Config
   , _ssStateLayers           :: STMMap.Map Text.Text Layer.Layer
+  , _ssLogEnv                :: Katip.LogEnv
+  , _ssLayerMetric           :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
   , _ssServerserverStartTime :: Time.UTCTime
   }
 

@@ -66,14 +66,16 @@ doItWithCommandLine connection host port = do
       config@Config.Config{..} = Config.addDefaults inputConfig
       cfgFile = "config.json"
   getTables <- Table.getTables config
+  logEnv <- Logger.logHandler _configAppLog (Katip.Environment _configEnvironment)
   accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
+  layerMetric <- registerLayerMetric
   case getTables of
     Left _ -> undefined
     Right textLayers -> do
       let listLayers = fmap (\t -> (t, Layer.defaultLayerSettings)) textLayers
       layers <- initCmdLayers listLayers config
-      Config.writeLayers listLayers originalCfg cfgFile
-      let state p = App.ServerServerState p cfgFile config layers serverStartTime
+      Config.writeLayers listLayers config cfgFile
+      let state p = App.ServerServerState p cfgFile config layers logEnv layerMetric serverStartTime
       ControlException.bracket
          (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
          (cleanup [accessLogEnv])
