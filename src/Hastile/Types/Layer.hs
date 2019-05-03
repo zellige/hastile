@@ -89,15 +89,16 @@ instance Aeson.ToJSON LayerSettings where
 
 layerSettingsToPairs :: LayerSettings -> [AesonTypes.Pair]
 layerSettingsToPairs ls =
-  [ "security"      AesonTypes..= _layerSecurity ls
-  , "format"        AesonTypes..= _layerFormat ls
-  , "table-name"    AesonTypes..= _layerTableName ls
-  , "quantize"      AesonTypes..= _layerQuantize ls
-  , "simplify"      AesonTypes..= _layerAlgorithms ls
-  , "minzoom"       AesonTypes..= _layerMinZoom ls
-  , "maxzoom"       AesonTypes..= _layerMaxZoom ls
-  , "last-modified" AesonTypes..= _layerLastModified ls
-  ]
+  DataMaybe.catMaybes
+    [ ("security"      AesonTypes..=)  <$> _layerSecurity ls
+    , ("format"        AesonTypes..=)  <$> _layerFormat ls
+    , ("table-name"    AesonTypes..=)  <$> _layerTableName ls
+    , ("quantize"      AesonTypes..=)  <$> _layerQuantize ls
+    , ("simplify"      AesonTypes..=)  <$> _layerAlgorithms ls
+    , ("minzoom"       AesonTypes..=)  <$> _layerMinZoom ls
+    , ("maxzoom"       AesonTypes..=)  <$> _layerMaxZoom ls
+    , ("last-modified" AesonTypes..=)  <$> _layerLastModified ls
+    ]
 
 data Layer = Layer
   { _layerName     :: Text.Text
