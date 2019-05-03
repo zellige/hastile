@@ -110,11 +110,14 @@ serveTileJson layerName = do
   pure $ Tiles.fromConfig config layer
 
 getContent :: (MonadIO.MonadIO m) => Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text] ByteString.ByteString)
-getContent z x stringY maybeIfModified layer = do
-  serverStartTime <- ReaderClass.asks App._ssServerserverStartTime
-  if Layer.isModified serverStartTime layer maybeIfModified
-      then getContent' layer z x stringY
-      else throwError Servant.err304
+getContent z x stringY maybeIfModified layer
+  | z < Layer.layerMinZoom layer = throwError zoomLowerThanMinZoomError
+  | z > Layer.layerMaxZoom layer = throwError zoomGreaterThanMaxZoomError
+  | otherwise = do
+      serverStartTime <- ReaderClass.asks App._ssServerserverStartTime
+      if Layer.isModified serverStartTime layer maybeIfModified
+        then getContent' layer z x stringY
+        else throwError Servant.err304
 
 getContent' :: (MonadIO.MonadIO m) => Layer.Layer -> Natural -> Natural -> Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 getContent' l z x stringY
@@ -198,3 +201,11 @@ getLayer l = do
 layerNotFoundError :: Servant.ServantErr
 layerNotFoundError =
   Servant.err404 { Servant.errBody = "Layer not found :-(" }
+
+zoomLowerThanMinZoomError :: Servant.ServantErr
+zoomLowerThanMinZoomError =
+  Servant.err400 { Servant.errBody = "Zoom is lower than minzoom" }
+
+zoomGreaterThanMaxZoomError :: Servant.ServantErr
+zoomGreaterThanMaxZoomError =
+  Servant.err400 { Servant.errBody = "Zoom is greater than maxzoom" }
