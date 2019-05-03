@@ -115,7 +115,7 @@ fromConfig Config.Config{..} layer@Layer.Layer{..} =
     , _tileData         = Nothing
     , _tileMinZoom      = Just $ Layer.layerMinZoom layer
     , _tileMaxZoom      = Just $ Layer.layerMaxZoom layer
-    , _tileBoundingBox  = Nothing
+    , _tileBoundingBox  = Layer._layerBounds _layerSettings
     , _tileCenter       = Nothing
     }
   where

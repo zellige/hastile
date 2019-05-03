@@ -67,11 +67,12 @@ data LayerSettings = LayerSettings
   , _layerAlgorithms   :: Maybe Algorithms
   , _layerMinZoom      :: Maybe GeometryTypesGeography.ZoomLevel
   , _layerMaxZoom      :: Maybe GeometryTypesGeography.ZoomLevel
+  , _layerBounds       :: Maybe GeometryTypesGeography.BoundingBox
   , _layerLastModified :: Maybe Time.UTCTime
   } deriving (Show, Eq)
 
 defaultLayerSettings :: LayerSettings
-defaultLayerSettings = LayerSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+defaultLayerSettings = LayerSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 instance Aeson.FromJSON LayerSettings where
   parseJSON = AesonTypes.withObject "LayerSettings" $ \o -> LayerSettings
@@ -82,6 +83,7 @@ instance Aeson.FromJSON LayerSettings where
     <*> o AesonTypes..:? "simplify"
     <*> o AesonTypes..:? "minzoom"
     <*> o AesonTypes..:? "maxzoom"
+    <*> o AesonTypes..:? "bounds"
     <*> o AesonTypes..:? "last-modified"
 
 instance Aeson.ToJSON LayerSettings where
@@ -97,6 +99,7 @@ layerSettingsToPairs ls =
     , ("simplify"      AesonTypes..=)  <$> _layerAlgorithms ls
     , ("minzoom"       AesonTypes..=)  <$> _layerMinZoom ls
     , ("maxzoom"       AesonTypes..=)  <$> _layerMaxZoom ls
+    , ("bounds"        AesonTypes..=)  <$> _layerBounds ls
     , ("last-modified" AesonTypes..=)  <$> _layerLastModified ls
     ]
 
