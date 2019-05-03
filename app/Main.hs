@@ -9,7 +9,6 @@ import qualified Control.Monad.IO.Class            as MonadIO
 import qualified Data.Foldable                     as Foldable
 import qualified Data.LruCache.IO                  as LRU
 import qualified Data.Map                          as Map
-import qualified Data.Maybe                        as Maybe
 import qualified Data.Text                         as Text
 import qualified Data.Text.Encoding                as TextEncoding
 import qualified Data.Time                         as Time
@@ -41,8 +40,7 @@ doIt :: Config.CmdLine -> IO ()
 doIt cmdLine =
   case cmdLine of
     Config.Starter cfgFilePath dbConnection host port -> do
-      let newCfgFilePath = Maybe.fromMaybe "config.json" cfgFilePath
-      newConfig <- setupLayersConfiguration newCfgFilePath dbConnection host port
+      (newCfgFilePath, newConfig) <- setupLayersConfiguration cfgFilePath dbConnection host port
       doItWithCommandLine newCfgFilePath newConfig
     Config.Server cfgFilePath -> do
       config <- Config.getConfig cfgFilePath
@@ -64,20 +62,31 @@ doItWithConfig cfgFile config@Config.Config{..} = do
     (getWarp accessLogEnv _configPort . Server.runServer App.Authenticated . state)
   pure ()
 
-setupLayersConfiguration :: FilePath -> Text.Text -> Text.Text -> Int -> IO Config.Config
-setupLayersConfiguration cfgFile dbConnection host port = do
-  fileExists <- SystemDirectory.doesFileExist cfgFile
-  if fileExists then
-    Config.getConfig cfgFile
-  else do
-    let config = createConfig dbConnection host port
-    getTables <- Table.getTables config
-    case getTables of
-      Left _ -> pure config
-      Right textLayers -> do
-        let listLayers = fmap (\t -> (t, Layer.defaultLayerSettings)) textLayers
-        Config.writeLayers listLayers config cfgFile
-        Config.getConfig cfgFile
+setupLayersConfiguration :: Maybe FilePath -> Text.Text -> Text.Text -> Int -> IO (FilePath, Config.Config)
+setupLayersConfiguration maybeCfgFile dbConnection host port =
+  case maybeCfgFile of
+    Nothing -> do
+      let defaultFileName = "hastile-config.json"
+      createDefaultCfgFile <- createFromDb defaultFileName
+      pure (defaultFileName, createDefaultCfgFile)
+    Just newCfgFile -> do
+      fileExists <- SystemDirectory.doesFileExist newCfgFile
+      if fileExists then do
+        readConfig <- Config.getConfig newCfgFile
+        pure (newCfgFile, readConfig)
+      else do
+        createNamedCfgFile <- createFromDb newCfgFile
+        pure (newCfgFile, createNamedCfgFile)
+  where
+    createFromDb cfgFile = do
+      let config = createConfig dbConnection host port
+      getTables <- Table.getTables config
+      case getTables of
+        Left _ -> pure config
+        Right textLayers -> do
+          let listLayers = fmap (\t -> (t, Layer.defaultLayerSettings)) textLayers
+          Config.writeLayers listLayers config cfgFile
+          Config.getConfig cfgFile
 
 createConfig :: Text.Text -> Text.Text -> Int -> Config.Config
 createConfig dbConnection host port = Config.addDefaults inputConfig
