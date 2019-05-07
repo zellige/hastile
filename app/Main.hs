@@ -32,7 +32,6 @@ import qualified Hastile.Types.App                 as App
 import qualified Hastile.Types.Config              as Config
 import qualified Hastile.Types.Layer               as Layer
 import qualified Hastile.Types.Logger              as Logger
-import qualified Hastile.Types.Token               as Token
 
 main :: IO ()
 main = OptionsGeneric.getRecord "hastile" >>= doIt
@@ -42,39 +41,25 @@ doIt cmdLine =
   case cmdLine of
     Config.Starter cfgFilePath dbConnection host port -> do
       (newCfgFilePath, newConfig) <- setupLayersConfiguration cfgFilePath dbConnection host port
-      doItWithCommandLine newCfgFilePath newConfig
+      doItWithConfig newCfgFilePath newConfig (App.StarterServerState newCfgFilePath newConfig) Table.nullCheckConfig
     Config.Server cfgFilePath -> do
       config <- Config.getConfig cfgFilePath
       cache <- LRU.newLruHandle (Config._configTokenCacheSize config)
-      doItWithConfig cfgFilePath config cache
+      layerMetric <- registerLayerMetric
+      doItWithConfig cfgFilePath config (App.ServerServerState cfgFilePath config cache layerMetric) Table.checkConfig
 
-doItWithCommandLine :: FilePath -> Config.Config -> IO ()
-doItWithCommandLine cfgFile config@Config.Config{..} = do
+doItWithConfig :: FilePath -> Config.Config -> App.SetupAppState -> Table.RunCheckConfig -> IO ()
+doItWithConfig cfgFile config@Config.Config{..} appState checkConfig = do
   serverStartTime <- Time.getCurrentTime
   logEnv <- Logger.logHandler _configAppLog (Katip.Environment _configEnvironment)
   accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
-  layerMetric <- registerLayerMetric
+  checkConfig logEnv cfgFile config
   layers <- initConfigLayers config
-  let state = App.ServerServerState serverStartTime cfgFile config layers logEnv layerMetric
+  let state = appState serverStartTime logEnv layers
   ControlException.bracket
       (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
       (cleanup [accessLogEnv])
       (getWarp accessLogEnv _configPort . Server.runServer . state)
-  pure ()
-
-doItWithConfig :: FilePath -> Config.Config -> Token.Cache -> IO ()
-doItWithConfig cfgFile config@Config.Config{..} cache = do
-  serverStartTime <- Time.getCurrentTime
-  logEnv <- Logger.logHandler _configAppLog (Katip.Environment _configEnvironment)
-  accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
-  Table.checkConfig logEnv cfgFile config
-  layerMetric <- registerLayerMetric
-  layers <- initConfigLayers config
-  let state = App.StarterServerState serverStartTime cfgFile config layers cache logEnv layerMetric
-  ControlException.bracket
-    (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
-    (cleanup [logEnv, accessLogEnv])
-    (getWarp accessLogEnv _configPort . Server.runServer . state)
   pure ()
 
 setupLayersConfiguration :: Maybe FilePath -> Text.Text -> Text.Text -> Int -> IO (FilePath, Config.Config)

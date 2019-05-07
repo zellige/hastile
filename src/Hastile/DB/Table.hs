@@ -29,7 +29,12 @@ import qualified Hastile.Lib.Log               as LibLog
 import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
 
-checkConfig :: Katip.LogEnv -> FilePath -> Config.Config -> IO ()
+type RunCheckConfig = Katip.LogEnv -> FilePath -> Config.Config -> IO ()
+
+nullCheckConfig :: RunCheckConfig
+nullCheckConfig _ _ _ = pure ()
+
+checkConfig :: RunCheckConfig
 checkConfig logEnv cfgFile Config.Config{..} = do
   pool <- HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection)
   let layers = uncurry Layer.Layer <$> DataMapStrict.toList _configLayers

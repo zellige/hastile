@@ -35,23 +35,24 @@ import qualified Hastile.Types.Logger          as Logger
 import qualified Hastile.Types.Token           as Token
 
 data ServerState = StarterServerState
-  { _ssServerserverStartTime   :: Time.UTCTime
-  , _ssConfigFile              :: FilePath
-  , _ssOriginalConfig          :: Config.Config
-  , _ssStateLayers             :: STMMap.Map Text.Text Layer.Layer
-  , _ssTokenAuthorisationCache :: Token.Cache
-  , _ssLogEnv                  :: Katip.LogEnv
-  , _ssLayerMetric             :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
-  , _ssPool                    :: HasqlPool.Pool
-  } | ServerServerState
-  { _ssServerserverStartTime :: Time.UTCTime
-  , _ssConfigFile            :: FilePath
+  { _ssConfigFile            :: FilePath
   , _ssOriginalConfig        :: Config.Config
-  , _ssStateLayers           :: STMMap.Map Text.Text Layer.Layer
+  , _ssServerserverStartTime :: Time.UTCTime
   , _ssLogEnv                :: Katip.LogEnv
-  , _ssLayerMetric           :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
+  , _ssStateLayers           :: STMMap.Map Text.Text Layer.Layer
   , _ssPool                  :: HasqlPool.Pool
+  } | ServerServerState
+  { _ssConfigFile              :: FilePath
+  , _ssOriginalConfig          :: Config.Config
+  , _ssTokenAuthorisationCache :: Token.Cache
+  , _ssLayerMetric             :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
+  , _ssServerserverStartTime   :: Time.UTCTime
+  , _ssLogEnv                  :: Katip.LogEnv
+  , _ssStateLayers             :: STMMap.Map Text.Text Layer.Layer
+  , _ssPool                    :: HasqlPool.Pool
   }
+
+type SetupAppState = (Time.UTCTime -> Katip.LogEnv -> STMMap.Map Text.Text Layer.Layer -> HasqlPool.Pool -> ServerState)
 
 ControlLens.makeLenses ''ServerState
 

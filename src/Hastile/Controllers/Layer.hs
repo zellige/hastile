@@ -75,8 +75,6 @@ provisionLayer l settings = do
 serveLayerPublic :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
 serveLayerPublic l z x stringY _ maybeIfModified = do
   layer <- getLayerOrThrow l
-  layerCount <- ReaderClass.asks App._ssLayerMetric
-  _ <- MonadIO.liftIO $ Prometheus.withLabel layerCount ("public", Layer._layerName layer) Prometheus.incCounter
   getContent z x stringY maybeIfModified layer
 
 serveLayerAuthenticated :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
