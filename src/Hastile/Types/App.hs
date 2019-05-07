@@ -35,22 +35,22 @@ import qualified Hastile.Types.Logger          as Logger
 import qualified Hastile.Types.Token           as Token
 
 data ServerState = StarterServerState
-  { _ssPool                    :: HasqlPool.Pool
+  { _ssServerserverStartTime   :: Time.UTCTime
   , _ssConfigFile              :: FilePath
   , _ssOriginalConfig          :: Config.Config
   , _ssStateLayers             :: STMMap.Map Text.Text Layer.Layer
   , _ssTokenAuthorisationCache :: Token.Cache
   , _ssLogEnv                  :: Katip.LogEnv
   , _ssLayerMetric             :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
-  , _ssServerserverStartTime   :: Time.UTCTime
+  , _ssPool                    :: HasqlPool.Pool
   } | ServerServerState
-  { _ssPool                  :: HasqlPool.Pool
+  { _ssServerserverStartTime :: Time.UTCTime
   , _ssConfigFile            :: FilePath
   , _ssOriginalConfig        :: Config.Config
   , _ssStateLayers           :: STMMap.Map Text.Text Layer.Layer
   , _ssLogEnv                :: Katip.LogEnv
   , _ssLayerMetric           :: Prometheus.Vector (Text.Text, Text.Text) Prometheus.Counter
-  , _ssServerserverStartTime :: Time.UTCTime
+  , _ssPool                  :: HasqlPool.Pool
   }
 
 ControlLens.makeLenses ''ServerState
