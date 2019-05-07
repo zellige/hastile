@@ -53,9 +53,6 @@ data ServerState = StarterServerState
   , _ssServerserverStartTime :: Time.UTCTime
   }
 
-data AppMode = Public | Authenticated
-
-
 ControlLens.makeLenses ''ServerState
 
 ssBuffer :: ControlLens.Lens' ServerState DataGeometryTypesGeography.Pixels

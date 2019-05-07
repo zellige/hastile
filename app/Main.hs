@@ -52,14 +52,28 @@ doItWithConfig cfgFile config@Config.Config{..} = do
   logEnv <- Logger.logHandler _configAppLog (Katip.Environment _configEnvironment)
   accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
   Table.checkConfig logEnv cfgFile config
-  layerMetric <- registerLayerMetric
   newTokenAuthorisationCache <- LRU.newLruHandle _configTokenCacheSize
+  layerMetric <- registerLayerMetric
   layers <- initConfigLayers config
   let state p = App.StarterServerState p cfgFile config layers newTokenAuthorisationCache logEnv layerMetric serverStartTime
   ControlException.bracket
     (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
     (cleanup [logEnv, accessLogEnv])
-    (getWarp accessLogEnv _configPort . Server.runServer App.Authenticated . state)
+    (getWarp accessLogEnv _configPort . Server.runServer . state)
+  pure ()
+
+doItWithCommandLine :: FilePath -> Config.Config -> IO ()
+doItWithCommandLine cfgFile config@Config.Config{..} = do
+  serverStartTime <- Time.getCurrentTime
+  logEnv <- Logger.logHandler _configAppLog (Katip.Environment _configEnvironment)
+  accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
+  layerMetric <- registerLayerMetric
+  layers <- initConfigLayers config
+  let state p = App.ServerServerState p cfgFile config layers logEnv layerMetric serverStartTime
+  ControlException.bracket
+      (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
+      (cleanup [accessLogEnv])
+      (getWarp accessLogEnv _configPort . Server.runServer . state)
   pure ()
 
 setupLayersConfiguration :: Maybe FilePath -> Text.Text -> Text.Text -> Int -> IO (FilePath, Config.Config)
@@ -92,20 +106,6 @@ createConfig :: Text.Text -> Text.Text -> Int -> Config.Config
 createConfig dbConnection host port = Config.addDefaults inputConfig
   where
     inputConfig = Config.emptyInputConfig { Config._inputConfigPgConnection = dbConnection, Config._inputConfigProtocolHost = Just host, Config._inputConfigPort = Just port }
-
-doItWithCommandLine :: FilePath -> Config.Config -> IO ()
-doItWithCommandLine cfgFile config@Config.Config{..} = do
-  serverStartTime <- Time.getCurrentTime
-  logEnv <- Logger.logHandler _configAppLog (Katip.Environment _configEnvironment)
-  accessLogEnv <- Logger.logHandler _configAccessLog (Katip.Environment _configEnvironment)
-  layerMetric <- registerLayerMetric
-  layers <- initConfigLayers config
-  let state p = App.ServerServerState p cfgFile config layers logEnv layerMetric serverStartTime
-  ControlException.bracket
-      (HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection))
-      (cleanup [accessLogEnv])
-      (getWarp accessLogEnv _configPort . Server.runServer App.Public . state)
-  pure ()
 
 initConfigLayers :: Config.Config -> IO (StmMap.Map Text.Text Layer.Layer)
 initConfigLayers Config.Config{..} = do

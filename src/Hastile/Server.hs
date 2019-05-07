@@ -14,12 +14,12 @@ import qualified Hastile.Controllers        as Controllers
 import qualified Hastile.Routes             as Routes
 import qualified Hastile.Types.App          as App
 
-runServer :: App.AppMode -> App.ServerState -> Wai.Application
-runServer appMode serverState =
-  case appMode of
-    App.Public ->
+runServer :: App.ServerState -> Wai.Application
+runServer serverState =
+  case serverState of
+    App.StarterServerState {} ->
       Servant.serve Routes.publicHastileApi (createPublicServer serverState)
-    App.Authenticated ->
+    App.ServerServerState {} ->
       Servant.serve Routes.authenticatedHastileApi (createAuthenticatedServer serverState)
 
 createPublicServer :: App.ServerState -> Servant.Server Routes.PublicHastileApi
