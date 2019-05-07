@@ -47,6 +47,7 @@ extra-deps:
 - geojson-3.0.4
 - hasql-cursor-query-0.4.4.2
 - hasql-cursor-transaction-0.6.3.1
+- hasql-pool-0.5.0.2
 - prometheus-client-1.0.0
 - prometheus-metrics-ghc-1.0.0
 - wai-middleware-prometheus-1.0.0

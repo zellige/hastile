@@ -48,9 +48,9 @@ library
                      , foldl
                      , geojson
                      , hasql
-                     , hasql-cursor-query
-                     , hasql-pool
-                     , hasql-transaction
+                     , hasql-cursor-query          >= 0.4.4.2      && < 0.5.0.0
+                     , hasql-pool                  >= 0.5.0.2      && < 0.6.0.0
+                     , hasql-transaction           >= 0.6.3.1      && < 0.7.0.0
                      , here
                      , http-types
                      , http-media
