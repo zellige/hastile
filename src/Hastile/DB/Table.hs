@@ -10,6 +10,7 @@
 module Hastile.DB.Table where
 
 import qualified Control.Exception.Base        as ControlException
+import qualified Control.Monad                 as ControlMonad
 import qualified Control.Monad.IO.Class        as MonadIO
 import qualified Data.Either                   as DataEither
 import qualified Data.Map.Strict               as DataMapStrict
@@ -99,3 +100,13 @@ wkbGeometryTablesQuery =
         udt_name = 'geometry'
     |]
     decoder = HasqlDecoders.rowList $ HasqlDecoders.column HasqlDecoders.text
+
+boxFromTableQuery :: HasqlStatement.Statement Text.Text [Double]
+boxFromTableQuery =
+  HasqlStatement.Statement sql (HasqlEncoders.param HasqlEncoders.text) decoder False
+  where
+    sql = [i|
+      SELECT Box2D(ST_Envelope(ST_Collect(t.wkb_geometry)))
+      FROM $1 as T
+    |]
+    decoder = HasqlDecoders.singleRow . HasqlDecoders.column . HasqlDecoders.array $ HasqlDecoders.dimension ControlMonad.replicateM (HasqlDecoders.element HasqlDecoders.float8)
