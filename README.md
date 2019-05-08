@@ -19,7 +19,7 @@ POST   /token                     (application/json)                   - A token
 DELETE /token/tokenid             (application/json)                   - Delete the given token from the token database.
 ```
 
-* [TileJSON](https://github.com/mapbox/tilejson-spec/tree/master/2.2.0)
+* [TileJSON Specification](https://github.com/mapbox/tilejson-spec/tree/master/2.2.0)
 
 ## Layer API
 
@@ -52,31 +52,28 @@ Example:
 | Attributes | |
 | --- | ----------- |
 | **layer-name**<br/>string | The unique key to the layer configuration |
-| | |
 
 #### Layer Configuration
 | Attributes | |
 | --- | ----------- |
-| **security**<br/>string | "public" - allow anyone to request, "private" - require a valid token (using ?token=xxxx) |
+| **security**<br/>string | "public" - allow anyone to request<br/>"private" - require a valid token (using ?token=xxxx) |
 | **table-name**<br/>string | The unique key to the layer |
-| **format**<br/>string | "source" - a normal table<br>"wkb-properties" - combination of JSON hash and wkb_geometry columns<br>"geojson" - combination of GeoJSON, JSON hash of properties and wkb geomtry columns |
+| **format**<br/>string | "source" - a normal table<br/>"wkb-properties" - combination of JSON hash and wkb_geometry columns<br/>"geojson" - combination of GeoJSON, JSON hash of properties and wkb geomtry columns |
 | **last-modified**<br/>date | Last time the layer has been update, used to return the Last-Modified HTTP header |
 | **quantize**<br/>integer | Positive integer, amount to round and remove duplicates (10 is probably the most, 1 is typical) |
 | **simplify**<br/>string | Allows specifying the layer simplification setting |
 
-#### Layer Simplification settings
+#### Layer Simplification Settings
 
 | Attributes | |
 | --- | ----------- |
 | **zoom-level**<br/>string | The zoom level (>=) to apply the layer simplification algorithm. |
-| | |
 
 #### Layer Simplification Algorithm
 
 | Attributes | |
 | --- | ----------- |
 | **algorithm-name**<br/>string | "douglas-peucker" - apply the Ramer–Douglas–Peucker algorithm (epsilon of 1.0) |
-| | |
 
 ## Token API
 
@@ -85,7 +82,6 @@ To insert or update a token:
 
 To delete a token:
 - ```curl -H "Content-Type: application/json" -X DELETE http://localhost:8080/token/abcd```
-
 
 ## Building
 
