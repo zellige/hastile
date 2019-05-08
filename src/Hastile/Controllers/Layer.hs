@@ -202,8 +202,8 @@ layerNotFoundError =
 
 zoomLowerThanMinZoomError :: Servant.ServantErr
 zoomLowerThanMinZoomError =
-  Servant.err400 { Servant.errBody = "Zoom is lower than minzoom" }
+  Servant.err404 { Servant.errBody = "Zoom is lower than minzoom" }
 
 zoomGreaterThanMaxZoomError :: Servant.ServantErr
 zoomGreaterThanMaxZoomError =
-  Servant.err400 { Servant.errBody = "Zoom is greater than maxzoom" }
+  Servant.err404 { Servant.errBody = "Zoom is greater than maxzoom" }
