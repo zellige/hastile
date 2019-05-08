@@ -34,20 +34,49 @@ To modify an existing layer:
 
 ### Payload
 
-#### Layer
-* "layer-name": { layer configuration }
+Example:
+
+```json
+    "rail_network": {
+      "security": "public",
+      "table-name": "suburbanrail_hastile",
+      "format": "wkb-properties",
+      "last-modified": "2018-10-31 09:09:39 +1000",
+      "quantize": 4,
+      "simplify": {
+        "12": "douglas-peucker"
+      }
+    }
+```
+
+| Attributes | |
+| --- | ----------- |
+| **layer-name**<br/>string | The unique key to the layer configuration |
+| | |
 
 #### Layer Configuration
-* "table-name" : "..."
-* "format" : "source" | "wkb-properties" | "geojson"
-* "quantize" : 1..(probably at most 10)
-* "simplify" : { simplify settings }
+| Attributes | |
+| --- | ----------- |
+| **security**<br/>string | "public" - allow anyone to request, "private" - require a valid token (using ?token=xxxx) |
+| **table-name**<br/>string | The unique key to the layer |
+| **format**<br/>string | "source" - a normal table<br>"wkb-properties" - combination of JSON hash and wkb_geometry columns<br>"geojson" - combination of GeoJSON, JSON hash of properties and wkb geomtry columns |
+| **last-modified**<br/>date | Last time the layer has been update, used to return the Last-Modified HTTP header |
+| **quantize**<br/>integer | Positive integer, amount to round and remove duplicates (10 is probably the most, 1 is typical) |
+| **simplify**<br/>string | Allows specifying the layer simplification setting |
 
-#### Simplify Settings
-* "zoom-level (1..20)" : "simplification algorithm"
+#### Layer Simplification settings
 
-#### Simplification Alogirthm
-* " name " : "douglas-peucker" (no others yet supported)
+| Attributes | |
+| --- | ----------- |
+| **zoom-level**<br/>string | The zoom level (>=) to apply the layer simplification algorithm. |
+| | |
+
+#### Layer Simplification Algorithm
+
+| Attributes | |
+| --- | ----------- |
+| **algorithm-name**<br/>string | "douglas-peucker" - apply the Ramer–Douglas–Peucker algorithm (epsilon of 1.0) |
+| | |
 
 ## Token API
 
