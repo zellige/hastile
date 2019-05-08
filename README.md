@@ -4,6 +4,19 @@ A Haskell tile server that produces GeoJSON or MVT (Mapbox Vector Tiles) from a 
 
 ![Build Status](https://circleci.com/gh/indicatrix/hastile/tree/master.png?circle-token=151e6cea2b027041b06878de8694bbfdaf2b6aba)
 
+## Getting Started
+
+Point the server at a PostgreSQL (9.5+) database with the PostGIS extension.  It will automatically render tables with a 
+"wkb_geometry" column server them as layers.
+
+For example:
+- `stack build`
+- `stack exec -- hastile starter --dbConnection "host=localhost port=5432 user=dba password=password dbname=mapdata" --port 8080 --host "http://localhost" --cfgFile hastile-config.json`
+
+Tiles will be available at: `http://localhost:8080/table_name/z/x/y.mvt`
+
+A configuration file will be created automatically although not used (see running in Server mode below).
+
 ## RESTful API
 
 ```
@@ -56,12 +69,15 @@ Example:
 #### Layer Configuration
 | Attributes | |
 | --- | ----------- |
-| **security**<br/>string | "public" - allow anyone to request<br/>"private" - require a valid token (using ?token=xxxx) |
-| **table-name**<br/>string | The unique key to the layer |
-| **format**<br/>string | "source" - a normal table<br/>"wkb-properties" - combination of JSON hash and wkb_geometry columns<br/>"geojson" - combination of GeoJSON, JSON hash of properties and wkb geomtry columns |
-| **last-modified**<br/>date | Last time the layer has been update, used to return the Last-Modified HTTP header |
-| **quantize**<br/>integer | Positive integer, amount to round and remove duplicates (10 is probably the most, 1 is typical) |
-| **simplify**<br/>string | Allows specifying the layer simplification setting |
+| **security**<br/>string | "public" - allow anyone to request<br/>"private" - require a valid token (using ?token=xxxx). |
+| **table-name**<br/>string | The unique key to the layer. |
+| **format**<br/>string | "source" - a normal table<br/>"wkb-properties" - combination of JSON hash and wkb_geometry columns<br/>"geojson" - combination of GeoJSON, JSON hash of properties and wkb geomtry columns. |
+| **last-modified**<br/>date | Last time the layer has been update, used to return the Last-Modified HTTP header. |
+| **quantize**<br/>integer | Positive integer, amount to round and remove duplicates (10 is probably the most, 1 is typical). |
+| **simplify**<br/>string | Allows specifying the layer simplification setting. |
+| **minzoom**<br/>int | 0..30 Minimum zoom level to render, otherwise returns 404. Adds setting to TileJSON. |
+| **maxzoom**<br/>int | 0..30 Maximum zoom level to render, otherwise returns 404. Adds setting to TileJSON. |
+| **bounds**<br/>array float | Bounds are represented in WGS:84 latitude and longitude values. Adds settings to TileJSON. |
 
 #### Layer Simplification Settings
 
@@ -73,32 +89,30 @@ Example:
 
 | Attributes | |
 | --- | ----------- |
-| **algorithm-name**<br/>string | "douglas-peucker" - apply the Ramer–Douglas–Peucker algorithm (epsilon of 1.0) |
-
-## Token API
-
-To insert or update a token:
-- ```curl -d '{ "token": "abcd", "layers": ["layer1", "layer2"] }' -H "Content-Type: application/json" -X POST http://localhost:8080/token```
-
-To delete a token:
-- ```curl -H "Content-Type: application/json" -X DELETE http://localhost:8080/token/abcd```
+| **algorithm-name**<br/>string | "douglas-peucker" - apply the Ramer-Douglas-Peucker algorithm (epsilon of 1.0). |
 
 ## Building
-
-### PostgreSQL
-
-To generate the GeoJSON feature (see below) requires PostgreSQL 9.5+.
 
 Building:
  - `stack build`
  - `stack test`
 
-## Set up tokens database
+## Server Mode
+
+Server mode makes more features available:
+- Token based security (private layers),
+- Metrics (prometheus)
+
+### Token Based Security
+
+A token table is required for token security.  This is required for "private" layers.
+
+#### Setup the Token Database
 
 * Create a postgres database to store the tokens table:
-  `createdb -O sa db_name`
+  `createdb -O dba db_name`
 If you don't have the `createdb` utility then use the `migration` tool :  
-  `./db/migration createdb db_name sa`
+  `./db/migration createdb db_name dba`
 * Initialize the DB :  
   `./db/migration init "postgresql://db_user:password@db_server:db_port/db_name"`
 * Run the migrations :  
@@ -106,11 +120,23 @@ If you don't have the `createdb` utility then use the `migration` tool :
 * Use the `migration` tool for migrations :  
   `./db/migration --help`  
 
+#### Token API
+
+To insert or update a token:
+- ```curl -d '{ "token": "abcd", "layers": ["layer1", "layer2"] }' -H "Content-Type: application/json" -X POST http://localhost:8080/token```
+
+To delete a token:
+- ```curl -H "Content-Type: application/json" -X DELETE http://localhost:8080/token/abcd```
+
+#### Running in Server Mode
+
+To run Hastile in server mode you must use a configuration file:
+- `stack exec -- hastile server --configFile hastile-config.json`
 
 ## Configuration
 
 The file contains settings for the database connection and layer configuration, for example:
-```javascript
+```json
 {
   "db-connection": "host=example.com port=5432 user=tiler password=123abc dbname=notoracle"
   "layers": {
@@ -128,12 +154,10 @@ The file contains settings for the database connection and layer configuration, 
 }
 ```
 
-Where, db-connection is a [Postgres connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
-
-The layer table has three columns: a single GeoJSON formatted feature as JSON, the properties part of the geojson and the geometry. The geometry is used to perform the spatial query. The GeoJSON column is the feature returned if the layer format is `geojson`. The properties column is returned along side the geometry if the layer format is `wkb-properties`.
+Where, db-connection is a [PostgreSQL connection string](https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING).
 
 To construct a table with a GeoJSON feature with all properties containing arbitrary columns from a table, create a materialized view like:
-```javascript
+```SQL
 CREATE MATERIALIZED VIEW layer1_table as SELECT jsonb_build_object(
     'type',      'Feature',
     'id',         ogc_fid,
@@ -145,7 +169,7 @@ CREATE MATERIALIZED VIEW layer1_table as SELECT jsonb_build_object(
 This will create the two columns required: geojson (a GeoJSON feature in JSON format) and the geometry column.
 
 You can configure other database, mapnik and HTTP port settings too:
-```javascript
+```json
 {
   "db-pool-size": 10,
   "db-timeout": 5,
@@ -162,7 +186,7 @@ CREATE MATERIALIZED VIEW layers AS
 ```
 
 Changing the configuration to:
-```javascript
+```json
   "layers": {
     "layer": {
       ...
