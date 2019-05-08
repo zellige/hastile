@@ -6,8 +6,8 @@ A Haskell tile server that produces GeoJSON or MVT (Mapbox Vector Tiles) from a 
 
 ## Getting Started
 
-Point the server at a PostgreSQL (9.5+) database with the PostGIS extension.  It will automatically render tables with a 
-"wkb_geometry" column server them as layers.
+Point the server at a PostgreSQL (9.5+) database with the PostGIS extension enabled.  It will automatically render tables with a 
+"wkb_geometry" column and serve them as layers.
 
 For example:
 - `stack build`
