@@ -13,10 +13,12 @@ import qualified Control.Exception.Base        as ControlException
 import qualified Control.Monad                 as ControlMonad
 import qualified Control.Monad.IO.Class        as MonadIO
 import qualified Data.Either                   as DataEither
+import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
 import qualified Data.Map.Strict               as DataMapStrict
 import           Data.String.Here.Interpolated
 import qualified Data.Text                     as Text
 import qualified Data.Text.Encoding            as TextEncoding
+import qualified Data.Traversable              as Traversable
 import qualified Hasql.Decoders                as HasqlDecoders
 import qualified Hasql.Encoders                as HasqlEncoders
 import qualified Hasql.Pool                    as HasqlPool
@@ -54,6 +56,13 @@ getTables Config.Config{..} = do
   errOrList <- wkbGeometryTables pool
   HasqlPool.release pool
   pure errOrList
+
+getBboxes :: Config.Config -> [Text.Text] -> IO (Either Text.Text [GeometryTypesGeography.BoundingBox])
+getBboxes Config.Config{..} layerTableNames = do
+  pool <- HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection)
+  errOrList <- Traversable.mapM (boxFromTable pool) layerTableNames
+  HasqlPool.release pool
+  pure (Traversable.sequence errOrList)
 
 checkLayerExists :: MonadIO.MonadIO m => HasqlPool.Pool -> Layer.Layer -> m (Either String ())
 checkLayerExists pool layer = do
@@ -101,7 +110,13 @@ wkbGeometryTablesQuery =
     |]
     decoder = HasqlDecoders.rowList $ HasqlDecoders.column HasqlDecoders.text
 
-boxFromTableQuery :: HasqlStatement.Statement Text.Text [Double]
+boxFromTable :: (MonadIO.MonadIO m) => HasqlPool.Pool -> Text.Text -> m (Either Text.Text GeometryTypesGeography.BoundingBox)
+boxFromTable pool layerTableName =
+  DB.runTransaction HasqlTransactionSession.Read pool action
+  where
+    action = HasqlTransaction.statement layerTableName boxFromTableQuery
+
+boxFromTableQuery :: HasqlStatement.Statement Text.Text GeometryTypesGeography.BoundingBox
 boxFromTableQuery =
   HasqlStatement.Statement sql (HasqlEncoders.param HasqlEncoders.text) decoder False
   where
@@ -109,4 +124,12 @@ boxFromTableQuery =
       SELECT Box2D(ST_Envelope(ST_Collect(t.wkb_geometry)))
       FROM $1 as T
     |]
-    decoder = HasqlDecoders.singleRow . HasqlDecoders.column . HasqlDecoders.array $ HasqlDecoders.dimension ControlMonad.replicateM (HasqlDecoders.element HasqlDecoders.float8)
+    decoder = HasqlDecoders.singleRow bboxDecoder
+
+-- TODO Use custom decoder - not undefined
+bboxDecoder :: HasqlDecoders.Row GeometryTypesGeography.BoundingBox
+bboxDecoder =  HasqlDecoders.column $ toPayload <$> HasqlDecoders.array (HasqlDecoders.dimension ControlMonad.replicateM (HasqlDecoders.element HasqlDecoders.float8))
+  where
+    toPayload [bbMinX, bbMinY, bbMaxX, bbMaxY] = GeometryTypesGeography.BoundingBox bbMinX bbMinY bbMaxX bbMaxY
+    toPayload _ = undefined
+

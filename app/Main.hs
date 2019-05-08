@@ -84,6 +84,7 @@ setupLayersConfiguration maybeCfgFile dbConnection host port =
       case getTables of
         Left _ -> pure config
         Right textLayers -> do
+          -- getBboxes <- Table.getBboxes config textLayers
           let listLayers = fmap (\t -> (t, Layer.defaultLayerSettings)) textLayers
           Config.writeLayers listLayers config cfgFile
           Config.getConfig cfgFile
