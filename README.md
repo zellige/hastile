@@ -54,6 +54,10 @@ Example:
       "security": "public",
       "table-name": "suburbanrail_hastile",
       "format": "wkb-properties",
+      "minzoom": 0,
+      "maxzoom": 20,
+      "bounds": [ 144.94932174682617, -37.82449737924566, 144.97901916503906, -37.84788365473107 ],
+      "format": "wkb-properties",
       "last-modified": "2018-10-31 09:09:39 +1000",
       "quantize": 4,
       "simplify": {
