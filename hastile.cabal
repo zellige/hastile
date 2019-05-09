@@ -70,13 +70,14 @@ library
                      , text
                      , time
                      , transformers
+                     , trifecta
                      , vector
-                     , vectortiles >= 1.5.0                
+                     , vectortiles                 >= 1.5.0                
                      , wai
                      , wai-extra
                      , wai-middleware-prometheus
                      , word8
-                     , wkt-geom                    >= 0.0.8    && < 0.1.0
+                     , wkt-geom                    >= 0.0.10   && < 0.1.0
                      , unordered-containers
                      , zellige
   ghc-options:       -Wall -Werror -O2

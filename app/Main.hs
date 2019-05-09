@@ -84,7 +84,10 @@ setupLayersConfiguration maybeCfgFile dbConnection host port =
       case getTables of
         Left _ -> pure config
         Right textLayers -> do
-          -- getBboxes <- Table.getBboxes config textLayers
+          getBboxes <- Table.getBboxes config textLayers
+          case getBboxes of
+            Left err      -> MonadIO.liftIO $ putStrLn (show err)
+            Right boxes -> MonadIO.liftIO $ Foldable.traverse_ (\x -> maybe (pure ()) (\y -> putStrLn $ show y) x) boxes
           let listLayers = fmap (\t -> (t, Layer.defaultLayerSettings)) textLayers
           Config.writeLayers listLayers config cfgFile
           Config.getConfig cfgFile

@@ -10,15 +10,16 @@
 module Hastile.DB.Table where
 
 import qualified Control.Exception.Base        as ControlException
-import qualified Control.Monad                 as ControlMonad
 import qualified Control.Monad.IO.Class        as MonadIO
 import qualified Data.Either                   as DataEither
 import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
+import qualified Data.Geospatial               as Geospatial
 import qualified Data.Map.Strict               as DataMapStrict
 import           Data.String.Here.Interpolated
 import qualified Data.Text                     as Text
 import qualified Data.Text.Encoding            as TextEncoding
 import qualified Data.Traversable              as Traversable
+import qualified Data.Wkt                      as Wkt
 import qualified Hasql.Decoders                as HasqlDecoders
 import qualified Hasql.Encoders                as HasqlEncoders
 import qualified Hasql.Pool                    as HasqlPool
@@ -26,6 +27,7 @@ import qualified Hasql.Statement               as HasqlStatement
 import qualified Hasql.Transaction             as HasqlTransaction
 import qualified Hasql.Transaction.Sessions    as HasqlTransactionSession
 import qualified Katip
+import qualified Text.Trifecta.Result          as TrifectaResult
 
 import qualified Hastile.DB                    as DB
 import qualified Hastile.Lib.Log               as LibLog
@@ -57,7 +59,7 @@ getTables Config.Config{..} = do
   HasqlPool.release pool
   pure errOrList
 
-getBboxes :: Config.Config -> [Text.Text] -> IO (Either Text.Text [GeometryTypesGeography.BoundingBox])
+getBboxes :: Config.Config -> [Text.Text] -> IO (Either Text.Text [Maybe GeometryTypesGeography.BoundingBox])
 getBboxes Config.Config{..} layerTableNames = do
   pool <- HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection)
   errOrList <- Traversable.mapM (boxFromTable pool) layerTableNames
@@ -110,26 +112,30 @@ wkbGeometryTablesQuery =
     |]
     decoder = HasqlDecoders.rowList $ HasqlDecoders.column HasqlDecoders.text
 
-boxFromTable :: (MonadIO.MonadIO m) => HasqlPool.Pool -> Text.Text -> m (Either Text.Text GeometryTypesGeography.BoundingBox)
+boxFromTable :: (MonadIO.MonadIO m) => HasqlPool.Pool -> Text.Text -> m (Either Text.Text (Maybe GeometryTypesGeography.BoundingBox))
 boxFromTable pool layerTableName =
   DB.runTransaction HasqlTransactionSession.Read pool action
-  where
-    action = HasqlTransaction.statement layerTableName boxFromTableQuery
+    where
+      action = HasqlTransaction.statement layerTableName (boxFromTableQuery layerTableName)
 
-boxFromTableQuery :: HasqlStatement.Statement Text.Text GeometryTypesGeography.BoundingBox
-boxFromTableQuery =
-  HasqlStatement.Statement sql (HasqlEncoders.param HasqlEncoders.text) decoder False
+boxFromTableQuery :: Text.Text -> HasqlStatement.Statement Text.Text (Maybe GeometryTypesGeography.BoundingBox)
+boxFromTableQuery layerTableName =
+  HasqlStatement.Statement sql encoder decoder False
   where
     sql = [i|
-      SELECT Box2D(ST_Envelope(ST_Collect(t.wkb_geometry)))
-      FROM $1 as T
+      SELECT ST_extent(t.wkb_geometry)::text
+      FROM ${layerTableName} as t
     |]
+    encoder = HasqlEncoders.param HasqlEncoders.text
     decoder = HasqlDecoders.singleRow bboxDecoder
 
 -- TODO Use custom decoder - not undefined
-bboxDecoder :: HasqlDecoders.Row GeometryTypesGeography.BoundingBox
-bboxDecoder =  HasqlDecoders.column $ toPayload <$> HasqlDecoders.array (HasqlDecoders.dimension ControlMonad.replicateM (HasqlDecoders.element HasqlDecoders.float8))
+bboxDecoder :: HasqlDecoders.Row (Maybe GeometryTypesGeography.BoundingBox)
+bboxDecoder =  HasqlDecoders.column $ asGeom <$> HasqlDecoders.text
   where
-    toPayload [bbMinX, bbMinY, bbMaxX, bbMaxY] = GeometryTypesGeography.BoundingBox bbMinX bbMinY bbMaxX bbMaxY
-    toPayload _ = undefined
+    toPayload x = Wkt.parseString Wkt.box (Text.unpack x)
+    asGeom y =
+      case toPayload y of
+        (TrifectaResult.Success (Geospatial.BoundingBoxWithoutCRSXY (Geospatial.PointXY minX minY) (Geospatial.PointXY maxX maxY))) -> Just (GeometryTypesGeography.BoundingBox minX minY maxX maxY)
+        _ -> Nothing
 
