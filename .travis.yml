@@ -11,16 +11,21 @@ cache:
 matrix:
   # Build with different GHC versions and stable package sets
   include:
-  - env: RESOLVER=lts-12
+  - env: 
+    - RESOLVER=lts-12
+    - LINUX_ZIP=hastile-linux-$TRAVIS_TAG.zip
+    - MACOS_ZIP=hastile-macos-$TRAVIS_TAG.zip
+    - WINDOWS_ZIP=hastile-windows-$TRAVIS_TAG.zip
+
     compiler: "LTS12"
     install:
     - stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
     - stack build --copy-bins --local-bin-path . --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
-    - zip hastile-$TRAVIS_TAG-linux.zip hastile migrate 
+    - zip $LINUX_ZIP hastile migrate 
     deploy:
       provider: releases
       api_key: "$GITHUB_OAUTH_TOKEN"
-      file: "hastile-linux-$TRAVIS_TAG.zip"
+      file: "$LINUX_ZIP"
       skip_cleanup: true
       on:
         tags: true
@@ -31,11 +36,11 @@ matrix:
     install:
     - stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
     - stack build --copy-bins --local-bin-path . --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
-    - zip hastile-$TRAVIS_TAG-macos.zip hastile migrate 
+    - zip $MACOS_ZIP hastile migrate 
     deploy:
       provider: releases
       api_key: "$GITHUB_OAUTH_TOKEN"
-      file: "hastile-macos-$TRAVIS_TAG.zip"
+      file: "$MACOS_ZIP"
       skip_cleanup: true
       on:
         tags: true
@@ -46,11 +51,11 @@ matrix:
     install:
     - stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
     - stack build --copy-bins --local-bin-path . --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
-    - zip hastile-windows-$TRAVIS_TAG.zip hastile migrate 
+    - zip $WINDOWS_ZIP hastile migrate 
     deploy:
       provider: releases
       api_key: "$GITHUB_OAUTH_TOKEN"
-      file: "hastile-windows-$TRAVIS_TAG.zip"
+      file: "$WINDOWS_ZIP"
       skip_cleanup: true
       on:
         tags: true
