@@ -50,7 +50,7 @@ library
                      , hasql
                      , hasql-cursor-query          >= 0.4.4.2      && < 0.5.0.0
                      , hasql-pool                  >= 0.5.0.2      && < 0.6.0.0
-                     , hasql-transaction           >= 0.6.3.1      && < 0.7.0.0
+                     , hasql-transaction           >= 0.6.3.1      && < 0.8.0.0
                      , here
                      , http-types
                      , http-media
@@ -123,7 +123,7 @@ executable migrate
                             bytestring                  >= 0.10     && < 0.11,
                             cryptohash                  >= 0.11     && < 0.12,
                             directory                   >= 1.2      && < 1.4,
-                            postgresql-simple           >= 0.4      && < 0.6,
+                            postgresql-simple           >= 0.4      && < 0.7,
                             postgresql-simple-migration,
                             time                        >= 1.4      && < 1.9,
                             text                        >= 1.2      && < 1.3  
