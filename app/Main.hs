@@ -82,12 +82,14 @@ setupLayersConfiguration maybeCfgFile dbConnection host port =
       let config = createConfig dbConnection host port
       getTables <- Table.getTables config
       case getTables of
-        Left _ -> pure config
+        Left err -> do
+          MonadIO.liftIO $ print err
+          pure config
         Right textLayers -> do
           getBboxes <- Table.getBboxes config textLayers
           case getBboxes of
             Left err      -> do
-              MonadIO.liftIO $ putStrLn (show err)
+              MonadIO.liftIO $ print err
               pure config
             Right boxes -> do
               let listLayers = zipWith (\b t -> (t, Layer.defaultLayerSettings { Layer._layerBounds = b } )) boxes textLayers
