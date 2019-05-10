@@ -13,25 +13,48 @@ matrix:
   include:
   - env: RESOLVER=lts-12
     compiler: "LTS12"
+    install:
+    - stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
+    - stack build --copy-bins --local-bin-path . --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
+    - zip hastile-$TRAVIS_TAG-linux.zip hastile migrate 
     deploy:
       provider: releases
       api_key: "GITHUB OAUTH TOKEN"
-      file: "hastile.zip"
+      file: "hastile-linux-$TRAVIS_TAG.zip"
       skip_cleanup: true
       on:
         tags: true
+
   - env: RESOLVER=lts-12
     compiler: "LTS12"
     os: osx
+    install:
+    - stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
+    - stack build --copy-bins --local-bin-path . --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
+    - zip hastile-$TRAVIS_TAG-macos.zip hastile migrate 
+    deploy:
+      provider: releases
+      api_key: "GITHUB OAUTH TOKEN"
+      file: "hastile-macos-$TRAVIS_TAG.zip"
+      skip_cleanup: true
+      on:
+        tags: true
 
   - env: RESOLVER=lts-12
     compiler: "LTS12"
     os: windows
+    install:
+    - stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
+    - stack build --copy-bins --local-bin-path . --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
+    - zip hastile-windows-$TRAVIS_TAG.zip hastile migrate 
+    deploy:
+      provider: releases
+      api_key: "GITHUB OAUTH TOKEN"
+      file: "hastile-windows-$TRAVIS_TAG.zip"
+      skip_cleanup: true
+      on:
+        tags: true
 
 before_install:
 - if [[ $TRAVIS_OS_NAME == 'windows' ]]; then choco install haskell-stack; else curl -sSL https://get.haskellstack.org/ | sh; fi
 
-install:
-- stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
-- stack build --copy-bins --local-bin-path . --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
-- zip hastile.zip hastile migrate 
