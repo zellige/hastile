@@ -13,7 +13,13 @@ matrix:
   include:
   - env: RESOLVER=lts-12
     compiler: "LTS12"
-
+    deploy:
+      provider: releases
+      api_key: "e1bfc7517ac37152ab8633427701c62acadb52cc"
+      file: "hastile.zip"
+      skip_cleanup: true
+      on:
+        tags: true
   - env: RESOLVER=lts-12
     compiler: "LTS12"
     os: osx
@@ -27,4 +33,5 @@ before_install:
 
 install:
 - stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
-- stack build --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
+- stack build --copy-bins --local-bin-path . --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
+- zip hastile.zip hastile migrate 
