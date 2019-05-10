@@ -129,13 +129,12 @@ boxFromTableQuery layerTableName =
     encoder = HasqlEncoders.param HasqlEncoders.text
     decoder = HasqlDecoders.singleRow bboxDecoder
 
--- TODO Use custom decoder - not undefined
 bboxDecoder :: HasqlDecoders.Row (Maybe GeometryTypesGeography.BoundingBox)
-bboxDecoder =  HasqlDecoders.column $ asGeom <$> HasqlDecoders.text
+bboxDecoder =  HasqlDecoders.nullableColumn $ HasqlDecoders.custom asGeom
   where
-    toPayload x = Wkt.parseString Wkt.box (Text.unpack x)
-    asGeom y =
+    toPayload = Wkt.parseByteString Wkt.box
+    asGeom _ y =
       case toPayload y of
-        (TrifectaResult.Success (Geospatial.BoundingBoxWithoutCRSXY (Geospatial.PointXY minX minY) (Geospatial.PointXY maxX maxY))) -> Just (GeometryTypesGeography.BoundingBox minX minY maxX maxY)
-        _ -> Nothing
+        (TrifectaResult.Success (Geospatial.BoundingBoxWithoutCRSXY (Geospatial.PointXY minX minY) (Geospatial.PointXY maxX maxY))) -> Right (GeometryTypesGeography.BoundingBox minX minY maxX maxY)
+        _ -> Left "Failed to get bounds of wkb_geometry column"
 
