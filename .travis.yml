@@ -11,31 +11,15 @@ cache:
 matrix:
   # Build with different GHC versions and stable package sets
   include:
-  - env: RESOLVER=lts-11
-    compiler: "LTS11"
   - env: RESOLVER=lts-12
     compiler: "LTS12"
-  - env: RESOLVER=lts-13
-    compiler: "LTS13"
 
-  - env: RESOLVER=lts-11
-    compiler: "LTS11"
-    os: osx
   - env: RESOLVER=lts-12
     compiler: "LTS12"
-    os: osx
-  - env: RESOLVER=lts-13
-    compiler: "LTS13"
     os: osx
 
-  - env: RESOLVER=lts-11
-    compiler: "LTS11"
-    os: windows
   - env: RESOLVER=lts-12
     compiler: "LTS12"
-    os: windows
-  - env: RESOLVER=lts-13
-    compiler: "LTS13"
     os: windows
 
 before_install:
