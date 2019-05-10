@@ -13,10 +13,7 @@ matrix:
   include:
   - env: 
     - RESOLVER=lts-12
-    - LINUX_ZIP=hastile-linux-$TRAVIS_TAG.zip
-    - MACOS_ZIP=hastile-macos-$TRAVIS_TAG.zip
-    - WINDOWS_ZIP=hastile-windows-$TRAVIS_TAG.zip
-
+    - ZIP=hastile-linux-$TRAVIS_TAG.zip
     compiler: "LTS12"
     install:
     - stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
@@ -25,37 +22,41 @@ matrix:
     deploy:
       provider: releases
       api_key: "$GITHUB_OAUTH_TOKEN"
-      file: "$LINUX_ZIP"
+      file: "$ZIP"
       skip_cleanup: true
       on:
         tags: true
 
-  - env: RESOLVER=lts-12
+  - env: 
+    - RESOLVER=lts-12
+    - ZIP=hastile-macos-$TRAVIS_TAG.zip
     compiler: "LTS12"
     os: osx
     install:
     - stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
     - stack build --copy-bins --local-bin-path . --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
-    - zip $MACOS_ZIP hastile migrate 
+    - zip $ZIP hastile migrate 
     deploy:
       provider: releases
       api_key: "$GITHUB_OAUTH_TOKEN"
-      file: "$MACOS_ZIP"
+      file: "$ZIP"
       skip_cleanup: true
       on:
         tags: true
 
-  - env: RESOLVER=lts-12
+  - env: 
+    - RESOLVER=lts-12
+    - ZIP=hastile-windows-$TRAVIS_TAG.zip
     compiler: "LTS12"
     os: windows
     install:
     - stack setup --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --resolver $RESOLVER
     - stack build --copy-bins --local-bin-path . --stack-yaml stack-ci.yaml --no-system-ghc --no-terminal -j2 --haddock --no-haddock-deps --resolver $RESOLVER
-    - zip $WINDOWS_ZIP hastile migrate 
+    - zip $ZIP hastile migrate 
     deploy:
       provider: releases
       api_key: "$GITHUB_OAUTH_TOKEN"
-      file: "$WINDOWS_ZIP"
+      file: "$ZIP"
       skip_cleanup: true
       on:
         tags: true
