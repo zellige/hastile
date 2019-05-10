@@ -92,8 +92,7 @@ setupLayersConfiguration maybeCfgFile dbConnection host port =
             Right boxes -> do
               let listLayers = zipWith (\b t -> (t, Layer.defaultLayerSettings { Layer._layerBounds = b } )) boxes textLayers
               Config.writeLayers listLayers config cfgFile
-              newConfig <- Config.getConfig cfgFile
-              pure newConfig
+              Config.getConfig cfgFile
 
 createConfig :: Text.Text -> Text.Text -> Int -> Config.Config
 createConfig dbConnection host port = Config.addDefaults inputConfig
