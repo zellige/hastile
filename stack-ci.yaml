@@ -58,7 +58,7 @@ extra-deps:
 - prometheus-metrics-ghc-1.0.0
 - wai-middleware-prometheus-1.0.0
 - katip-0.8.0.0
-- Win32-2.8.3.0
+- Win32-2.5.4.1
 
 # Override default flag values for local packages and extra-deps
 flags: {}
