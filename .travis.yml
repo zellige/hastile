@@ -15,7 +15,7 @@ matrix:
     compiler: "LTS12"
     deploy:
       provider: releases
-      api_key: "e1bfc7517ac37152ab8633427701c62acadb52cc"
+      api_key: "GITHUB OAUTH TOKEN"
       file: "hastile.zip"
       skip_cleanup: true
       on:
