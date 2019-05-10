@@ -1,5 +1,5 @@
 sudo: false 
-language: generic
+language: sh
 
 # Caching so the next build will be fast too.
 cache:
