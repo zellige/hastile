@@ -1,0 +1,6 @@
+site_name: Hastile Documentation
+nav:
+    - General: general.md
+theme: readthedocs
+markdown_extensions: 
+    - smarty
