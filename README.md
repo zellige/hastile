@@ -6,6 +6,23 @@ A Haskell tile server that produces GeoJSON or MVT (Mapbox Vector Tiles) from a 
 
 ## Getting Started
 
+### Dependencies:
+#### All
+Install Haskell Stack:
+    ```
+    curl -sSL https://get.haskellstack.org/ | sh
+    ```
+
+#### Linux
+    ```
+    sudo apt-get update
+    sudo apt-get install -y libgmp-dev
+    sudo apt-get install postgresql gdal-bin postgis libgeos-dev
+    sudo apt install libpq-dev 
+    ```
+
+### Build
+
 Point the server at a PostgreSQL (9.5+) database with the PostGIS extension enabled.  It will automatically render tables with a 
 "wkb_geometry" column and serve them as layers.
 
