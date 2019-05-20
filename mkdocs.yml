@@ -4,3 +4,4 @@ nav:
 theme: readthedocs
 markdown_extensions: 
     - smarty
+repo_url: https://github.com/indicatrix/hastile/
