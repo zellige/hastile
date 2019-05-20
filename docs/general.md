@@ -9,17 +9,17 @@ A Haskell tile server that produces GeoJSON or MVT (Mapbox Vector Tiles) from a 
 ### Dependencies:
 #### All
 Install Haskell Stack:
-    ```
+
     curl -sSL https://get.haskellstack.org/ | sh
-    ```
+
 
 #### Linux
-    ```
+
     sudo apt-get update
     sudo apt-get install -y libgmp-dev
     sudo apt-get install postgresql gdal-bin postgis libgeos-dev
     sudo apt install libpq-dev 
-    ```
+
 
 ### Build
 
@@ -27,6 +27,7 @@ Point the server at a PostgreSQL (9.5+) database with the PostGIS extension enab
 "wkb_geometry" column and serve them as layers.
 
 For example:
+
 - `stack build`
 - `stack exec -- hastile starter --dbConnection "host=localhost port=5432 user=dba password=password dbname=mapdata" --port 8080 --host "http://localhost" --cfgFile hastile-config.json`
 
@@ -222,6 +223,13 @@ To start the server:
 
 To run with GHC Metrics:
 `./hastile server --configFile FILEPATH +RTS -T`
+
+
+## Documentation
+
+Hastile docs are generated using [mkdocs](https://www.mkdocs.org).
+
+Preview docs locally by using `mkdocs serve` or `mkdocs build`. Then deploy to https://indicatrix.github.io/hastile using `mkdocs gh-deploy`. This command will deploy to the `gh-pages` branch as outlined [here](https://www.mkdocs.org/user-guide/deploying-your-docs/#github-pages).
 
 ## Projections
 
