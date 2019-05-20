@@ -1,0 +1,7 @@
+site_name: Hastile Documentation
+nav:
+    - General: general.md
+theme: readthedocs
+markdown_extensions: 
+    - smarty
+repo_url: https://github.com/indicatrix/hastile/
