@@ -71,6 +71,8 @@
         
             <li><a class="toctree-l3" href="#running">Running</a></li>
         
+            <li><a class="toctree-l3" href="#documentation">Documentation</a></li>
+        
             <li><a class="toctree-l3" href="#projections">Projections</a></li>
         
             <li><a class="toctree-l3" href="#helpful-links">Helpful links</a></li>
@@ -134,9 +136,11 @@ sudo apt install libpq-dev
 <h3 id="build">Build</h3>
 <p>Point the server at a PostgreSQL (9.5+) database with the PostGIS extension enabled.  It will automatically render tables with a 
 &ldquo;wkb_geometry&rdquo; column and serve them as layers.</p>
-<p>For example:
-- <code>stack build</code>
-- <code>stack exec -- hastile starter --dbConnection "host=localhost port=5432 user=dba password=password dbname=mapdata" --port 8080 --host "http://localhost" --cfgFile hastile-config.json</code></p>
+<p>For example:</p>
+<ul>
+<li><code>stack build</code></li>
+<li><code>stack exec -- hastile starter --dbConnection "host=localhost port=5432 user=dba password=password dbname=mapdata" --port 8080 --host "http://localhost" --cfgFile hastile-config.json</code></li>
+</ul>
 <p>Tiles will be available at: <code>http://localhost:8080/table_name/z/x/y.mvt</code></p>
 <p>A configuration file will be created automatically although not used (see running in Server mode below).</p>
 <h2 id="restful-api">RESTful API</h2>
@@ -360,6 +364,9 @@ If you don&rsquo;t have the <code>createdb</code> utility then use the <code>mig
 <code>./hastile server --configFile FILEPATH</code></p>
 <p>To run with GHC Metrics:
 <code>./hastile server --configFile FILEPATH +RTS -T</code></p>
+<h2 id="documentation">Documentation</h2>
+<p>Hastile docs are generated using <a href="https://www.mkdocs.org">mkdocs</a>.</p>
+<p>Preview docs locally by using <code>mkdocs serve</code> or <code>mkdocs build</code>. Then deploy to https://indicatrix.github.io/hastile using <code>mkdocs gh-deploy</code>. This command will deploy to the <code>gh-pages</code> branch as outlined <a href="https://www.mkdocs.org/user-guide/deploying-your-docs/#github-pages">here</a>.</p>
 <h2 id="projections">Projections</h2>
 <p>We assume tiles are requested in the spherical mercator (EPSG 3857 AKA EPSG 900913 AKA Webby McWebcator). Furthermore, map data is assumed to be stored in EPSG 4326.</p>
 <h2 id="helpful-links">Helpful links</h2>
