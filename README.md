@@ -6,6 +6,9 @@ A Haskell tile server that produces GeoJSON or MVT (Mapbox Vector Tiles) from a 
 
 ## Getting Started
 
+- [Download a binary and unzip it](https://github.com/indicatrix/hastile/releases)
+- Run `./hastile starter --dbConnection "host=localhost port=5432 user=dba password=password dbname=mapdata" --port 8080 --host "http://localhost" --cfgFile hastile-config.json`
+
 ### Dependencies:
 #### All
 Install Haskell Stack:
