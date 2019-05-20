@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>General - Hastile Documentation</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "General";
+    var mkdocs_page_input_path = "general.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> Hastile Documentation</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1 current">
+		
+    <a class="current" href="./">General</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l2"><a href="#hastile">hastile</a></li>
+    
+        <ul>
+        
+            <li><a class="toctree-l3" href="#getting-started">Getting Started</a></li>
+        
+            <li><a class="toctree-l3" href="#restful-api">RESTful API</a></li>
+        
+            <li><a class="toctree-l3" href="#layer-api">Layer API</a></li>
+        
+            <li><a class="toctree-l3" href="#building">Building</a></li>
+        
+            <li><a class="toctree-l3" href="#server-mode">Server Mode</a></li>
+        
+            <li><a class="toctree-l3" href="#configuration">Configuration</a></li>
+        
+            <li><a class="toctree-l3" href="#running">Running</a></li>
+        
+            <li><a class="toctree-l3" href="#projections">Projections</a></li>
+        
+            <li><a class="toctree-l3" href="#helpful-links">Helpful links</a></li>
+        
+        </ul>
+    
+
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">Hastile Documentation</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>General</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="hastile">hastile</h1>
+<p>A Haskell tile server that produces GeoJSON or MVT (Mapbox Vector Tiles) from a PostGIS database.</p>
+<p><img alt="Build Status" src="https://circleci.com/gh/indicatrix/hastile/tree/master.png?circle-token=151e6cea2b027041b06878de8694bbfdaf2b6aba" /></p>
+<h2 id="getting-started">Getting Started</h2>
+<p>Point the server at a PostgreSQL (9.5+) database with the PostGIS extension enabled.  It will automatically render tables with a 
+&ldquo;wkb_geometry&rdquo; column and serve them as layers.</p>
+<p>For example:
+- <code>stack build</code>
+- <code>stack exec -- hastile starter --dbConnection "host=localhost port=5432 user=dba password=password dbname=mapdata" --port 8080 --host "http://localhost" --cfgFile hastile-config.json</code></p>
+<p>Tiles will be available at: <code>http://localhost:8080/table_name/z/x/y.mvt</code></p>
+<p>A configuration file will be created automatically although not used (see running in Server mode below).</p>
+<h2 id="restful-api">RESTful API</h2>
+<pre><code>GET    /                          (application/json)                   - Returns the current configuration.
+POST   /                          (application/json)                   - Add/overwite many layer configurations.
+POST   /layername                 (application/json)                   - Add/overwrite a single layer configuration.
+GET    /layername[.json]          (application/json)                   - Return TileJSON for a tile layer.
+GET    /layername/Z/X/Y.&lt;mvt|pbf&gt; (application/vnd.mapbox-vector-tile) - Return Mapnik Vector Tile for given layername, Zoom, (X,Y).
+GET    /layername/Z/X/Y.json      (application/json)                   - Return GeoJSON for given layername, Zoom, (X,Y).
+GET    /token                     (application/json)                   - Returns tokens and authorised layers.
+GET    /token/tokenid             (application/json)                   - Returns the authorised layers for the given token.
+POST   /token                     (application/json)                   - A token and authorised layers to upsert the token database.
+DELETE /token/tokenid             (application/json)                   - Delete the given token from the token database.
+</code></pre>
+
+<ul>
+<li><a href="https://github.com/mapbox/tilejson-spec/tree/master/2.2.0">TileJSON Specification</a></li>
+</ul>
+<h2 id="layer-api">Layer API</h2>
+<p>The <code>POST /</code> with multiple layer configuration or <code>POST /layername</code> with a layer configuration allows you to change the layers that Hastile serves up 
+and will save the configuration file to disk.</p>
+<p>To create a new layer:
+- <code>curl -d '{ "layer_name": { "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} } }' -H "Content-Type: application/json" -X POST http://localhost:8080/</code></p>
+<p>To modify an existing layer:
+- <code>curl -d '{ "table-name": "...", "format": "geojson", "quantize": 2, "simplify": {} }' -H "Content-Type: application/json" -X POST http://localhost:8080/layer_name</code></p>
+<h3 id="payload">Payload</h3>
+<p>Example:</p>
+<pre><code class="json">    &quot;rail_network&quot;: {
+      &quot;security&quot;: &quot;public&quot;,
+      &quot;table-name&quot;: &quot;suburbanrail_hastile&quot;,
+      &quot;format&quot;: &quot;wkb-properties&quot;,
+      &quot;minzoom&quot;: 0,
+      &quot;maxzoom&quot;: 20,
+      &quot;bounds&quot;: [ 144.94932174682617, -37.82449737924566, 144.97901916503906, -37.84788365473107 ],
+      &quot;format&quot;: &quot;wkb-properties&quot;,
+      &quot;last-modified&quot;: &quot;2018-10-31 09:09:39 +1000&quot;,
+      &quot;quantize&quot;: 4,
+      &quot;simplify&quot;: {
+        &quot;12&quot;: &quot;douglas-peucker&quot;
+      }
+    }
+</code></pre>
+
+<table>
+<thead>
+<tr>
+<th>Attributes</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>layer-name</strong><br/>string</td>
+<td>The unique key to the layer configuration</td>
+</tr>
+</tbody>
+</table>
+<h4 id="layer-configuration">Layer Configuration</h4>
+<table>
+<thead>
+<tr>
+<th>Attributes</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>security</strong><br/>string</td>
+<td>&ldquo;public&rdquo; - allow anyone to request<br/>&ldquo;private&rdquo; - require a valid token (using ?token=xxxx).</td>
+</tr>
+<tr>
+<td><strong>table-name</strong><br/>string</td>
+<td>The unique key to the layer.</td>
+</tr>
+<tr>
+<td><strong>format</strong><br/>string</td>
+<td>&ldquo;source&rdquo; - a normal table<br/>&ldquo;wkb-properties&rdquo; - combination of JSON hash and wkb_geometry columns<br/>&ldquo;geojson&rdquo; - combination of GeoJSON, JSON hash of properties and wkb geomtry columns.</td>
+</tr>
+<tr>
+<td><strong>last-modified</strong><br/>date</td>
+<td>Last time the layer has been update, used to return the Last-Modified HTTP header.</td>
+</tr>
+<tr>
+<td><strong>quantize</strong><br/>integer</td>
+<td>Positive integer, amount to round and remove duplicates (10 is probably the most, 1 is typical).</td>
+</tr>
+<tr>
+<td><strong>simplify</strong><br/>string</td>
+<td>Allows specifying the layer simplification setting.</td>
+</tr>
+<tr>
+<td><strong>minzoom</strong><br/>int</td>
+<td>0..30 Minimum zoom level to render, otherwise returns 404. Adds setting to TileJSON.</td>
+</tr>
+<tr>
+<td><strong>maxzoom</strong><br/>int</td>
+<td>0..30 Maximum zoom level to render, otherwise returns 404. Adds setting to TileJSON.</td>
+</tr>
+<tr>
+<td><strong>bounds</strong><br/>array float</td>
+<td>Bounds are represented in WGS:84 latitude and longitude values. Adds settings to TileJSON.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="layer-simplification-settings">Layer Simplification Settings</h4>
+<table>
+<thead>
+<tr>
+<th>Attributes</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>zoom-level</strong><br/>string</td>
+<td>The zoom level (&gt;=) to apply the layer simplification algorithm.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="layer-simplification-algorithm">Layer Simplification Algorithm</h4>
+<table>
+<thead>
+<tr>
+<th>Attributes</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>algorithm-name</strong><br/>string</td>
+<td>&ldquo;douglas-peucker&rdquo; - apply the Ramer-Douglas-Peucker algorithm (epsilon of 1.0).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="building">Building</h2>
+<p>Building:
+ - <code>stack build</code>
+ - <code>stack test</code></p>
+<h2 id="server-mode">Server Mode</h2>
+<p>Server mode makes more features available:
+- Token based security (private layers),
+- Metrics (prometheus)</p>
+<h3 id="token-based-security">Token Based Security</h3>
+<p>A token table is required for token security.  This is required for &ldquo;private&rdquo; layers.</p>
+<h4 id="setup-the-token-database">Setup the Token Database</h4>
+<ul>
+<li>Create a postgres database to store the tokens table:
+  <code>createdb -O dba db_name</code>
+If you don&rsquo;t have the <code>createdb</code> utility then use the <code>migration</code> tool :<br />
+<code>./db/migration createdb db_name dba</code></li>
+<li>Initialize the DB :<br />
+<code>./db/migration init "postgresql://db_user:password@db_server:db_port/db_name"</code></li>
+<li>Run the migrations :<br />
+<code>./db/migration migrate "postgresql://db_user:password@db_server:db_port/db_name"</code></li>
+<li>Use the <code>migration</code> tool for migrations :<br />
+<code>./db/migration --help</code>  </li>
+</ul>
+<h4 id="token-api">Token API</h4>
+<p>To insert or update a token:
+- <code>curl -d '{ "token": "abcd", "layers": ["layer1", "layer2"] }' -H "Content-Type: application/json" -X POST http://localhost:8080/token</code></p>
+<p>To delete a token:
+- <code>curl -H "Content-Type: application/json" -X DELETE http://localhost:8080/token/abcd</code></p>
+<h4 id="running-in-server-mode">Running in Server Mode</h4>
+<p>To run Hastile in server mode you must use a configuration file:
+- <code>stack exec -- hastile server --configFile hastile-config.json</code></p>
+<h2 id="configuration">Configuration</h2>
+<p>The file contains settings for the database connection and layer configuration, for example:</p>
+<pre><code class="json">{
+  &quot;db-connection&quot;: &quot;host=example.com port=5432 user=tiler password=123abc dbname=notoracle&quot;
+  &quot;layers&quot;: {
+    &quot;layer1&quot;: { 
+      &quot;table_name&quot;: &quot;layer1_table&quot;,
+      &quot;format&quot;: &quot;wkb-properties&quot;,
+      &quot;last-modified&quot;: &quot;2017-01-15T23:49:36Z&quot;
+    },
+    &quot;layer2&quot;: {
+      &quot;table_name&quot;: &quot;layer2_table&quot;,
+      &quot;format&quot;: &quot;geojson&quot;,
+      &quot;last-modified&quot;: &quot;2017-01-15T23:49:36Z&quot;
+    }
+  }
+}
+</code></pre>
+
+<p>Where, db-connection is a <a href="https://www.postgresql.org/docs/9.4/static/libpq-connect.html#LIBPQ-CONNSTRING">PostgreSQL connection string</a>.</p>
+<p>To construct a table with a GeoJSON feature with all properties containing arbitrary columns from a table, create a materialized view like:</p>
+<pre><code class="SQL">CREATE MATERIALIZED VIEW layer1_table as SELECT jsonb_build_object(
+    'type',      'Feature',
+    'id',         ogc_fid,
+    'geometry',   ST_AsGeoJSON(wkb_geometry)::jsonb,
+    'properties', to_jsonb(row) - 'ogc_fid' - 'wkb_geometry'
+)::json as geojson, (to_jsonb(row) - 'wkb_geometry') :: JSON as properties,row.wkb_geometry as wkb_geometry FROM (SELECT * FROM source_layer1_table) row;
+</code></pre>
+
+<p>This will create the two columns required: geojson (a GeoJSON feature in JSON format) and the geometry column.</p>
+<p>You can configure other database, mapnik and HTTP port settings too:</p>
+<pre><code class="json">{
+  &quot;db-pool-size&quot;: 10,
+  &quot;db-timeout&quot;: 5,
+  &quot;port&quot;: 8080
+}
+</code></pre>
+
+<p>If you want to combine multiple tables into a single layer you can use UNION and MATERIALIZED VIEWS and then query it directly:</p>
+<pre><code class="SQL">CREATE MATERIALIZED VIEW layers AS
+  SELECT geojson FROM layer1_table
+  UNION
+  SELECT geojson FROM layer2_table
+</code></pre>
+
+<p>Changing the configuration to:</p>
+<pre><code class="json">  &quot;layers&quot;: {
+    &quot;layer&quot;: {
+      ...
+    }  
+  }
+</code></pre>
+
+<h2 id="running">Running</h2>
+<p>To start the server:
+<code>./hastile server --configFile FILEPATH</code></p>
+<p>To run with GHC Metrics:
+<code>./hastile server --configFile FILEPATH +RTS -T</code></p>
+<h2 id="projections">Projections</h2>
+<p>We assume tiles are requested in the spherical mercator (EPSG 3857 AKA EPSG 900913 AKA Webby McWebcator). Furthermore, map data is assumed to be stored in EPSG 4326.</p>
+<h2 id="helpful-links">Helpful links</h2>
+<ul>
+<li>[Mapbox Vector Tile Specification] (https://www.mapbox.com/vector-tiles/specification/)</li>
+<li><a href="http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/">Tiles a la Google Maps</a></li>
+<li><a href="https://alastaira.wordpress.com/2011/01/23/the-google-maps-bing-maps-spherical-mercator-projection/">The Google Maps/Bing Maps Spherical Mercator Projection</a></li>
+<li><a href="https://github.com/mapbox/mapnik-vector-tile/blob/master/bench/vtile-encode.cpp">vtile-encode - CLI that does GeoJSON to mvt</a></li>
+</ul>
+              
+            </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+      
+    </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+
+</body>
+</html>
