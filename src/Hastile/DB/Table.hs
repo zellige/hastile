@@ -10,6 +10,7 @@
 module Hastile.DB.Table where
 
 import qualified Control.Exception.Base        as ControlException
+import qualified Control.Monad.Except          as Except
 import qualified Control.Monad.IO.Class        as MonadIO
 import qualified Data.Either                   as DataEither
 import qualified Data.Geometry.Types.Geography as GeometryTypesGeography
@@ -29,6 +30,7 @@ import qualified Hasql.Transaction.Sessions    as HasqlTransactionSession
 import qualified Katip
 import qualified Text.Trifecta.Result          as TrifectaResult
 
+import qualified Hastile.Config                as Config
 import qualified Hastile.DB                    as DB
 import qualified Hastile.Lib.Log               as LibLog
 import qualified Hastile.Types.Config          as Config
@@ -52,11 +54,19 @@ checkConfig logEnv cfgFile Config.Config{..} = do
         Katip.runKatipContextT le (mempty :: Katip.LogContexts) mempty (LibLog.logErrors cfgFile errs)
   HasqlPool.release pool
 
-getTables :: Config.Config -> IO (Either Text.Text [Text.Text])
+writeConfigFromDatabaseTables :: FilePath -> Config.Config -> Except.ExceptT Text.Text IO Config.Config
+writeConfigFromDatabaseTables cfgFile config = do
+  textLayers <- MonadIO.liftIO (getTables config) >>= Except.liftEither
+  boxes <- MonadIO.liftIO (getBboxes config textLayers) >>= Except.liftEither
+  let listLayers = zipWith (\b t -> (t, Layer.defaultLayerSettings { Layer._layerBounds = b } )) boxes textLayers
+  Config.writeLayers listLayers config cfgFile
+  MonadIO.liftIO $ Config.getConfig cfgFile
+
+getTables :: MonadIO.MonadIO m => Config.Config -> m (Either Text.Text [Text.Text])
 getTables Config.Config{..} = do
-  pool <- HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection)
+  pool <- MonadIO.liftIO $ HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection)
   errOrList <- wkbGeometryTables pool
-  HasqlPool.release pool
+  MonadIO.liftIO $ HasqlPool.release pool
   pure errOrList
 
 getBboxes :: Config.Config -> [Text.Text] -> IO (Either Text.Text [Maybe GeometryTypesGeography.BoundingBox])

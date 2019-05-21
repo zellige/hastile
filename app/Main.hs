@@ -5,10 +5,12 @@ module Main where
 
 import qualified Control.Exception.Base            as ControlException
 import qualified Control.Monad                     as Monad
+import qualified Control.Monad.Except              as Except
 import qualified Control.Monad.IO.Class            as MonadIO
 import qualified Data.Foldable                     as Foldable
 import qualified Data.LruCache.IO                  as LRU
 import qualified Data.Map                          as Map
+import qualified Data.Maybe                        as Maybe
 import qualified Data.Text                         as Text
 import qualified Data.Text.Encoding                as TextEncoding
 import qualified Data.Time                         as Time
@@ -64,37 +66,30 @@ doItWithConfig cfgFile config@Config.Config{..} appState checkConfig = do
 
 setupLayersConfiguration :: Maybe FilePath -> Text.Text -> Text.Text -> Int -> IO (FilePath, Config.Config)
 setupLayersConfiguration maybeCfgFile dbConnection host port =
-  case maybeCfgFile of
-    Nothing -> do
-      let defaultFileName = "hastile-config.json"
-      createDefaultCfgFile <- createFromDb defaultFileName
-      pure (defaultFileName, createDefaultCfgFile)
-    Just newCfgFile -> do
-      fileExists <- SystemDirectory.doesFileExist newCfgFile
-      if fileExists then do
-        readConfig <- Config.getConfig newCfgFile
-        pure (newCfgFile, readConfig)
-      else do
-        createNamedCfgFile <- createFromDb newCfgFile
-        pure (newCfgFile, createNamedCfgFile)
-  where
-    createFromDb cfgFile = do
-      let config = createConfig dbConnection host port
-      getTables <- Table.getTables config
-      case getTables of
-        Left err -> do
+  let
+    config = createConfig dbConnection host port
+    configFileName = Maybe.fromMaybe "hastile-config.json" maybeCfgFile
+  in do
+    fileExists <- SystemDirectory.doesFileExist configFileName
+    if fileExists then do
+      readConfig <- Config.getConfig configFileName
+      pure (configFileName, readConfig)
+    else do
+      maybeNewConfig <- MonadIO.liftIO . Except.runExceptT $ Table.writeConfigFromDatabaseTables configFileName config
+      case maybeNewConfig of
+        Left err        -> do
           MonadIO.liftIO $ print err
-          pure config
-        Right textLayers -> do
-          getBboxes <- Table.getBboxes config textLayers
-          case getBboxes of
-            Left err      -> do
-              MonadIO.liftIO $ print err
-              pure config
-            Right boxes -> do
-              let listLayers = zipWith (\b t -> (t, Layer.defaultLayerSettings { Layer._layerBounds = b } )) boxes textLayers
-              Config.writeLayers listLayers config cfgFile
-              Config.getConfig cfgFile
+          pure (configFileName, config)
+        Right newConfig -> pure (configFileName, newConfig)
+
+writeConfigFromDatabaseTables :: FilePath -> Text.Text -> Text.Text -> Int -> Except.ExceptT Text.Text IO Config.Config
+writeConfigFromDatabaseTables cfgFile dbConnection host port = do
+  let config = createConfig dbConnection host port
+  textLayers <- MonadIO.liftIO (Table.getTables config) >>= Except.liftEither
+  boxes <- MonadIO.liftIO (Table.getBboxes config textLayers) >>= Except.liftEither
+  let listLayers = zipWith (\b t -> (t, Layer.defaultLayerSettings { Layer._layerBounds = b } )) boxes textLayers
+  Config.writeLayers listLayers config cfgFile
+  MonadIO.liftIO $ Config.getConfig cfgFile
 
 createConfig :: Text.Text -> Text.Text -> Int -> Config.Config
 createConfig dbConnection host port = Config.addDefaults inputConfig
