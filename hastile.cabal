@@ -101,12 +101,13 @@ executable hastile
                      , http-types
                      , katip
                      , lrucaching
+                     , mtl
                      , optparse-generic
-                     , text
                      , prometheus-client
                      , prometheus-metrics-ghc
                      , servant-server
                      , stm-containers
+                     , text
                      , time
                      , transformers
                      , wai
