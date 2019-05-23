@@ -27,7 +27,7 @@ Install Haskell Stack:
 
 ### Build
 
-Point the server at a PostgreSQL (9.5+) database with the PostGIS extension enabled.  It will automatically render tables with a 
+Point the server at a PostgreSQL (9.6+) database with the PostGIS extension enabled.  It will automatically render tables with a 
 "wkb_geometry" column and serve them as layers.
 
 For example:
