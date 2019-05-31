@@ -4,11 +4,6 @@ SCRIPT_DIR=`dirname $0`
 ENV_DIR="$SCRIPT_DIR/env"
 MIGRATION_DIR="$SCRIPT_DIR/migrate"
 
-echo $0
-echo $1
-echo $2
-echo $3
-
 ## Functions
 usage () {
   echo "Usage: $0 [options] command"
