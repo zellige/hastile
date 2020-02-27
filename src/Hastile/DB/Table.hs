@@ -75,6 +75,7 @@ getBboxes Config.Config{..} layerTableNames = do
   pool <- HasqlPool.acquire (_configPgPoolSize, _configPgTimeout, TextEncoding.encodeUtf8 _configPgConnection)
   errOrList <- Traversable.mapM (boxFromTable pool) layerTableNames
   HasqlPool.release pool
+  -- errorOrList is a [ IO a ]. Sequence gives us IO [ a ]. In this case, boxFromTable returns a IO (Either)
   pure (Traversable.sequence errOrList)
 
 checkLayerExists :: MonadIO.MonadIO m => HasqlPool.Pool -> Layer.Layer -> m (Either String ())

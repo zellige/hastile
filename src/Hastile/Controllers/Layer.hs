@@ -30,6 +30,7 @@ import qualified Data.Text                           as Text
 import qualified Data.Text.Encoding                  as TextEncoding
 import qualified Data.Text.Read                      as TextRead
 import qualified Data.Time                           as Time
+import qualified Data.Time.Clock as Clock
 import           GHC.Conc
 import           Network.HTTP.Types.Header           (hLastModified)
 import           Numeric.Natural                     (Natural)
@@ -46,6 +47,7 @@ import qualified Hastile.Types.Config                as Config
 import qualified Hastile.Types.Layer                 as Layer
 import qualified Hastile.Types.Layer.Format          as LayerFormat
 import qualified Hastile.Types.Layer.Security        as LayerSecurity
+import qualified Hastile.Types.Time as LayerTime
 import qualified Hastile.Types.Tile                  as Tiles
 
 layerServerAuthenticated :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
@@ -72,12 +74,12 @@ provisionLayer l settings = do
   newLayer [layerToModify]
   pure Servant.NoContent
 
-serveLayerPublic :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
+serveLayerPublic :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text, Servant.Header "Expires" Text.Text] ByteString.ByteString)
 serveLayerPublic l z x stringY _ maybeIfModified = do
   layer <- getLayerOrThrow l
   getContent z x stringY maybeIfModified layer
 
-serveLayerAuthenticated :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
+serveLayerAuthenticated :: (MonadIO.MonadIO m) => Text.Text -> Natural -> Natural -> Text.Text -> Maybe Text.Text -> Maybe Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text, Servant.Header "Expires" Text.Text] ByteString.ByteString)
 serveLayerAuthenticated l z x stringY maybeToken maybeIfModified = do
   layer <- getLayerOrThrow l
   layerCount <- ReaderClass.asks App._ssLayerMetric
@@ -107,7 +109,7 @@ serveTileJson layerName = do
   config <- ReaderClass.asks App._ssOriginalConfig
   pure $ Tiles.fromConfig config layer
 
-getContent :: (MonadIO.MonadIO m) => Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text] ByteString.ByteString)
+getContent :: (MonadIO.MonadIO m) => Natural -> Natural -> Text.Text -> Maybe Text.Text -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified"  Text.Text, Servant.Header "Expires" Text.Text] ByteString.ByteString)
 getContent z x stringY maybeIfModified layer
   | z < Layer.layerMinZoom layer = throwError zoomLowerThanMinZoomError
   | z > Layer.layerMaxZoom layer = throwError zoomGreaterThanMaxZoomError
@@ -117,7 +119,7 @@ getContent z x stringY maybeIfModified layer
         then getContent' layer z x stringY
         else throwError Servant.err304
 
-getContent' :: (MonadIO.MonadIO m) => Layer.Layer -> Natural -> Natural -> Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
+getContent' :: (MonadIO.MonadIO m) => Layer.Layer -> Natural -> Natural -> Text.Text -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text, Servant.Header "Expires" Text.Text] ByteString.ByteString)
 getContent' l z x stringY
   | (".mvt" `Text.isSuffixOf` stringY) || (".pbf" `Text.isSuffixOf` stringY) || (".vector.pbf" `Text.isSuffixOf` stringY) = getAnything getTile l z x stringY
   | ".json" `Text.isSuffixOf` stringY = getAnything getJson l z x stringY
@@ -131,7 +133,7 @@ getAnything f layer z x stringY =
   where
     getY s = TextRead.decimal $ Text.takeWhile Char.isNumber s
 
-getTile :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
+getTile :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text, Servant.Header "Expires" Text.Text] ByteString.ByteString)
 getTile layer z xy = do
   buffer  <- ReaderClass.asks (^. App.ssBuffer)
   let simplificationAlgorithm = Layer.getAlgorithm z layer
@@ -148,17 +150,19 @@ getTile layer z xy = do
       geoFeature <- getStreamingLayerWkbProperties config layer z xy
       checkEmpty (GeoJsonStreamingToMvt.vtToBytes config geoFeature) layer
 
-checkEmpty :: (MonadIO.MonadIO m) => ByteString.ByteString -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
+checkEmpty :: (MonadIO.MonadIO m) => ByteString.ByteString -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text, Servant.Header "Expires" Text.Text] ByteString.ByteString)
 checkEmpty tile layer = do
   serverStartTime <- ReaderClass.asks App._ssServerserverStartTime
+  tileExpireTime <- MonadIO.liftIO $  Clock.addUTCTime 5 <$> Clock.getCurrentTime
   if ByteString.null tile
     then throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TextEncoding.encodeUtf8 $ Layer.lastModifiedFromLayer serverStartTime layer)] }
-    else pure $ Servant.addHeader (Layer.lastModifiedFromLayer serverStartTime layer) tile
+    else pure $ Servant.addHeader (Layer.lastModifiedFromLayer serverStartTime layer) (Servant.addHeader (LayerTime.lastModified tileExpireTime) tile)
 
-getJson :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) ->  App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text] ByteString.ByteString)
+getJson :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) ->  App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text, Servant.Header "Expires" Text.Text] ByteString.ByteString)
 getJson layer z xy = do
   serverStartTime <- ReaderClass.asks App._ssServerserverStartTime
-  Servant.addHeader (Layer.lastModifiedFromLayer serverStartTime layer) . ByteStringLazyChar8.toStrict . Aeson.encode <$> getGeoFeature layer z xy
+  tileExpireTime <- MonadIO.liftIO $  Clock.addUTCTime 5 <$> Clock.getCurrentTime
+  Servant.addHeader (Layer.lastModifiedFromLayer serverStartTime layer) . Servant.addHeader (LayerTime.lastModified tileExpireTime) . ByteStringLazyChar8.toStrict . Aeson.encode <$> getGeoFeature layer z xy
 
 getStreamingLayerSource :: (MonadIO.MonadIO m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m TypesMvtFeatures.StreamingLayer
 getStreamingLayerSource config layer z xy = do

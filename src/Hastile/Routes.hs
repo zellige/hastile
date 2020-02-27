@@ -49,7 +49,7 @@ type LayerApi =
       ))
 
 type HastileContentApi =
-  Y :> QueryParam "token" Text.Text :> Servant.Header "If-Modified-Since" Text.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" Text.Text] ByteString.ByteString)
+  Y :> QueryParam "token" Text.Text :> Servant.Header "If-Modified-Since" Text.Text :> Get '[Mime.MapboxVectorTile, Mime.AlreadyJSON] (Headers '[Header "Last-Modified" Text.Text, Header "Expires" Text.Text] ByteString.ByteString)
 
 publicHastileApi :: Proxy.Proxy PublicHastileApi
 publicHastileApi = Proxy.Proxy
