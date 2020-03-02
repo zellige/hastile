@@ -35,6 +35,7 @@ import qualified Hastile.DB                    as DB
 import qualified Hastile.Lib.Log               as LibLog
 import qualified Hastile.Types.Config          as Config
 import qualified Hastile.Types.Layer           as Layer
+import qualified Hastile.Types.Layer.Security  as LayerSecurity
 
 type RunCheckConfig = Katip.LogEnv -> FilePath -> Config.Config -> IO ()
 
@@ -58,7 +59,7 @@ writeConfigFromDatabaseTables :: FilePath -> Config.Config -> Except.ExceptT Tex
 writeConfigFromDatabaseTables cfgFile config = do
   textLayers <- MonadIO.liftIO (getTables config) >>= Except.liftEither
   boxes <- MonadIO.liftIO (getBboxes config textLayers) >>= Except.liftEither
-  let listLayers = zipWith (\b t -> (t, Layer.defaultLayerSettings { Layer._layerBounds = b } )) boxes textLayers
+  let listLayers = zipWith (\b t -> (t, Layer.defaultLayerSettings { Layer._layerBounds = b, Layer._layerSecurity = Just LayerSecurity.Public } )) boxes textLayers
   Config.writeLayers listLayers config cfgFile
   MonadIO.liftIO $ Config.getConfig cfgFile
 

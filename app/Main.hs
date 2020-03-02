@@ -82,15 +82,6 @@ setupLayersConfiguration maybeCfgFile dbConnection host port =
           pure (configFileName, config)
         Right newConfig -> pure (configFileName, newConfig)
 
-writeConfigFromDatabaseTables :: FilePath -> Text.Text -> Text.Text -> Int -> Except.ExceptT Text.Text IO Config.Config
-writeConfigFromDatabaseTables cfgFile dbConnection host port = do
-  let config = createConfig dbConnection host port
-  textLayers <- MonadIO.liftIO (Table.getTables config) >>= Except.liftEither
-  boxes <- MonadIO.liftIO (Table.getBboxes config textLayers) >>= Except.liftEither
-  let listLayers = zipWith (\b t -> (t, Layer.defaultLayerSettings { Layer._layerBounds = b } )) boxes textLayers
-  Config.writeLayers listLayers config cfgFile
-  MonadIO.liftIO $ Config.getConfig cfgFile
-
 createConfig :: Text.Text -> Text.Text -> Int -> Config.Config
 createConfig dbConnection host port = Config.addDefaults inputConfig
   where
