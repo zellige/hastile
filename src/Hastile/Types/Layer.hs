@@ -156,7 +156,8 @@ layerTimeToLive defaultTtl =
 
 expiresFromLayer :: Time.UTCTime -> Layer -> Text.Text
 expiresFromLayer currentTime layer =
-  LayerTime.toText $ Clock.addUTCTime (layerTimeToLive 5 layer) currentTime
+  -- default to 1 year expiry on tiles
+  LayerTime.toText $ Clock.addUTCTime (layerTimeToLive 31556952 layer) currentTime
 
 isModified :: Time.UTCTime -> Layer -> Maybe Text.Text -> Bool
 isModified serverStartTime layer maybeTimeText =
