@@ -47,7 +47,6 @@ import qualified Hastile.Types.Config                as Config
 import qualified Hastile.Types.Layer                 as Layer
 import qualified Hastile.Types.Layer.Format          as LayerFormat
 import qualified Hastile.Types.Layer.Security        as LayerSecurity
-import qualified Hastile.Types.Time as LayerTime
 import qualified Hastile.Types.Tile                  as Tiles
 
 layerServerAuthenticated :: (MonadIO.MonadIO m) => Servant.ServerT Routes.LayerApi (App.ActionHandler m)
@@ -153,16 +152,16 @@ getTile layer z xy = do
 checkEmpty :: (MonadIO.MonadIO m) => ByteString.ByteString -> Layer.Layer -> App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text, Servant.Header "Expires" Text.Text] ByteString.ByteString)
 checkEmpty tile layer = do
   serverStartTime <- ReaderClass.asks App._ssServerserverStartTime
-  tileExpireTime <- MonadIO.liftIO $  Clock.addUTCTime 5 <$> Clock.getCurrentTime
+  currentTime <- MonadIO.liftIO Clock.getCurrentTime
   if ByteString.null tile
     then throwError $ App.err204 { Servant.errHeaders = [(hLastModified, TextEncoding.encodeUtf8 $ Layer.lastModifiedFromLayer serverStartTime layer)] }
-    else pure $ Servant.addHeader (Layer.lastModifiedFromLayer serverStartTime layer) (Servant.addHeader (LayerTime.lastModified tileExpireTime) tile)
+    else pure $ Servant.addHeader (Layer.lastModifiedFromLayer serverStartTime layer) (Servant.addHeader (Layer.expiresFromLayer currentTime layer) tile)
 
 getJson :: (MonadIO.MonadIO m) => Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) ->  App.ActionHandler m (Servant.Headers '[Servant.Header "Last-Modified" Text.Text, Servant.Header "Expires" Text.Text] ByteString.ByteString)
 getJson layer z xy = do
   serverStartTime <- ReaderClass.asks App._ssServerserverStartTime
-  tileExpireTime <- MonadIO.liftIO $  Clock.addUTCTime 5 <$> Clock.getCurrentTime
-  Servant.addHeader (Layer.lastModifiedFromLayer serverStartTime layer) . Servant.addHeader (LayerTime.lastModified tileExpireTime) . ByteStringLazyChar8.toStrict . Aeson.encode <$> getGeoFeature layer z xy
+  currentTime <- MonadIO.liftIO Clock.getCurrentTime
+  Servant.addHeader (Layer.lastModifiedFromLayer serverStartTime layer) . Servant.addHeader (Layer.expiresFromLayer currentTime layer) . ByteStringLazyChar8.toStrict . Aeson.encode <$> getGeoFeature layer z xy
 
 getStreamingLayerSource :: (MonadIO.MonadIO m) => TypesConfig.Config -> Layer.Layer -> TypesGeography.ZoomLevel -> (TypesGeography.Pixels, TypesGeography.Pixels) -> App.ActionHandler m TypesMvtFeatures.StreamingLayer
 getStreamingLayerSource config layer z xy = do

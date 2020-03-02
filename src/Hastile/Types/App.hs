@@ -52,6 +52,7 @@ data ServerState = StarterServerState
   , _ssPool                    :: HasqlPool.Pool
   }
 
+
 type SetupAppState = (Time.UTCTime -> Katip.LogEnv -> STMMap.Map Text.Text Layer.Layer -> HasqlPool.Pool -> ServerState)
 
 ControlLens.makeLenses ''ServerState
