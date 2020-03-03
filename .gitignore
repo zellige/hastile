@@ -20,7 +20,6 @@ cabal.sandbox.config
 dist
 dist-*
 site
-stack.yaml.lock
 ._.DS_Store
 
 release/
