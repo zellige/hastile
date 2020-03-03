@@ -1,0 +1,23 @@
+{
+    "db-pool-size": 10,
+    "token-cache-size": 1000,
+    "environment": "development",
+    "db-timeout": 1,
+    "tile-buffer": 128,
+    "access-log": "stdout",
+    "db-connection": "host=localhost port=5432 user=sa password=password1 dbname=tmr_links",
+    "app-log": "stdout",
+    "layers": {
+        "lvl4": {
+            "security": "public",
+            "bounds": [
+                137.491345,
+                -29.62056,
+                153.60323,
+                -10.57461
+            ]
+        }
+    },
+    "host": "http://localhost",
+    "port": 8080
+}

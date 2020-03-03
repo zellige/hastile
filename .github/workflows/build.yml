@@ -9,7 +9,19 @@ jobs:
 
     steps:
     - name: Get code
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
+
+    - name: Checkout zellige repo
+      uses: actions/checkout@v2
+      with:
+        repository: zellige/zellige
+        path: zellige
+
+    - name: Checkout vectortiles repo
+      uses: actions/checkout@v2
+      with:
+        repository: zellige/vectortiles
+        path: vectortiles
     
     - name: Setup Stack
       uses: mstksg/setup-stack@v2
