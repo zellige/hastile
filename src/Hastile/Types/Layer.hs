@@ -28,6 +28,8 @@ module Hastile.Types.Layer
   , layerMaxZoom
   , layerLastModified
   , lastModifiedFromLayer
+  , layerTimeToLive
+  , expiresFromLayer
   , isModified
   , getAlgorithm
   ) where
@@ -41,6 +43,7 @@ import qualified Data.Map.Strict               as MapStrict
 import qualified Data.Maybe                    as DataMaybe
 import qualified Data.Text                     as Text
 import qualified Data.Time                     as Time
+import qualified Data.Time.Clock as Clock
 import           Options.Generic               (Generic)
 
 import qualified Hastile.Types.Layer.Format    as LayerFormat
@@ -69,10 +72,11 @@ data LayerSettings = LayerSettings
   , _layerMaxZoom      :: Maybe GeometryTypesGeography.ZoomLevel
   , _layerBounds       :: Maybe GeometryTypesGeography.BoundingBox
   , _layerLastModified :: Maybe Time.UTCTime
+  , _layerTimeToLive   :: Maybe Clock.NominalDiffTime
   } deriving (Show, Eq)
 
 defaultLayerSettings :: LayerSettings
-defaultLayerSettings = LayerSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+defaultLayerSettings = LayerSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 instance Aeson.FromJSON LayerSettings where
   parseJSON = AesonTypes.withObject "LayerSettings" $ \o -> LayerSettings
@@ -85,6 +89,7 @@ instance Aeson.FromJSON LayerSettings where
     <*> o AesonTypes..:? "maxzoom"
     <*> o AesonTypes..:? "bounds"
     <*> o AesonTypes..:? "last-modified"
+    <*> o AesonTypes..:? "ttl"
 
 instance Aeson.ToJSON LayerSettings where
   toJSON ls = AesonTypes.object $ layerSettingsToPairs ls
@@ -101,6 +106,7 @@ layerSettingsToPairs ls =
     , ("maxzoom"       AesonTypes..=)  <$> _layerMaxZoom ls
     , ("bounds"        AesonTypes..=)  <$> _layerBounds ls
     , ("last-modified" AesonTypes..=)  <$> _layerLastModified ls
+    , ("ttl"           AesonTypes..=)  <$> _layerTimeToLive ls
     ]
 
 data Layer = Layer
@@ -142,7 +148,16 @@ layerLastModified serverStartTime =
 
 lastModifiedFromLayer :: Time.UTCTime -> Layer -> Text.Text
 lastModifiedFromLayer serverStartTime layer =
-  LayerTime.lastModified $ layerLastModified serverStartTime layer
+  LayerTime.toText $ layerLastModified serverStartTime layer
+
+layerTimeToLive :: Clock.NominalDiffTime -> Layer -> Clock.NominalDiffTime
+layerTimeToLive defaultTtl =
+  getLayerSetting defaultTtl _layerTimeToLive
+
+expiresFromLayer :: Time.UTCTime -> Layer -> Text.Text
+expiresFromLayer currentTime layer =
+  -- default to 1 year expiry on tiles
+  LayerTime.toText $ Clock.addUTCTime (layerTimeToLive 31556952 layer) currentTime
 
 isModified :: Time.UTCTime -> Layer -> Maybe Text.Text -> Bool
 isModified serverStartTime layer maybeTimeText =
