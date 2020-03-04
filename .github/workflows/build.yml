@@ -3,9 +3,40 @@ name: CI
 on: [push]
 
 jobs:
-  build:
+  # build_linux:
+  #   runs-on: ubuntu-latest
 
-    runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Get code
+  #     uses: actions/checkout@v2
+
+  #   - name: Checkout zellige repo
+  #     uses: actions/checkout@v2
+  #     with:
+  #       repository: zellige/zellige
+
+  #   - name: Checkout vectortiles repo
+  #     uses: actions/checkout@v2
+  #     with:
+  #       repository: zellige/vectortiles
+    
+  #   - name: Setup Stack
+  #     uses: mstksg/setup-stack@v2
+    
+  #   # - name: Cache Stack downloads
+  #   #   uses: actions/cache@v1
+  #   #   env:
+  #   #     cache-name: cache-stack-modules
+  #   #   with:
+  #   #     path: /home/runner/.stack/
+  #   #     key: ${{ hashFiles('**/stack.yaml.lock') }}
+      
+  #   - name: stack install, build and test
+  #     run: |
+  #       stack build
+
+  build_windows:
+    runs-on: windows-latest
 
     steps:
     - name: Get code
