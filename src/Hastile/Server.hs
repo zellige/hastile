@@ -1,18 +1,20 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE TypeOperators #-}
 
-module Hastile.Server ( runServer ) where
+module Hastile.Server
+  ( runServer,
+  )
+where
 
 import qualified Control.Monad.Trans.Reader as MonadTransReader
-import qualified Network.Wai                as Wai
+import qualified Hastile.Controllers as Controllers
+import qualified Hastile.Routes as Routes
+import qualified Hastile.Types.App as App
+import qualified Network.Wai as Wai
 import qualified Servant
-import qualified Servant.Server             as ServantServer
-
-import qualified Hastile.Controllers        as Controllers
-import qualified Hastile.Routes             as Routes
-import qualified Hastile.Types.App          as App
+import qualified Servant.Server as ServantServer
 
 runServer :: App.ServerState -> Wai.Application
 runServer serverState =
