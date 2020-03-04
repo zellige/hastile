@@ -24,13 +24,13 @@ jobs:
     - name: Setup Stack
       uses: mstksg/setup-stack@v2
     
-    - name: Cache Stack downloads
-      uses: actions/cache@v1
-      env:
-        cache-name: cache-stack-modules
-      with:
-        path: /home/runner/.stack/
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+    # - name: Cache Stack downloads
+    #   uses: actions/cache@v1
+    #   env:
+    #     cache-name: cache-stack-modules
+    #   with:
+    #     path: /home/runner/.stack/
+    #     key: ${{ hashFiles('**/stack.yaml.lock') }}
       
     - name: stack install, build and test
       run: |
