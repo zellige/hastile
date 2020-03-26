@@ -3,23 +3,26 @@
 module Hastile.Lib.TileSpec where
 
 import           Control.Lens
-import qualified Data.ByteString                as BS (ByteString, readFile)
-import qualified Data.ByteString.Lazy           as LBS (ByteString, fromStrict,
-                                                        writeFile)
-import qualified Data.Geometry.MapnikVectorTile as MVT
-import qualified Data.Geometry.Types.Geography  as DGT
-import qualified Data.HashMap.Strict            as HM
-import qualified Data.Text                      as T
-import qualified Geography.VectorTile           as VT
-import           System.IO                      (hClose)
-import           System.IO.Temp                 (withSystemTempFile)
-import           Test.Hspec                     (Spec, describe, it, shouldBe)
+import qualified Data.ByteString                     as BS (ByteString,
+                                                            readFile)
+import qualified Data.ByteString.Lazy                as LBS (ByteString,
+                                                             fromStrict,
+                                                             writeFile)
+import qualified Data.Geometry.MapnikVectorTile      as MVT
+import qualified Data.Geometry.Types.Geography       as DGT
+import qualified Data.Geometry.VectorTile.VectorTile as VT
+import qualified Data.HashMap.Strict                 as HM
+import qualified Data.Text                           as T
+import           System.IO                           (hClose)
+import           System.IO.Temp                      (withSystemTempFile)
+import           Test.Hspec                          (Spec, describe, it,
+                                                      shouldBe)
 
 
-import qualified Data.Geometry.Types.Config     as TypesConfig
-import           Hastile.Lib.Tile               (addBufferToBBox, extent,
-                                                 googleToBBoxM, mkTile)
-import           Hastile.Types.Tile             (BBox (..))
+import qualified Data.Geometry.Types.Config          as TypesConfig
+import           Hastile.Lib.Tile                    (addBufferToBBox, extent,
+                                                      googleToBBoxM, mkTile)
+import           Hastile.Types.Tile                  (BBox (..))
 
 spec :: Spec
 spec = do
