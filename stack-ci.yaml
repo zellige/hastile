@@ -56,10 +56,8 @@ extra-deps:
 - process-1.6.7.0
 - time-1.8.0.4
 - text-printer-0.5.0.1
-- location:
-    git: https://github.com/indicatrix/zellige.git
-    commit: d1fd49a2604712a5749bf5342c9ba113601ec916
-  extra-dep: true
+- git: https://github.com/indicatrix/zellige.git
+  commit: d1fd49a2604712a5749bf5342c9ba113601ec916
 
 # Override default flag values for local packages and extra-deps
 flags: {}
