@@ -36,6 +36,14 @@ jobs:
       with:
         path: /home/runner/.stack/
         key: ${{ hashFiles('**/stack.yaml.lock') }}
+
+    - name: Cache Stack Build
+      uses: actions/cache@v1
+      env:
+        cache-name: cache-stack-local-modules-linux
+      with:
+        path: ./hastile/.stack/
+        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
       
     - name: stack install, build and test
       run: |
@@ -69,6 +77,14 @@ jobs:
       with:
         path: /home/runner/.stack/
         key: ${{ hashFiles('**/stack.yaml.lock') }}
+
+    - name: Cache Stack Build
+      uses: actions/cache@v1
+      env:
+        cache-name: cache-stack-local-modules-windows
+      with:
+        path: ./hastile/.stack/
+        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
       
     - name: stack install, build and test
       run: |
