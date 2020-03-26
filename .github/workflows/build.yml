@@ -44,11 +44,26 @@ jobs:
       with:
         path: ./hastile/.stack/
         key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
-      
-    - name: stack install, build and test
+    
+    - name: stack pre (setup, configure)
       run: |
-        stack build
-        stack test
+        stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
+        stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
+      working-directory: ./hastile
+
+    - name: stack compile
+      run: |
+        stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
+      working-directory: ./hastile
+
+    - name: db migrate
+      run: |
+        ./db/migration setup --stack test
+      working-directory: ./hastile
+    
+    - name: stack test
+      run: |
+        stack test  --stack-yaml stack-ci.yaml --no-terminal -j2
       working-directory: ./hastile
 
   build_windows:
@@ -86,8 +101,13 @@ jobs:
         path: ./hastile/.stack/
         key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
       
-    - name: stack install, build and test
+    - name: stack pre (setup, configure)
       run: |
-        stack build
+        stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
+        stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
       working-directory: ./hastile
-        
+
+    - name: stack compile
+      run: |
+        stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
+      working-directory: ./hastile        
