@@ -47,13 +47,6 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Install Postgresql 11 and PostGIS
-      uses: huaxk/postgis-action@v1
-      with:
-        postgresql version: '11'
-        postgresql password: 'password'
-        postgresql user: 'hastile' 
-        postgresql db: 'hastile_test'
 
     - name: Get code
       uses: actions/checkout@v2
@@ -80,6 +73,5 @@ jobs:
     - name: stack install, build and test
       run: |
         stack build
-        stack test
       working-directory: ./hastile
         
