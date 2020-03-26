@@ -100,7 +100,7 @@ Example:
 | **format**<br/>string | "source" - a normal table<br/>"wkb-properties" - combination of JSON hash and wkb_geometry columns<br/>"geojson" - combination of GeoJSON, JSON hash of properties and wkb geomtry columns. |
 | **last-modified**<br/>date | Last time the layer has been update, used to return the Last-Modified HTTP header. |
 | **quantize**<br/>integer | Positive integer, amount to round and remove duplicates (10 is probably the most, 1 is typical). |
-| **simplify**<br/>string | Allows specifying the layer simplification setting. |
+| **simplify**<br/>map | A map of [zoom levels](#layer-simplification-settings) to [simplification settings](#layer-simplification-algorithm). |
 | **minzoom**<br/>int | 0..30 Minimum zoom level to render, otherwise returns 404. Adds setting to TileJSON. |
 | **maxzoom**<br/>int | 0..30 Maximum zoom level to render, otherwise returns 404. Adds setting to TileJSON. |
 | **bounds**<br/>array float | Bounds are represented in WGS:84 latitude and longitude values. Adds settings to TileJSON. |
