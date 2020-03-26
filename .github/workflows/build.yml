@@ -51,9 +51,10 @@ jobs:
         stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
       working-directory: ./hastile
 
-    - name: stack compile
+    - name: stack compile and install
       run: |
         stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
+        stack install  --stack-yaml stack-ci.yaml --no-terminal -j2
       working-directory: ./hastile
 
     - name: db migrate
