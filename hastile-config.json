@@ -5,17 +5,21 @@
     "db-timeout": 1,
     "tile-buffer": 128,
     "access-log": "stdout",
-    "db-connection": "host=localhost port=5432 user=sa password=password1 dbname=tmr_links",
+    "db-connection": "host=localhost port=5432 user=sa password=password1 dbname=mapdata_development",
     "app-log": "stdout",
     "layers": {
-        "lvl4": {
+        "qpp_transport_noise_corridors": {
             "security": "public",
+            "table-name": "qpp_transport_noise_corridors",
             "bounds": [
                 137.491345,
                 -29.62056,
                 153.60323,
                 -10.57461
-            ]
+            ],
+            "simplify": {
+              "12": "douglas-peucker"
+            }
         }
     },
     "host": "http://localhost",
