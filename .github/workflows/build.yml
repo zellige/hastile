@@ -9,11 +9,14 @@ jobs:
     steps:
     - name: Get code
       uses: actions/checkout@v2
+      with:
+        path: ./hastile
 
     - name: Checkout zellige repo
       uses: actions/checkout@v2
       with:
         repository: zellige/zellige
+        path: ./zellige
     
     - name: Setup Stack
       uses: mstksg/setup-stack@v2
@@ -30,6 +33,7 @@ jobs:
       run: |
         stack build
         stack test
+      working-directory: ./hastile
 
   build_windows:
     runs-on: windows-latest
