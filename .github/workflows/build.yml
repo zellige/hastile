@@ -72,6 +72,9 @@ jobs:
 
     steps:
 
+    - name: Install Postgresql 11 Client
+      run: choco install postgresql11
+
     - name: Get code
       uses: actions/checkout@v2
       with:
