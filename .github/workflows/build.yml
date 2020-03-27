@@ -119,3 +119,53 @@ jobs:
         echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
         stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
       working-directory: ./hastile        
+
+  build_macos:
+    runs-on: macos-latest
+
+    steps:
+
+    - name: Install Postgresql 11 Client
+      run: |
+        brew install postgresql@11
+
+    - name: Get code
+      uses: actions/checkout@v2
+      with:
+        path: ./hastile
+
+    - name: Checkout zellige repo
+      uses: actions/checkout@v2
+      with:
+        repository: zellige/zellige
+        path: ./zellige
+    
+    - name: Setup Stack
+      uses: mstksg/setup-stack@v2
+    
+    - name: Cache Stack downloads
+      uses: actions/cache@v1
+      env:
+        cache-name: cache-stack-modules-macos
+      with:
+        path: /home/runner/.stack/
+        key: ${{ hashFiles('**/stack.yaml.lock') }}
+
+    - name: Cache Stack Build
+      uses: actions/cache@v1
+      env:
+        cache-name: cache-stack-local-modules-macos
+      with:
+        path: ./hastile/.stack-work/
+        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+      
+    - name: stack pre (setup, configure)
+      run: |
+        stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
+        stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
+      working-directory: ./hastile
+
+    - name: stack compile
+      run: |
+        stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
+      working-directory: ./hastile        
