@@ -129,9 +129,22 @@ jobs:
     - name: stack compile
       run: |
         echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
-        stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
+        stack build --stack-yaml stack-ci.yaml --no-terminal -j2
       working-directory: ./hastile        
 
+    - name: create zip
+      run: |
+        echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
+        stack install --stack-yaml stack-ci.yaml --local-bin-path .
+        zip -r hastile.zip ./hastile.exe ./migrate.exe
+      working-directory: ./hastile
+
+    - name: Upload zip of binary
+      uses: actions/upload-artifact@v1
+      with:
+        name: hastile-windows
+        path: ./hastile/hastile.zip
+  
   build_macos:
     runs-on: macos-latest
 
@@ -189,3 +202,18 @@ jobs:
         export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
         stack build --stack-yaml stack-ci.yaml --no-terminal
       working-directory: ./hastile        
+
+    - name: create zip
+      run: |
+        export PATH=/usr/local/opt/postgresql@11/bin:$PATH
+        export LDFLAGS="-L/usr/local/opt/postgresql@11/lib"
+        export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
+        stack install --stack-yaml stack-ci.yaml --local-bin-path .
+        zip -r hastile.zip ./hastile ./migrate
+      working-directory: ./hastile
+
+    - name: Upload zip of binary
+      uses: actions/upload-artifact@v1
+      with:
+        name: hastile-macos
+        path: ./hastile/hastile.zip
