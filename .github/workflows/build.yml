@@ -167,6 +167,7 @@ jobs:
         key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
       
     - name: stack pre (setup, configure)
+      timeout-minutes: 720
       env:
         LDFLAGS: "-L/usr/local/opt/postgresql@11/lib"
         CPPFLAGS: "-I/usr/local/opt/postgresql@11/include"
@@ -176,6 +177,7 @@ jobs:
       working-directory: ./hastile
 
     - name: stack compile
+      timeout-minutes: 720
       env:
         LDFLAGS: "-L/usr/local/opt/postgresql@11/lib"
         CPPFLAGS: "-I/usr/local/opt/postgresql@11/include"
