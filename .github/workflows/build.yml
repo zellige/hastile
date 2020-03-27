@@ -66,12 +66,13 @@ jobs:
       run: |
         stack test  --stack-yaml stack-ci.yaml --no-terminal -j2
         stack install --stack-yaml stack-ci.yaml --local-bin-path .
+        zip -r hastile.zip ./hastile ./migrate
       working-directory: ./hastile
 
     - name: Upload math result for job 2
       uses: actions/upload-artifact@v1
       with:
-        name: homework
+        name: hastile-linux
         path: homework/math-homework.txt      
 
   build_windows:
