@@ -77,8 +77,7 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: hastile-linux
-        path: ./hastile.zip
-        working-directory: ./hastile
+        path: ./hastile/hastile.zip
   
   build_windows:
     runs-on: windows-latest
