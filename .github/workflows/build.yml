@@ -69,11 +69,11 @@ jobs:
         zip -r hastile.zip ./hastile ./migrate
       working-directory: ./hastile
 
-    - name: Upload math result for job 2
+    - name: Upload zip of binary
       uses: actions/upload-artifact@v1
       with:
         name: hastile-linux
-        path: homework/math-homework.txt      
+        path: ./hastile.zip
 
   build_windows:
     runs-on: windows-latest
