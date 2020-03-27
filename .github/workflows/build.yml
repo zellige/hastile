@@ -109,11 +109,13 @@ jobs:
       
     - name: stack pre (setup, configure)
       run: |
+        echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
         stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
         stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
       working-directory: ./hastile
 
     - name: stack compile
       run: |
+        echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
         stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
       working-directory: ./hastile        
