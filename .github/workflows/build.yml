@@ -183,9 +183,9 @@ jobs:
 
     - name: stack compile
       timeout-minutes: 720
-      env:
-        LDFLAGS: "-L/usr/local/opt/postgresql@11/lib"
-        CPPFLAGS: "-I/usr/local/opt/postgresql@11/include"
       run: |
-        stack build  --stack-yaml stack-ci.yaml --no-terminal
+        export PATH=/usr/local/opt/postgresql@11/bin:$PATH
+        export LDFLAGS="-L/usr/local/opt/postgresql@11/lib"
+        export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
+        stack build --stack-yaml stack-ci.yaml --no-terminal
       working-directory: ./hastile        
