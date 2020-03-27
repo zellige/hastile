@@ -73,7 +73,9 @@ jobs:
     steps:
 
     - name: Install Postgresql 11 Client
-      run: choco install postgresql11
+      run: |
+        choco install postgresql11
+        echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
 
     - name: Get code
       uses: actions/checkout@v2
