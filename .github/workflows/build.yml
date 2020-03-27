@@ -173,10 +173,10 @@ jobs:
       
     - name: stack pre (setup, configure)
       timeout-minutes: 720
-      env:
-        LDFLAGS: "-L/usr/local/opt/postgresql@11/lib"
-        CPPFLAGS: "-I/usr/local/opt/postgresql@11/include"
       run: |
+        export PATH=/usr/local/opt/postgresql@11/bin:$PATH
+        export LDFLAGS="-L/usr/local/opt/postgresql@11/lib"
+        export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
         stack setup --stack-yaml stack-ci.yaml --no-terminal
         stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal
       working-directory: ./hastile
