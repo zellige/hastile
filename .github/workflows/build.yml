@@ -65,7 +65,14 @@ jobs:
     - name: stack test
       run: |
         stack test  --stack-yaml stack-ci.yaml --no-terminal -j2
+        stack install --stack-yaml stack-ci.yaml --local-bin-path .
       working-directory: ./hastile
+
+    - name: Upload math result for job 2
+      uses: actions/upload-artifact@v1
+      with:
+        name: homework
+        path: homework/math-homework.txt      
 
   build_windows:
     runs-on: windows-latest
@@ -164,8 +171,8 @@ jobs:
         LDFLAGS: "-L/usr/local/opt/postgresql@11/lib"
         CPPFLAGS: "-I/usr/local/opt/postgresql@11/include"
       run: |
-        stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
-        stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
+        stack setup --stack-yaml stack-ci.yaml --no-terminal
+        stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal
       working-directory: ./hastile
 
     - name: stack compile
@@ -173,5 +180,5 @@ jobs:
         LDFLAGS: "-L/usr/local/opt/postgresql@11/lib"
         CPPFLAGS: "-I/usr/local/opt/postgresql@11/include"
       run: |
-        stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
+        stack build  --stack-yaml stack-ci.yaml --no-terminal
       working-directory: ./hastile        
