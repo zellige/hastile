@@ -34,7 +34,7 @@ jobs:
       env:
         cache-name: cache-stack-modules-linux
       with:
-        path: /home/runner/.stack/
+        path: C:\Users\runneradmin\AppData\Roaming\stack
         key: ${{ hashFiles('**/stack.yaml.lock') }}
 
     - name: Cache Stack Build
