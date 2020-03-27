@@ -65,6 +65,10 @@ jobs:
     - name: stack test
       run: |
         stack test  --stack-yaml stack-ci.yaml --no-terminal -j2
+      working-directory: ./hastile
+
+    - name: create zip
+      run: |
         stack install --stack-yaml stack-ci.yaml --local-bin-path .
         zip -r hastile.zip ./hastile ./migrate
       working-directory: ./hastile
@@ -74,7 +78,8 @@ jobs:
       with:
         name: hastile-linux
         path: ./hastile.zip
-
+        working-directory: ./hastile
+  
   build_windows:
     runs-on: windows-latest
 
