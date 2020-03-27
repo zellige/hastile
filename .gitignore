@@ -17,6 +17,7 @@
 cabal-dev
 cabal.project.local
 cabal.sandbox.config
+hastile-config.json
 dist
 dist-*
 site
