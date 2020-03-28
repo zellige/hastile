@@ -136,7 +136,7 @@ jobs:
       shell: powershell -Command "& '{0}'"
       run: |
         echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
-        stack install --stack-yaml stack-ci.yaml --local-bin-path . & exit 0
+        stack install --stack-yaml stack-ci.yaml --local-bin-path
         7z a hastile.zip ./hastile.exe ./migrate.exe
       working-directory: ./hastile
 
