@@ -209,7 +209,7 @@ jobs:
         export PATH=/usr/local/opt/postgresql@11/bin:$PATH
         export LDFLAGS="-L/usr/local/opt/postgresql@11/lib"
         export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
-        stack install --stack-yaml stack-ci.yaml --local-bin-path
+        stack install --stack-yaml stack-ci.yaml --local-bin-path .
         zip -r hastile.zip ./hastile ./migrate
       working-directory: ./hastile
 
