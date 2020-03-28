@@ -133,9 +133,10 @@ jobs:
       working-directory: ./hastile        
 
     - name: create zip
+      shell: cmd
       run: |
         echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
-        stack install --stack-yaml stack-ci.yaml --local-bin-path .
+        stack install --stack-yaml stack-ci.yaml --local-bin-path . & exit 0
         zip -r hastile.zip ./hastile.exe ./migrate.exe
       working-directory: ./hastile
 
@@ -208,7 +209,7 @@ jobs:
         export PATH=/usr/local/opt/postgresql@11/bin:$PATH
         export LDFLAGS="-L/usr/local/opt/postgresql@11/lib"
         export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
-        stack install --stack-yaml stack-ci.yaml --local-bin-path . & exit 0
+        stack install --stack-yaml stack-ci.yaml --local-bin-path
         zip -r hastile.zip ./hastile ./migrate
       working-directory: ./hastile
 
