@@ -57,7 +57,7 @@ extra-deps:
 - text-printer-0.5.0.1
 - Win32-2.5.4.1
 - git: https://github.com/zellige/zellige.git
-  commit: d1fd49a2604712a5749bf5342c9ba113601ec916
+  commit: 5907fc2d16ef9edcc0200c0c2355d4ad0c73e839
 
 # Override default flag values for local packages and extra-deps
 flags: {}
