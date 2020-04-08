@@ -219,19 +219,19 @@ jobs:
       uses: actions/download-artifact@v1
       with:
         name: hastile-linux
-        path: build-linux-{{ github.ref }}.zip
+        path: build-linux.zip
 
     - name: Download build artifacts
       uses: actions/download-artifact@v1
       with:
         name: hastile-windows
-        path: build-windows-{{ github.ref }}.zip
+        path: build-windows.zip
 
     - name: Download build artifacts
       uses: actions/download-artifact@v1
       with:
         name: hastile-macos
-        path: build-macos-{{ github.ref }}.zip
+        path: build-macos.zip
 
     - name: Generate Changelog
       run: echo "# Good things have arrived" > ${{ github.workflow }}-CHANGELOG.txt
@@ -242,8 +242,8 @@ jobs:
       with:
         body_path: ${{ github.workflow }}-CHANGELOG.txt
         files: |
-         build-linux-{{ github.ref }}.zip
-         build-windows-{{ github.ref }}.zip
-         build-macos-{{ github.ref }}.zip
+         build-linux.zip
+         build-windows.zip
+         build-macos.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
