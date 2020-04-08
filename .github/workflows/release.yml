@@ -82,32 +82,6 @@ jobs:
       with:
         name: hastile-linux
         path: ./hastile/hastile.zip
-
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@latest
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        body: |
-          Changes in this Release
-          - First Change
-          - Second Change
-        draft: false
-        prerelease: false
-    
-    - name: Upload Release Asset
-      id: upload-release-asset 
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./hastile/hastile.zip
-        asset_name: hastile-linux.zip
-        asset_content_type: application/zip
   
   build_windows:
     runs-on: windows-latest
@@ -175,17 +149,6 @@ jobs:
       with:
         name: hastile-windows
         path: ./hastile/hastile.zip
-
-    - name: Upload Release Asset
-      id: upload-release-asset 
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./hastile/hastile.zip
-        asset_name: hastile-windows.zip
-        asset_content_type: application/zip
   
   build_macos:
     runs-on: macos-latest
@@ -268,5 +231,42 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
         asset_path: ./hastile/hastile.zip
-        asset_name: hastile-macos.zip
+        asset_name: hastile-macos-{{ github.ref }}.zip
         asset_content_type: application/zip
+
+  release:
+    runs-on: ubuntu-latest    
+    needs: [build_linux, build_windows, build_macos]
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v1
+      with:
+        name: build-linux
+        path: build-linux-{{ github.ref }}.zip
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v1
+      with:
+        name: build-windows
+        path: build-windows-{{ github.ref }}.zip
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v1
+      with:
+        name: build-macos
+        path: build-macos-{{ github.ref }}.zip
+
+    - name: Generate Changelog
+      run: echo "# Good things have arrived" > ${{ github.workflow }}-CHANGELOG.txt
+
+    - name: Upload Release Assets
+      id: upload-release-assets
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: ${{ github.workflow }}-CHANGELOG.txt
+        fiiles: |
+         build-linux-{{ github.ref }}.zip
+         build-windows-{{ github.ref }}.zip
+         build-macos-{{ github.ref }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
