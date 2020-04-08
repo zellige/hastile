@@ -36,7 +36,7 @@ jobs:
     - name: Cache Stack downloads
       uses: actions/cache@v1
       with:
-        path: /{{$HOME}}/.stack/
+        path: /home/runner/.stack/
         key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml.lock') }}
 
     - name: Cache Stack Build
@@ -168,7 +168,7 @@ jobs:
     - name: Cache Stack downloads
       uses: actions/cache@v1
       with:
-        path: /{{$HOME}}/.stack/
+        path: /Users/runner/.stack/
         key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml.lock') }}
 
     - name: Cache Stack Build
@@ -219,19 +219,19 @@ jobs:
       uses: actions/download-artifact@v1
       with:
         name: hastile-linux
-        path: build-linux.zip
+        path: ./hastile/hastile-linux.zip
 
     - name: Download build artifacts
       uses: actions/download-artifact@v1
       with:
         name: hastile-windows
-        path: build-windows.zip
+        path: ./hastile/hastile-windows.zip
 
     - name: Download build artifacts
       uses: actions/download-artifact@v1
       with:
         name: hastile-macos
-        path: build-macos.zip
+        path: ./hastile/hastile-macos.zip
 
     - name: Generate Changelog
       run: echo "# Good things have arrived" > ${{ github.workflow }}-CHANGELOG.txt
@@ -242,8 +242,8 @@ jobs:
       with:
         body_path: ${{ github.workflow }}-CHANGELOG.txt
         files: |
-         build-linux.zip
-         build-windows.zip
-         build-macos.zip
+         ./hastile/hastile-linux.zip
+         ./hastile/hastile-windows.zip
+         ./hastile/hastile-macos.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
