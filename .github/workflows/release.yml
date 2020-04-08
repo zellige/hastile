@@ -35,19 +35,15 @@ jobs:
     
     - name: Cache Stack downloads
       uses: actions/cache@v1
-      env:
-        cache-name: cache-stack-modules-linux
       with:
-        path: /$HOME/.stack/
-        key: download-cache-${{ hashFiles('**/stack.yaml.lock') }}
+        path: /{{$HOME}}/.stack/
+        key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml.lock') }}
 
     - name: Cache Stack Build
       uses: actions/cache@v1
-      env:
-        cache-name: cache-stack-local-modules-linux
       with:
         path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ runner.os }}-${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
     
     - name: stack pre (setup, configure)
       run: |
@@ -109,19 +105,15 @@ jobs:
     
     - name: Cache Stack downloads
       uses: actions/cache@v1
-      env:
-        cache-name: cache-stack-modules-windows
       with:
         path: C:\Users\runneradmin\AppData\Roaming\stack
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml.lock') }}
 
     - name: Cache Stack Build
       uses: actions/cache@v1
-      env:
-        cache-name: cache-stack-local-modules-windows
       with:
         path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ runner.os }}-${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
       
     - name: stack pre (setup, configure)
       run: |
@@ -175,19 +167,15 @@ jobs:
     
     - name: Cache Stack downloads
       uses: actions/cache@v1
-      env:
-        cache-name: cache-stack-modules-macos
       with:
-        path: /$HOME/.stack/
-        key: download-cache-${{ hashFiles('**/stack.yaml.lock') }}
+        path: /{{$HOME}}/.stack/
+        key: ${{ runner.os }}-${{ hashFiles('**/stack.yaml.lock') }}
 
     - name: Cache Stack Build
       uses: actions/cache@v1
-      env:
-        cache-name: cache-stack-local-modules-macos
       with:
         path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ runner.os }}-${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
       
     - name: stack pre (setup, configure)
       timeout-minutes: 720
