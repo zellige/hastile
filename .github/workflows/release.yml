@@ -253,7 +253,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         body_path: ${{ github.workflow }}-CHANGELOG.txt
-        fiiles: |
+        files: |
          build-linux-{{ github.ref }}.zip
          build-windows-{{ github.ref }}.zip
          build-macos-{{ github.ref }}.zip
