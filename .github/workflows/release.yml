@@ -38,8 +38,8 @@ jobs:
       env:
         cache-name: cache-stack-modules-linux
       with:
-        path: $HOME/.stack/
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+        path: /$HOME/.stack/
+        key: download-cache-${{ hashFiles('**/stack.yaml.lock') }}
 
     - name: Cache Stack Build
       uses: actions/cache@v1
@@ -178,8 +178,8 @@ jobs:
       env:
         cache-name: cache-stack-modules-macos
       with:
-        path: $HOME/.stack/
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+        path: /$HOME/.stack/
+        key: download-cache-${{ hashFiles('**/stack.yaml.lock') }}
 
     - name: Cache Stack Build
       uses: actions/cache@v1
