@@ -38,7 +38,7 @@ jobs:
       env:
         cache-name: cache-stack-modules-linux
       with:
-        path: /home/runner/.stack/
+        path: $HOME/.stack/
         key: ${{ hashFiles('**/stack.yaml.lock') }}
 
     - name: Cache Stack Build
@@ -178,7 +178,7 @@ jobs:
       env:
         cache-name: cache-stack-modules-macos
       with:
-        path: /home/runner/.stack/
+        path: $HOME/.stack/
         key: ${{ hashFiles('**/stack.yaml.lock') }}
 
     - name: Cache Stack Build
@@ -230,19 +230,19 @@ jobs:
     - name: Download build artifacts
       uses: actions/download-artifact@v1
       with:
-        name: build-linux
+        name: hastile-linux
         path: build-linux-{{ github.ref }}.zip
 
     - name: Download build artifacts
       uses: actions/download-artifact@v1
       with:
-        name: build-windows
+        name: hastile-windows
         path: build-windows-{{ github.ref }}.zip
 
     - name: Download build artifacts
       uses: actions/download-artifact@v1
       with:
-        name: build-macos
+        name: hastile-macos
         path: build-macos-{{ github.ref }}.zip
 
     - name: Generate Changelog
