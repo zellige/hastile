@@ -32,18 +32,18 @@ jobs:
     - name: Cache Stack downloads
       uses: actions/cache@v1
       env:
-        cache-name: cache-stack-modules-linux
+        cache-name: cache-stack-modules-linux-v1
       with:
         path: /home/runner/.stack/
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ hashFiles('**/stack.yaml.lock') }}-v1
 
     - name: Cache Stack Build
       uses: actions/cache@v1
       env:
-        cache-name: cache-stack-local-modules-linux
+        cache-name: cache-stack-local-modules-linux-v1
       with:
         path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}-v1
     
     - name: stack pre (setup, configure)
       run: |
@@ -106,18 +106,18 @@ jobs:
     - name: Cache Stack downloads
       uses: actions/cache@v1
       env:
-        cache-name: cache-stack-modules-windows
+        cache-name: cache-stack-modules-windows-v1
       with:
         path: C:\Users\runneradmin\AppData\Roaming\stack
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ hashFiles('**/stack.yaml.lock') }}-v1
 
     - name: Cache Stack Build
       uses: actions/cache@v1
       env:
-        cache-name: cache-stack-local-modules-windows
+        cache-name: cache-stack-local-modules-windows-v1
       with:
         path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}-v1
       
     - name: stack pre (setup, configure)
       run: |
@@ -172,18 +172,18 @@ jobs:
     - name: Cache Stack downloads
       uses: actions/cache@v1
       env:
-        cache-name: cache-stack-modules-macos
+        cache-name: cache-stack-modules-macos-v1
       with:
         path: /home/runner/.stack/
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ hashFiles('**/stack.yaml.lock') }}-v1
 
     - name: Cache Stack Build
       uses: actions/cache@v1
       env:
-        cache-name: cache-stack-local-modules-macos
+        cache-name: cache-stack-local-modules-macos-v1
       with:
         path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}-v1
       
     - name: stack pre (setup, configure)
       timeout-minutes: 720
@@ -191,8 +191,8 @@ jobs:
         export PATH=/usr/local/opt/postgresql@11/bin:$PATH
         export LDFLAGS="-L/usr/local/opt/postgresql@11/lib"
         export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
-        stack setup --stack-yaml stack-ci.yaml --no-terminal
-        stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal
+        stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
+        stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
       working-directory: ./hastile
 
     - name: stack compile
@@ -201,7 +201,7 @@ jobs:
         export PATH=/usr/local/opt/postgresql@11/bin:$PATH
         export LDFLAGS="-L/usr/local/opt/postgresql@11/lib"
         export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
-        stack build --stack-yaml stack-ci.yaml --no-terminal
+        stack build --stack-yaml stack-ci.yaml --no-terminal -j2
       working-directory: ./hastile        
 
     - name: create zip
