@@ -173,18 +173,18 @@ jobs:
     - name: Cache Stack downloads
       uses: actions/cache@v1
       env:
-        cache-name: cache-stack-modules-macos-v1
+        cache-name: cache-stack-modules-macos-v2
       with:
-        path: /home/runner/.stack/
-        key: ${{ hashFiles('**/stack.yaml.lock') }}-v1
+        path: /Users/runner/.stack/
+        key: ${{ hashFiles('**/stack.yaml.lock') }}-v2
 
     - name: Cache Stack Build
       uses: actions/cache@v1
       env:
-        cache-name: cache-stack-local-modules-macos-v1
+        cache-name: cache-stack-local-modules-macos-v2
       with:
         path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}-v1
+        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}-v2
       
     - name: stack pre (setup, configure)
       timeout-minutes: 720
