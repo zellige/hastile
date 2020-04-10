@@ -20,11 +20,14 @@ jobs:
 
     - name: Get code
       uses: actions/checkout@v2
+      with:
+        path: ./hastile
 
     - name: Checkout zellige repo
       uses: actions/checkout@v2
       with:
         repository: zellige/zellige
+        path: ./zellige
     
     - name: Setup Stack
       uses: mstksg/setup-stack@v2
@@ -44,7 +47,7 @@ jobs:
         cache-name: stack-work
       with:
         path: .stack-work/
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/evie.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
         restore-keys: ${{ runner.os }}-${{ env.cache-name }}-
     
     - name: stack pre (setup, configure)
@@ -60,6 +63,7 @@ jobs:
     - name: db migrate
       run: |
         ./db/migration setup --stack test
+      working-directory: ./hastile
     
     - name: stack test
       run: |
@@ -226,7 +230,7 @@ jobs:
           * Nothing this time, but please raise an issue if you would like a particular feature.
 
           ## 🍏 Improvements
-          * It's already perfect, so what more do you want? But seriously, raise an issue if something could be improved.
+          * Raise an issue if something could be improved.
 
           ## 🐞 Bug Fixes
           * Bugs, what bugs? Please raise an issue if you find anything that doesn't work as expected.
