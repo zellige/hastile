@@ -20,6 +20,11 @@ jobs:
 
     - name: Get code
       uses: actions/checkout@v2
+
+    - name: Checkout zellige repo
+      uses: actions/checkout@v2
+      with:
+        repository: zellige/zellige
     
     - name: Setup Stack
       uses: mstksg/setup-stack@v2
