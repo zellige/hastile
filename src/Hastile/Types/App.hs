@@ -81,3 +81,9 @@ err204 = Servant.ServantErr
   , errBody = ""
   , errHeaders = []
   }
+
+newtype RawHtml = RawHtml { unRaw :: BS.ByteString }
+
+-- tell Servant how to render the newtype to html page, in this case simply unwrap it
+instance Servant.MimeRender HTML RawHtml where
+    mimeRender _ =  unRaw

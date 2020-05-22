@@ -14,6 +14,7 @@ import qualified Hastile.Types.Layer as Layer
 import qualified Hastile.Types.Mime as Mime
 import qualified Hastile.Types.Tile as Tile
 import qualified Hastile.Types.Token as Token
+import qualified Hastile.Types.App as App
 import Servant
 
 type LayerName = Capture "layer" Text.Text
@@ -26,6 +27,7 @@ type Y = Capture "y" Text.Text
 
 type PublicHastileApi =
   Get '[JSON] Config.InputConfig
+    :<|> Get '[HTML] App.RawHtml
     :<|> LayerApi
 
 type AuthenticatedHastileApi =
