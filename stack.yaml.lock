@@ -12,12 +12,12 @@ packages:
   original:
     hackage: wkt-geom-0.0.10
 - completed:
-    hackage: geojson-4.0.1@sha256:276de5cb2aa3e07179a8d42c184b1a4e52d2c8d23cf2eb989ecfa6adbe726227,4234
+    hackage: geojson-4.0.2@sha256:39b44d53bd6ea8eb597745d7f8d2a6c502a1f1db189fe74fe2343761970437f2,4222
     pantry-tree:
       size: 2429
-      sha256: ef88e984e076f60d21ca0677a0f011abf40abecd5562e894575db2098ef49c98
+      sha256: a50b62fe5342c2e81295af25b99cdf51fda702ee235702f40e953c875ae9f989
   original:
-    hackage: geojson-4.0.1
+    hackage: geojson-4.0.2
 - completed:
     hackage: hasql-cursor-query-0.4.4.2@sha256:5e98c8513317f45bf9412e9a07b99b00fb7c39930031399bf4d7fbaa40bbdf8f,3264
     pantry-tree:

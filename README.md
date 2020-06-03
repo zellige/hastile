@@ -227,7 +227,6 @@ To start the server:
 To run with GHC Metrics:
 `./hastile server --configFile FILEPATH +RTS -T`
 
-
 ## Documentation
 
 Hastile docs are generated using [mkdocs](https://www.mkdocs.org).
