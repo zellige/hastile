@@ -53,7 +53,6 @@ jobs:
     - name: db migrate
       run: |
         ./db/migration setup --stack test
-      working-directory: ./hastile
     
     - name: stack test
       run: |
