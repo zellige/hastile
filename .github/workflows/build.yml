@@ -52,7 +52,7 @@ jobs:
 
     - name: db migrate
       run: |
-        ./db/migration setup --stack test
+        ./db/migration setup --binary test
     
     - name: stack test
       run: |
