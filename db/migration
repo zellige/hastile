@@ -45,7 +45,7 @@ migrate_cmd () {
         ;;
 
     --binary)
-        ../migrate $2 $3 $4
+        migrate $2 $3 $4
         ;;
 
     *)
