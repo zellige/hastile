@@ -23,7 +23,6 @@ import qualified Hastile.Types.Config       as Config
 
 publicHastileServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.PublicHastileApi (App.ActionHandler m)
 publicHastileServer = returnConfiguration
-  Servant.:<|> fmap App.RawHtml (liftIO $ BS.readFile "static/index.html")
   Servant.:<|> Layer.layerServerPublic
 
 authenticatedHastileServer :: (MonadIO.MonadIO m) => Servant.ServerT Routes.AuthenticatedHastileApi (App.ActionHandler m)
