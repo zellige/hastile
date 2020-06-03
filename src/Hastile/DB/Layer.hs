@@ -82,13 +82,13 @@ geoJsonDecoder =
 layerQueryStreamingSource :: TypesConfig.Config -> Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) TypesMvtFeatures.StreamingLayer
 layerQueryStreamingSource config layer =
   layerQueryStreaming config sql
-  where sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(row." <> (Layer.layerGeomColumn layer) <> "), (to_jsonb(row) - '" <> (Layer.layerGeomColumn layer) <> "') :: JSON FROM (SELECT * FROM "
+  where sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(row." <> Layer.layerGeomColumn layer <> "), (to_jsonb(row) - '" <> Layer.layerGeomColumn layer <> "') :: JSON FROM (SELECT * FROM "
                 <> Layer.layerTableName layer <> ") row " <> layerQueryWhereClause (Layer.layerGeomColumn layer) (Layer.layerSrid layer)
 
 layerQueryStreamingWkbProperties :: TypesConfig.Config -> Layer.Layer -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) TypesMvtFeatures.StreamingLayer
 layerQueryStreamingWkbProperties config layer =
   layerQueryStreaming config sql
-  where sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(" <> (Layer.layerGeomColumn layer) <> "), properties FROM " <> Layer.layerTableName layer <> layerQueryWhereClause (Layer.layerGeomColumn layer) (Layer.layerSrid layer)
+  where sql = TextEncoding.encodeUtf8 $ "SELECT ST_AsBinary(" <> Layer.layerGeomColumn layer <> "), properties FROM " <> Layer.layerTableName layer <> layerQueryWhereClause (Layer.layerGeomColumn layer) (Layer.layerSrid layer)
 
 layerQueryStreaming :: TypesConfig.Config -> ByteString.ByteString -> HasqlCursorQuery.CursorQuery (Tile.BBox Tile.Metres) TypesMvtFeatures.StreamingLayer
 layerQueryStreaming config sql =
@@ -106,7 +106,7 @@ convertDecoder decoder =
 
 layerQueryWhereClause :: Text.Text -> Integer -> Text.Text
 layerQueryWhereClause geometryColumnName srid =
-  " WHERE ST_Intersects(" <> geometryColumnName <> ", ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint($1, $2), ST_MakePoint($3, $4)), 3857), " <> (Text.pack $ show srid) <> "));"
+  " WHERE ST_Intersects(" <> geometryColumnName <> ", ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_MakePoint($1, $2), ST_MakePoint($3, $4)), 3857), " <> Text.pack (show srid) <> "));"
 
 foldSeq :: Foldl.Fold a (Sequence.Seq a)
 foldSeq = Foldl.Fold step begin done
