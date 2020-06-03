@@ -35,27 +35,27 @@ jobs:
         cache-name: cache-stack-modules-linux
       with:
         path: /home/runner/.stack/
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/stack.yaml.lock') }}
+        restore-keys: ${{ runner.os }}-${{ env.cache-name }}-
 
     - name: Cache Stack Build
       uses: actions/cache@v1
       env:
         cache-name: cache-stack-local-modules-linux
       with:
-        path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        path: .stack-work/
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        restore-keys: ${{ runner.os }}-${{ env.cache-name }}-
     
     - name: stack pre (setup, configure)
       run: |
         stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
         stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
-      working-directory: ./hastile
 
     - name: stack compile and install
       run: |
         stack build  --stack-yaml stack-ci.yaml --no-terminal -j2
         stack install  --stack-yaml stack-ci.yaml --no-terminal -j2
-      working-directory: ./hastile
 
     - name: db migrate
       run: |
@@ -65,25 +65,21 @@ jobs:
     - name: stack test
       run: |
         stack test  --stack-yaml stack-ci.yaml --no-terminal -j2
-      working-directory: ./hastile
 
     - name: create zip
       run: |
         stack install --stack-yaml stack-ci.yaml --local-bin-path .
-        zip -r hastile.zip ./hastile ./migrate
-      working-directory: ./hastile
+        zip -r hastile-linux.zip ./hastile
 
     - name: Upload zip of binary
       uses: actions/upload-artifact@v1
       with:
         name: hastile-linux
-        path: ./hastile/hastile.zip
+        path: hastile-linux.zip
   
   build_windows:
     runs-on: windows-latest
-
     steps:
-
     - name: Install Postgresql 11 Client
       run: |
         choco install postgresql11
@@ -91,9 +87,7 @@ jobs:
 
     - name: Get code
       uses: actions/checkout@v2
-      with:
-        path: ./hastile
-
+    
     - name: Checkout zellige repo
       uses: actions/checkout@v2
       with:
@@ -109,48 +103,45 @@ jobs:
         cache-name: cache-stack-modules-windows
       with:
         path: C:\Users\runneradmin\AppData\Roaming\stack
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/stack.yaml.lock') }}
+        restore-keys: ${{ runner.os }}-${{ env.cache-name }}-
 
     - name: Cache Stack Build
       uses: actions/cache@v1
       env:
         cache-name: cache-stack-local-modules-windows
       with:
-        path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        path: .stack-work/
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/evie.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        restore-keys: ${{ runner.os }}-${{ env.cache-name }}-
       
     - name: stack pre (setup, configure)
       run: |
         echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
         stack setup --stack-yaml stack-ci.yaml --no-terminal -j2
         stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal -j2
-      working-directory: ./hastile
 
     - name: stack compile
       run: |
         echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
         stack build --stack-yaml stack-ci.yaml --no-terminal -j2
-      working-directory: ./hastile        
 
     - name: create zip
       shell: powershell -Command "& '{0}'"
       run: |
         echo "::add-path::C:\Program Files\PostgreSQL\11\bin"
         stack install --stack-yaml stack-ci.yaml --local-bin-path .
-        7z a hastile.zip ./hastile.exe ./migrate.exe
-      working-directory: ./hastile
+        7z a hastile-windows.zip ./hastile.exe
 
     - name: Upload zip of binary
       uses: actions/upload-artifact@v1
       with:
         name: hastile-windows
-        path: ./hastile/hastile.zip
+        path: hastile-windows.zip
   
   build_macos:
     runs-on: macos-latest
-
     steps:
-
     - name: Install Postgresql 11 Client
       run: |
         brew install postgresql@11
@@ -174,16 +165,18 @@ jobs:
       env:
         cache-name: cache-stack-modules-macos
       with:
-        path: /home/runner/.stack/
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+        path: /Users/runner/.stack/
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/stack.yaml.lock') }}
+        restore-keys: ${{ runner.os }}-${{ env.cache-name }}-
 
     - name: Cache Stack Build
       uses: actions/cache@v1
       env:
         cache-name: cache-stack-local-modules-macos
       with:
-        path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        path: .stack-work/
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/evie.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        restore-keys: ${{ runner.os }}-${{ env.cache-name }}-
       
     - name: stack pre (setup, configure)
       timeout-minutes: 720
@@ -193,7 +186,6 @@ jobs:
         export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
         stack setup --stack-yaml stack-ci.yaml --no-terminal
         stack build --stack-yaml stack-ci.yaml --no-system-ghc --only-configure --no-terminal
-      working-directory: ./hastile
 
     - name: stack compile
       timeout-minutes: 720
@@ -202,7 +194,6 @@ jobs:
         export LDFLAGS="-L/usr/local/opt/postgresql@11/lib"
         export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
         stack build --stack-yaml stack-ci.yaml --no-terminal
-      working-directory: ./hastile        
 
     - name: create zip
       run: |
@@ -210,11 +201,10 @@ jobs:
         export LDFLAGS="-L/usr/local/opt/postgresql@11/lib"
         export CPPFLAGS="-I/usr/local/opt/postgresql@11/include"
         stack install --stack-yaml stack-ci.yaml --local-bin-path .
-        zip -r hastile.zip ./hastile ./migrate
-      working-directory: ./hastile
+        zip -r hastile-macos.zip ./hastile
 
     - name: Upload zip of binary
       uses: actions/upload-artifact@v1
       with:
         name: hastile-macos
-        path: ./hastile/hastile.zip
+        path: hastile-macos.zip
