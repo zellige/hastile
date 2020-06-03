@@ -29,6 +29,8 @@ module Hastile.Types.Layer
   , layerLastModified
   , lastModifiedFromLayer
   , layerTimeToLive
+  , layerGeomColumn
+  , layerSrid
   , expiresFromLayer
   , isModified
   , getAlgorithm
@@ -73,10 +75,12 @@ data LayerSettings = LayerSettings
   , _layerBounds       :: Maybe GeometryTypesGeography.BoundingBox
   , _layerLastModified :: Maybe Time.UTCTime
   , _layerTimeToLive   :: Maybe Clock.NominalDiffTime
+  , _layerGeomColumn   :: Maybe Text.Text
+  , _layerSrid         :: Maybe Integer
   } deriving (Show, Eq)
 
 defaultLayerSettings :: LayerSettings
-defaultLayerSettings = LayerSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+defaultLayerSettings = LayerSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 instance Aeson.FromJSON LayerSettings where
   parseJSON = AesonTypes.withObject "LayerSettings" $ \o -> LayerSettings
@@ -90,6 +94,8 @@ instance Aeson.FromJSON LayerSettings where
     <*> o AesonTypes..:? "bounds"
     <*> o AesonTypes..:? "last-modified"
     <*> o AesonTypes..:? "ttl"
+    <*> o AesonTypes..:? "geom-column"
+    <*> o AesonTypes..:? "srid"
 
 instance Aeson.ToJSON LayerSettings where
   toJSON ls = AesonTypes.object $ layerSettingsToPairs ls
@@ -107,6 +113,8 @@ layerSettingsToPairs ls =
     , ("bounds"        AesonTypes..=)  <$> _layerBounds ls
     , ("last-modified" AesonTypes..=)  <$> _layerLastModified ls
     , ("ttl"           AesonTypes..=)  <$> _layerTimeToLive ls
+    , ("geom-column"   AesonTypes..=)  <$> _layerGeomColumn ls
+    , ("srid"          AesonTypes..=)  <$> _layerSrid ls
     ]
 
 data Layer = Layer
@@ -153,6 +161,14 @@ lastModifiedFromLayer serverStartTime layer =
 layerTimeToLive :: Clock.NominalDiffTime -> Layer -> Clock.NominalDiffTime
 layerTimeToLive defaultTtl =
   getLayerSetting defaultTtl _layerTimeToLive
+ 
+layerGeomColumn :: Layer -> Text.Text
+layerGeomColumn =
+  getLayerSetting "wkb_geometry" _layerGeomColumn
+ 
+layerSrid :: Layer -> Integer
+layerSrid =
+  getLayerSetting 4326 _layerSrid
 
 expiresFromLayer :: Time.UTCTime -> Layer -> Text.Text
 expiresFromLayer currentTime layer =
