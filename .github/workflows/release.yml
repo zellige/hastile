@@ -29,9 +29,6 @@ jobs:
         repository: zellige/zellige
         path: ./zellige
     
-    - name: Setup Stack
-      uses: mstksg/setup-stack@v2
-    
     - name: Cache Stack downloads
       uses: actions/cache@v1
       env:
@@ -91,9 +88,6 @@ jobs:
     - name: Get code
       uses: actions/checkout@v2
     
-    - name: Setup Stack
-      uses: mstksg/setup-stack@v2
-    
     - name: Cache Stack downloads
       uses: actions/cache@v1
       env:
@@ -145,9 +139,6 @@ jobs:
 
     - name: Get code
       uses: actions/checkout@v2
-    
-    - name: Setup Stack
-      uses: mstksg/setup-stack@v2
     
     - name: Cache Stack downloads
       uses: actions/cache@v1
