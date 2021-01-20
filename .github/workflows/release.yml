@@ -21,8 +21,6 @@ jobs:
 
     - name: Get code
       uses: actions/checkout@v2
-      with:
-        path: ./hastile
 
     - name: Checkout zellige repo
       uses: actions/checkout@v2
@@ -38,16 +36,18 @@ jobs:
       env:
         cache-name: cache-stack-modules-linux
       with:
-        path: /home/runner/.stack/
-        key: ${{ hashFiles('**/stack.yaml.lock') }}
+        path: /home/runner/.stack
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/stack.yaml.lock') }}
+        restore-keys: ${{ runner.os }}-${{ env.cache-name }}-
 
     - name: Cache Stack Build
       uses: actions/cache@v1
       env:
         cache-name: cache-stack-local-modules-linux
       with:
-        path: ./hastile/.stack-work/
-        key: ${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        path: .stack-work
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/hastile.cabal') }}${{ hashFiles('**/stack.yaml.lock') }}
+        restore-keys: ${{ runner.os }}-${{ env.cache-name }}-
     
     - name: stack pre (setup, configure)
       run: |
